@@ -1,0 +1,47 @@
+# ============================================
+# .gitignore — Policlínica Ahuachapaneca
+# ============================================
+
+# ─── Variables de entorno (NUNCA subir) ───
+.env
+.env.local
+.env.development
+.env.production
+
+# ─── Sistema operativo ───
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+
+# ─── IDEs y editores ───
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.project
+.settings/
+
+# ─── Backend (PHP) ───
+backend/vendor/
+backend/storage/logs/*.log
+backend/storage/uploads/*
+!backend/storage/uploads/.gitkeep
+!backend/storage/logs/.gitkeep
+
+# ─── Frontend (React + Node) ───
+frontend/node_modules/
+frontend/dist/
+frontend/.tsbuildinfo
+*.tsbuildinfo
+
+# ─── Logs y temporales ───
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ─── Builds y compilados ───
+*.map
