@@ -1,0 +1,79 @@
+/* ============================================================
+   Sistema de diseño — Policlínica Ahuachapaneca
+   Tailwind v4: el bloque @theme genera utilidades (bg-brand-600,
+   text-muted, rounded-card, shadow-card, etc.)
+   ============================================================ */
+@theme {
+  /* --- Marca: azul oscuro institucional --- */
+  --color-brand-50: #eef3f8;
+  --color-brand-100: #d8e4ef;
+  --color-brand-200: #b0c8dd;
+  --color-brand-300: #7fa5c5;
+  --color-brand-400: #4d7ea6;
+  --color-brand-500: #2c5b83;
+  --color-brand-600: #1b3a5c;
+  --color-brand-700: #16304c;
+  --color-brand-800: #11253a;
+  --color-brand-900: #0b1927;
+
+  /* --- Acentos semánticos --- */
+  --color-success: #2d6a4f;
+  --color-success-soft: #e4f2ea;
+  --color-danger: #c0392b;
+  --color-danger-soft: #fae8e6;
+  --color-warning: #e67e22;
+  --color-warning-soft: #fdefe1;
+  --color-info: #2980b9;
+  --color-info-soft: #e6f1f9;
+  --color-royal: #6c3fa8;
+  --color-royal-soft: #f0e9fa;
+
+  /* --- Superficies --- */
+  --color-canvas: #f8f9fa;
+  --color-surface: #ffffff;
+  --color-line: #e6e8eb;
+  --color-ink: #1f2a37;
+  --color-muted: #6b7280;
+
+  /* --- Tipografía --- */
+  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  /* --- Radios --- */
+  --radius-field: 10px;
+  --radius-card: 14px;
+
+  /* --- Sombras --- */
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 12px rgba(16, 24, 40, 0.06);
+  --shadow-pop: 0 12px 32px rgba(16, 24, 40, 0.16);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+  }
+
+  /* Scrollbar discreto */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #d3d7dc;
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #b9bec5;
+    background-clip: content-box;
+  }
+}
