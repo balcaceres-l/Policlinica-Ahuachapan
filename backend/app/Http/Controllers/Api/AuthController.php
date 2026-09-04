@@ -9,7 +9,6 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
@@ -24,17 +23,16 @@ class AuthController extends Controller
 
         $user = User::where('usuario', $credentials['usuario'])->first();
 
+        // RB-32: mensaje idéntico para usuario inexistente y contraseña incorrecta.
         if (! $user || ! Hash::check($credentials['password'], $user->password)) {
-            throw ValidationException::withMessages([
-                'usuario' => ['Las credenciales proporcionadas no son válidas.'],
-            ]);
+            return $this->failure('Usuario o contraseña incorrectos.', 401);
         }
 
+        // RB-01: solo las cuentas activas pueden autenticarse.
         if ($user->estado !== 'ACTIVO') {
             return $this->failure('El usuario se encuentra inactivo.', 403);
         }
 
-        $user->tokens()->delete();
         $token = $user->createToken('frontend')->plainTextToken;
 
         return $this->success([
