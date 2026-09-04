@@ -1,5 +1,7 @@
 import { NavLink } from 'react-router-dom';
-import { cn } from '@/lib/utils';
+import useAuth from '@/hooks/auth/useAuth';
+import { ROL_LABEL } from '@/lib/constants/roles';
+import { cn, getIniciales } from '@/lib/utils';
 
 interface ItemNav {
   to: string;
@@ -33,6 +35,8 @@ const claseItem = (activo: boolean) =>
   );
 
 export function Sidebar() {
+  const { usuario, cerrarSesion } = useAuth();
+
   return (
     <aside className="flex h-full w-64 shrink-0 flex-col bg-brand-800 px-4 py-5">
       {/* Marca */}
@@ -74,20 +78,23 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* Usuario mock */}
+      {/* Usuario autenticado — HU-01 */}
       <div className="mt-auto border-t border-white/10 pt-4">
         <div className="flex items-center gap-3 rounded-field px-2 py-2">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-sm font-bold text-white">
-            KA
+            {usuario ? getIniciales(usuario.nombreCompleto) : ''}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-white">Katherinne Algarín</p>
-            <p className="truncate text-xs text-brand-200">Rol: Administrador</p>
+            <p className="truncate text-sm font-semibold text-white">{usuario?.nombreCompleto}</p>
+            <p className="truncate text-xs text-brand-200">
+              {usuario ? `Rol: ${ROL_LABEL[usuario.rol]}` : ''}
+            </p>
           </div>
           <button
             type="button"
-            title="Disponible cuando el módulo de login esté listo"
-            className="flex size-8 cursor-not-allowed items-center justify-center rounded-field text-brand-200 opacity-60"
+            onClick={() => void cerrarSesion()}
+            title="Cerrar sesión"
+            className="flex size-8 cursor-pointer items-center justify-center rounded-field text-brand-200 transition-colors hover:bg-white/10 hover:text-white"
           >
             <i className="ri-logout-box-r-line text-lg" />
           </button>

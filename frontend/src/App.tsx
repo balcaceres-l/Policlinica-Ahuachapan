@@ -1,27 +1,42 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import AppLayout from '@/components/layout/AppLayout';
+import LoginPage from '@/views/auth/LoginPage';
 import AsociarEspecialidadesPage from '@/views/admin/AsociarEspecialidadesPage';
 import EspecialidadesPage from '@/views/admin/EspecialidadesPage';
 import ListaUsuariosPage from '@/views/admin/ListaUsuariosPage';
 import CatalogoEspecialidadesPage from '@/views/secretaria/CatalogoEspecialidadesPage';
 
 /**
- * Rutas SIN autenticación — el ProtectedRoute real lo implementará
- * el compañero a cargo del módulo de login (HU-01/HU-02).
+ * Los roles de cada ProtectedRoute reflejan los del middleware `role:`
+ * en backend/routes/api.php. Si cambia uno, debe cambiar el otro.
  */
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<AppLayout />}>
-          <Route index element={<Navigate to="/admin/usuarios" replace />} />
-          <Route path="/admin/usuarios" element={<ListaUsuariosPage />} />
-          <Route path="/admin/especialidades" element={<EspecialidadesPage />} />
-          <Route path="/admin/asociar-especialidades" element={<AsociarEspecialidadesPage />} />
-          <Route path="/secretaria/especialidades" element={<CatalogoEspecialidadesPage />} />
+        <Route path="/login" element={<LoginPage />} />
+
+        {/* Solo administrador — RF-04..RF-09 */}
+        <Route element={<ProtectedRoute roles={['ADMINISTRADOR']} />}>
+          <Route element={<AppLayout />}>
+            <Route path="/admin/usuarios" element={<ListaUsuariosPage />} />
+            <Route path="/admin/especialidades" element={<EspecialidadesPage />} />
+            <Route path="/admin/asociar-especialidades" element={<AsociarEspecialidadesPage />} />
+          </Route>
         </Route>
 
-        <Route path="*" element={<Navigate to="/admin/usuarios" replace />} />
+        {/* Catálogo de especialidades — RF-10 */}
+        <Route element={<ProtectedRoute roles={['ADMINISTRADOR', 'RECEPCIONISTA', 'MEDICO']} />}>
+          <Route element={<AppLayout />}>
+            <Route path="/secretaria/especialidades" element={<CatalogoEspecialidadesPage />} />
+          </Route>
+        </Route>
+
+        {/* Cualquier otra ruta pasa por el guard, que decide según sesión y rol. */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="*" element={<Navigate to="/admin/usuarios" replace />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );
