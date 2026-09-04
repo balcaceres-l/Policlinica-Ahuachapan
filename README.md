@@ -7,7 +7,7 @@ Sistema web para la gestión de citas médicas, expedientes clínicos electróni
 | Capa | Tecnología |
 |---|---|
 | **Frontend** | React 19 + TypeScript + Vite + Tailwind CSS |
-| **Backend** | PHP 8.2+ (API REST) |
+| **Backend** | Laravel 12 + PHP 8.2 + Sanctum (API REST) |
 | **Base de datos** | MariaDB 10.11 |
 | **Servidor** | Apache 2.4 + PHP-FPM |
 
@@ -45,7 +45,10 @@ Sistema web para la gestión de citas médicas, expedientes clínicos electróni
 cd backend
 composer install
 cp .env.example .env
-# Configurar credenciales de BD en .env
+php artisan key:generate
+# Configurar credenciales de MariaDB en .env
+php artisan migrate --seed
+php artisan serve
 ```
 
 ### Frontend
