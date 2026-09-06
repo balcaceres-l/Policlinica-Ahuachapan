@@ -1,6 +1,6 @@
 import api from '@/services/api';
 import type { ApiResponse } from '@/types/api.types';
-import type { Credenciales, LoginRespuesta } from '@/types/auth.types';
+import type { CambiarPasswordPayload, Credenciales, LoginRespuesta } from '@/types/auth.types';
 import type { Usuario } from '@/types/user.types';
 
 /** RF-01 — POST /auth/login */
@@ -18,4 +18,13 @@ export const obtenerUsuarioActual = async (): Promise<Usuario> => {
 /** Revoca el token actual en el servidor. */
 export const logout = async (): Promise<void> => {
   await api.post('/auth/logout');
+};
+
+/**
+ * HU-02 / RF-02 — cambia la contraseña del usuario autenticado.
+ * El backend revoca las demás sesiones y conserva la actual, así que
+ * no hace falta volver a iniciar sesión.
+ */
+export const cambiarPassword = async (payload: CambiarPasswordPayload): Promise<void> => {
+  await api.patch('/auth/change-password', payload);
 };

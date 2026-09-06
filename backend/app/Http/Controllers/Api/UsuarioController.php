@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class UsuarioController extends Controller
 {
@@ -80,7 +81,7 @@ class UsuarioController extends Controller
 
     private function validatePayload(Request $request, ?User $user = null): array
     {
-        return $request->validate([
+        $reglas = [
             'nombre_completo' => ['required', 'string', 'max:150'],
             'usuario' => [
                 'required',
@@ -92,7 +93,16 @@ class UsuarioController extends Controller
             'rol' => ['required', Rule::in(['ADMINISTRADOR', 'MEDICO', 'RECEPCIONISTA'])],
             'estado' => ['sometimes', Rule::in(['ACTIVO', 'INACTIVO'])],
             'telefono' => ['nullable', 'string', 'max:25'],
-            'password' => [$user ? 'sometimes' : 'required', 'string', 'min:8'],
-        ]);
+        ];
+
+        // La contraseña solo se define al crear la cuenta. Cambiarla es HU-02 y
+        // pasa por PATCH /auth/change-password, que exige la contraseña actual;
+        // permitirla aquí dejaría a un administrador reasignando credenciales
+        // desde el formulario de edición de perfil, sin trazabilidad.
+        if (! $user) {
+            $reglas['password'] = ['required', 'string', Password::defaults()];
+        }
+
+        return $request->validate($reglas);
     }
 }

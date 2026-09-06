@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Concerns\RespondsWithJson;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\CambiarPasswordRequest;
 use App\Http\Resources\UsuarioResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -51,5 +52,28 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()?->delete();
 
         return $this->success(null, 'Sesión cerrada correctamente.');
+    }
+
+    /**
+     * HU-02 / RF-02 — cada usuario cambia su propia contraseña.
+     */
+    public function changePassword(CambiarPasswordRequest $request): JsonResponse
+    {
+        $user = $request->user();
+
+        // Se exige la contraseña actual: sin esto, una sesión abierta en un
+        // equipo compartido bastaría para apropiarse de la cuenta.
+        if (! Hash::check($request->validated('password_actual'), $user->password)) {
+            return $this->failure('La contraseña actual no es correcta.', 422);
+        }
+
+        $user->update(['password' => $request->validated('password')]);
+
+        // Se revocan las demás sesiones y se conserva la actual: cambiar la
+        // contraseña suele responder a sospecha de filtración.
+        $tokenActual = $request->user()->currentAccessToken();
+        $user->tokens()->where('id', '!=', $tokenActual->getKey())->delete();
+
+        return $this->success(null, 'Contraseña actualizada correctamente.');
     }
 }

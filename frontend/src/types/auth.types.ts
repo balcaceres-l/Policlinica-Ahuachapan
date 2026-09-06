@@ -12,6 +12,13 @@ export interface LoginRespuesta {
   usuario: Usuario;
 }
 
+/** HU-02 — cuerpo de PATCH /auth/change-password. */
+export interface CambiarPasswordPayload {
+  password_actual: string;
+  password: string;
+  password_confirmation: string;
+}
+
 /** Lo que expone el AuthContext a toda la aplicación. */
 export interface EstadoAuth {
   usuario: Usuario | null;
