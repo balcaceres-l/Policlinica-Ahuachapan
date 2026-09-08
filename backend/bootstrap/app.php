@@ -1,10 +1,10 @@
 <?php
 
+use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Middleware\SecurityHeaders;
-use App\Http\Middleware\EnsureUserHasRole;
-use Illuminate\Auth\AuthenticationException;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -32,11 +32,10 @@ return Application::configure(basePath: dirname(__DIR__))
             SecurityHeaders::class,
         ]);
 
-        // Nunca confiar en proxies arbitrarios; en cPanel/Apache el proxy es local.
+        // En cPanel el proxy corre en la misma máquina; no se confía en otros.
         $middleware->trustProxies(at: ['127.0.0.1', '::1']);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        // Toda excepción en /api responde JSON, nunca HTML ni stack trace.
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson()
         );
@@ -61,7 +60,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 'success' => false,
                 'message' => $message,
                 'errors' => $e instanceof ValidationException ? $e->errors() : null,
-                // El detalle real solo en local; en producción jamás se filtra.
+                // Con APP_DEBUG=false en producción esto siempre viaja como null.
                 'debug' => config('app.debug') && $status === 500
                     ? ['exception' => $e::class, 'mensaje' => $e->getMessage()]
                     : null,

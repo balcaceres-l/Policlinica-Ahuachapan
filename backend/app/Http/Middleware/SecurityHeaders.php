@@ -7,8 +7,8 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Cabeceras de seguridad para las respuestas de la API.
- * Los datos clínicos no deben cachearse ni indexarse.
+ * El no-store es lo relevante aquí: sin él, un proxy o el navegador pueden
+ * conservar respuestas con datos de expediente.
  */
 class SecurityHeaders
 {

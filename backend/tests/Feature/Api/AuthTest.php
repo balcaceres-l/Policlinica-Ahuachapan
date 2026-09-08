@@ -7,10 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
-/**
- * HU-01 — Inicio de sesión.
- * Cubre RF-01, RF-03, RB-01, RB-32 y RNF-06.
- */
+/** HU-01 — Inicio de sesión. */
 class AuthTest extends TestCase
 {
     use RefreshDatabase;
@@ -25,7 +22,6 @@ class AuthTest extends TestCase
         ], $atributos));
     }
 
-    /** RB-32: el mensaje no debe distinguir usuario inexistente de contraseña incorrecta. */
     public function test_usuario_inexistente_y_password_incorrecta_dan_el_mismo_mensaje(): void
     {
         $this->crearUsuario();
@@ -46,7 +42,6 @@ class AuthTest extends TestCase
         );
     }
 
-    /** RB-01: solo usuarios activos pueden iniciar sesión. */
     public function test_usuario_inactivo_no_puede_iniciar_sesion(): void
     {
         $this->crearUsuario(['estado' => 'INACTIVO']);
@@ -63,7 +58,6 @@ class AuthTest extends TestCase
         $this->postJson('/api/auth/login', [])->assertStatus(422);
     }
 
-    /** RNF-06: el hash jamás debe viajar al cliente. */
     public function test_la_respuesta_nunca_incluye_el_hash_de_password(): void
     {
         $this->crearUsuario();
@@ -76,7 +70,6 @@ class AuthTest extends TestCase
         $this->assertStringNotContainsString('password', $respuesta->getContent());
     }
 
-    /** RF-03: la respuesta trae el rol que el frontend usa para enrutar. */
     public function test_la_respuesta_incluye_el_rol_para_enrutar(): void
     {
         $this->crearUsuario(['rol' => 'MEDICO']);
@@ -102,14 +95,13 @@ class AuthTest extends TestCase
         $this->getJson('/api/auth/me', $cabecera)->assertOk();
         $this->postJson('/api/auth/logout', [], $cabecera)->assertOk();
 
-        // El guard cachea el usuario ya resuelto dentro del mismo test;
-        // sin esto la siguiente petición no revalidaría el token revocado.
+        // El guard cachea el usuario resuelto; sin esto la siguiente
+        // petición no revalida el token revocado.
         $this->app['auth']->forgetGuards();
 
         $this->getJson('/api/auth/me', $cabecera)->assertUnauthorized();
     }
 
-    /** El login previo ya no debe cerrar las demás sesiones del usuario. */
     public function test_iniciar_sesion_no_revoca_los_tokens_anteriores(): void
     {
         $this->crearUsuario();

@@ -7,8 +7,8 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Fuerza que toda petición a /api se trate como JSON, aunque el cliente
- * no envíe el header Accept correcto. Evita respuestas HTML inesperadas.
+ * Normaliza el Accept entrante para que Laravel nunca resuelva una vista
+ * HTML en las rutas de API, aunque el cliente mande el header equivocado.
  */
 class ForceJsonResponse
 {

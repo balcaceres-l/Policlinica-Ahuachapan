@@ -21,7 +21,6 @@ const CLASE_INPUT =
   'transition-colors placeholder:text-muted focus:border-brand-600 focus:ring-4 ' +
   'focus:ring-brand-600/15 disabled:opacity-60';
 
-/** HU-02 — cada usuario cambia su propia contraseña (RF-02). */
 export function CambiarPasswordModal({ isOpen, onClose }: CambiarPasswordModalProps) {
   const {
     register,
@@ -136,7 +135,7 @@ export function CambiarPasswordModal({ isOpen, onClose }: CambiarPasswordModalPr
           )}
         </div>
 
-        {/* Error devuelto por el servidor (contraseña actual incorrecta, política) */}
+        {/* Contraseña actual incorrecta o política no cumplida */}
         {errors.root && (
           <div
             role="alert"

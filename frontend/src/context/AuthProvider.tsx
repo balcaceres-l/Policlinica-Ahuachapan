@@ -11,7 +11,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [cargando, setCargando] = useState(true);
   const queryClient = useQueryClient();
 
-  // Al montar: si hay token guardado, recuperar al usuario para sobrevivir al F5.
+  // Rehidrata la sesión desde el token guardado para que un F5 no expulse.
   useEffect(() => {
     let activo = true;
 
@@ -25,7 +25,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const actual = await authService.obtenerUsuarioActual();
         if (activo) setUsuario(actual);
       } catch {
-        // Token expirado o revocado: se descarta en silencio.
         borrarToken();
       } finally {
         if (activo) setCargando(false);
@@ -50,11 +49,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await authService.logout();
     } catch {
-      // Si el token ya no vale en el servidor, la sesión local se limpia igual.
+      // Aunque el servidor rechace la revocación, la sesión local se limpia.
     } finally {
       borrarToken();
       setUsuario(null);
-      // Impide que el siguiente usuario vea datos cacheados del anterior.
+      // Sin esto el siguiente usuario en el mismo equipo vería datos
+      // cacheados del anterior.
       queryClient.clear();
     }
   }, [queryClient]);

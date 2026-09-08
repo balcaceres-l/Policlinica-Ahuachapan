@@ -7,10 +7,8 @@ import EspecialidadesPage from '@/views/admin/EspecialidadesPage';
 import ListaUsuariosPage from '@/views/admin/ListaUsuariosPage';
 import CatalogoEspecialidadesPage from '@/views/secretaria/CatalogoEspecialidadesPage';
 
-/**
- * Los roles de cada ProtectedRoute reflejan los del middleware `role:`
- * en backend/routes/api.php. Si cambia uno, debe cambiar el otro.
- */
+// Los roles de cada ProtectedRoute deben coincidir con el middleware
+// `role:` de backend/routes/api.php.
 function App() {
   return (
     <BrowserRouter>

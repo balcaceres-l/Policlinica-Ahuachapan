@@ -1,8 +1,6 @@
 import { createContext } from 'react';
 import type { EstadoAuth } from '@/types/auth.types';
 
-/**
- * Se separa del provider para no mezclar componentes y no-componentes
- * en el mismo archivo (regla react-refresh del ESLint del proyecto).
- */
+// Separado del provider por la regla react-refresh: un .tsx no debe exportar
+// componentes y no-componentes a la vez.
 export const AuthContext = createContext<EstadoAuth | null>(null);

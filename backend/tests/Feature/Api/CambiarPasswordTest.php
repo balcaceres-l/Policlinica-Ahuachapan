@@ -7,10 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
-/**
- * HU-02 — Cambio de contraseña.
- * Cubre RF-02 (todos los usuarios) y RNF-06.
- */
+/** HU-02 — Cambio de contraseña. */
 class CambiarPasswordTest extends TestCase
 {
     use RefreshDatabase;
@@ -43,7 +40,6 @@ class CambiarPasswordTest extends TestCase
         $this->patchJson('/api/auth/change-password', [])->assertUnauthorized();
     }
 
-    /** RF-02: los tres roles pueden cambiar su propia contraseña. */
     public function test_los_tres_roles_pueden_cambiar_su_contrasena(): void
     {
         foreach (['ADMINISTRADOR', 'RECEPCIONISTA', 'MEDICO'] as $rol) {
@@ -97,7 +93,6 @@ class CambiarPasswordTest extends TestCase
         ], $this->autenticar($user))->assertStatus(422);
     }
 
-    /** La política de Password::defaults() debe aplicarse. */
     public function test_rechaza_una_contrasena_demasiado_corta(): void
     {
         $user = $this->usuario();
@@ -109,7 +104,6 @@ class CambiarPasswordTest extends TestCase
         ], $this->autenticar($user))->assertStatus(422);
     }
 
-    /** Se revocan las otras sesiones y sobrevive la que hizo el cambio. */
     public function test_revoca_las_demas_sesiones_y_conserva_la_actual(): void
     {
         $user = $this->usuario();
@@ -132,7 +126,6 @@ class CambiarPasswordTest extends TestCase
         $this->getJson('/api/auth/me', $sesionVieja)->assertUnauthorized();
     }
 
-    /** La contraseña ya no puede reasignarse desde la edición de perfil. */
     public function test_editar_un_usuario_no_permite_cambiar_su_contrasena(): void
     {
         $admin = $this->usuario(['rol' => 'ADMINISTRADOR']);

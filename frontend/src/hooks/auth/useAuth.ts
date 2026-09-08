@@ -1,7 +1,6 @@
 import { useContext } from 'react';
 import { AuthContext } from '@/context/auth-context';
 
-/** Acceso al estado de sesión desde cualquier componente. */
 export function useAuth() {
   const contexto = useContext(AuthContext);
 

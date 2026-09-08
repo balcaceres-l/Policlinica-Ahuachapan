@@ -1,35 +1,31 @@
 import type { RolUsuario, Usuario } from '@/types/user.types';
 
-/** Cuerpo que espera POST /auth/login. */
 export interface Credenciales {
   usuario: string;
   password: string;
 }
 
-/** Contenido de `data` en la respuesta de login. */
 export interface LoginRespuesta {
   token: string;
   usuario: Usuario;
 }
 
-/** HU-02 — cuerpo de PATCH /auth/change-password. */
 export interface CambiarPasswordPayload {
   password_actual: string;
   password: string;
   password_confirmation: string;
 }
 
-/** Lo que expone el AuthContext a toda la aplicación. */
 export interface EstadoAuth {
   usuario: Usuario | null;
-  /** true mientras se verifica el token guardado al cargar la app. */
+  /** Activo mientras se valida el token guardado al arrancar la app. */
   cargando: boolean;
   autenticado: boolean;
   iniciarSesion: (credenciales: Credenciales) => Promise<Usuario>;
   cerrarSesion: () => Promise<void>;
 }
 
-/** RF-03: destino de cada rol después de autenticarse. */
+/** Pantalla inicial de cada rol tras autenticarse. */
 export const RUTA_INICIO_POR_ROL: Record<RolUsuario, string> = {
   ADMINISTRADOR: '/admin/usuarios',
   RECEPCIONISTA: '/secretaria/especialidades',

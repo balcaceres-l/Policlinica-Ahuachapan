@@ -30,7 +30,7 @@ export function LoginPage() {
     defaultValues: { usuario: '', password: '' },
   });
 
-  // Aviso cuando el interceptor expulsó al usuario por token vencido.
+  // Lo marca el interceptor de axios al toparse con un 401.
   useEffect(() => {
     if (params.get('expirada')) {
       toast.error('Tu sesión expiró. Inicia sesión nuevamente.');
@@ -39,7 +39,6 @@ export function LoginPage() {
 
   if (cargando) return null;
 
-  // Ya autenticado: no tiene sentido mostrar el formulario.
   if (usuario) {
     return <Navigate to={RUTA_INICIO_POR_ROL[usuario.rol]} replace />;
   }
@@ -49,14 +48,14 @@ export function LoginPage() {
       const autenticado = await iniciarSesion(valores);
       toast.success(`Bienvenido/a, ${autenticado.nombreCompleto}`);
 
-      // RF-03: destino según rol, o la ruta que intentaba visitar.
+      // La ruta que intentaba visitar tiene prioridad sobre la del rol.
       const destino =
         (location.state as { from?: string } | null)?.from ??
         RUTA_INICIO_POR_ROL[autenticado.rol];
 
       navigate(destino, { replace: true });
     } catch (error) {
-      // RB-32: se muestra el mensaje del servidor sin señalar qué campo falló.
+      // A nivel de formulario: el error no debe señalar qué campo falló.
       setError('root', {
         message: extraerMensajeError(error, 'No se pudo iniciar sesión.'),
       });
@@ -66,7 +65,6 @@ export function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-canvas px-4 py-10">
       <div className="w-full max-w-md">
-        {/* Identidad visual — RNF-03 */}
         <div className="mb-8 flex flex-col items-center text-center">
           <span className="mb-4 flex size-16 items-center justify-center rounded-card bg-brand-800 text-white">
             <i className="ri-hospital-line text-3xl" />
@@ -121,7 +119,7 @@ export function LoginPage() {
             )}
           </div>
 
-          {/* Error del servidor: credenciales inválidas o cuenta inactiva */}
+          {/* Credenciales inválidas o cuenta inactiva */}
           {errors.root && (
             <div
               role="alert"

@@ -1,12 +1,9 @@
 import { z } from 'zod';
 
 /**
- * HU-02 — Validación del cambio de contraseña.
- *
- * Refleja la política de desarrollo (mínimo 8, letras y números). En producción
- * el backend exige más (10, mayúsculas y símbolos) mediante Password::defaults();
- * el cliente no puede conocer el entorno, así que el servidor manda y su mensaje
- * se muestra tal cual si rechaza la contraseña.
+ * Reglas mínimas comunes a todos los entornos. En producción el backend exige
+ * más (10 caracteres, mayúsculas y símbolos) y el cliente no puede saberlo, así
+ * que su rechazo se muestra tal cual llega.
  */
 export const cambiarPasswordSchema = z
   .object({

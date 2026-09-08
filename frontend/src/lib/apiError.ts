@@ -1,8 +1,9 @@
 import { AxiosError } from 'axios';
 
 /**
- * Extrae el mensaje legible de una respuesta { success, message, errors }.
- * Prioriza el primer error de validación; si no hay, usa `message`.
+ * Desarma la respuesta { success, message, errors } del backend.
+ * El primer error de validación es más específico que `message`, que en un
+ * 422 es siempre genérico, así que tiene prioridad.
  */
 export function extraerMensajeError(
   error: unknown,

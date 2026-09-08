@@ -20,14 +20,11 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-/**
- * Un 401 significa que el token murió (expiró o fue revocado): se limpia la
- * sesión y se vuelve al login. Se excluye la petición de login, donde el 401
- * significa "credenciales incorrectas" y lo maneja la propia vista.
- */
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
+    // En el login un 401 son credenciales incorrectas y lo muestra la vista;
+    // en cualquier otra ruta significa token vencido o revocado.
     const esLogin = error.config?.url?.includes('/auth/login');
 
     if (error.response?.status === 401 && !esLogin) {

@@ -24,12 +24,11 @@ class AuthController extends Controller
 
         $user = User::where('usuario', $credentials['usuario'])->first();
 
-        // RB-32: mensaje idéntico para usuario inexistente y contraseña incorrecta.
+        // Mismo mensaje para usuario inexistente y contraseña incorrecta.
         if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             return $this->failure('Usuario o contraseña incorrectos.', 401);
         }
 
-        // RB-01: solo las cuentas activas pueden autenticarse.
         if ($user->estado !== 'ACTIVO') {
             return $this->failure('El usuario se encuentra inactivo.', 403);
         }
@@ -54,23 +53,17 @@ class AuthController extends Controller
         return $this->success(null, 'Sesión cerrada correctamente.');
     }
 
-    /**
-     * HU-02 / RF-02 — cada usuario cambia su propia contraseña.
-     */
     public function changePassword(CambiarPasswordRequest $request): JsonResponse
     {
         $user = $request->user();
 
-        // Se exige la contraseña actual: sin esto, una sesión abierta en un
-        // equipo compartido bastaría para apropiarse de la cuenta.
         if (! Hash::check($request->validated('password_actual'), $user->password)) {
             return $this->failure('La contraseña actual no es correcta.', 422);
         }
 
         $user->update(['password' => $request->validated('password')]);
 
-        // Se revocan las demás sesiones y se conserva la actual: cambiar la
-        // contraseña suele responder a sospecha de filtración.
+        // Se cierran las otras sesiones y sobrevive la que hizo el cambio.
         $tokenActual = $request->user()->currentAccessToken();
         $user->tokens()->where('id', '!=', $tokenActual->getKey())->delete();
 

@@ -10,14 +10,14 @@ interface ProtectedRouteProps {
 }
 
 /**
- * Control de acceso VISUAL. La autorización real la aplica el middleware
- * `role:` del backend — esto solo evita mostrar pantallas sin permiso.
+ * Control de acceso visual. La autorización efectiva la aplica el middleware
+ * `role:` del backend; esto solo evita renderizar pantallas sin permiso.
  */
 export function ProtectedRoute({ roles }: ProtectedRouteProps) {
   const { usuario, cargando } = useAuth();
   const location = useLocation();
 
-  // Aún se está verificando el token guardado: no decidir todavía.
+  // Sin este corte se redirigiría al login durante la rehidratación.
   if (cargando) {
     return (
       <div className="flex h-screen items-center justify-center bg-canvas">
@@ -27,11 +27,11 @@ export function ProtectedRoute({ roles }: ProtectedRouteProps) {
   }
 
   if (!usuario) {
-    // `state.from` permite volver a donde iba tras iniciar sesión.
+    // `state.from` deja volver a la ruta pedida después del login.
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
-  // Autenticado pero sin permiso: va a su propio inicio, no al login.
+  // Autenticado sin permiso: a su propio inicio, no al login.
   if (roles && !roles.includes(usuario.rol)) {
     return <Navigate to={RUTA_INICIO_POR_ROL[usuario.rol]} replace />;
   }
