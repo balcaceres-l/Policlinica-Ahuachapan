@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import ConfirmarEstadoModal from '@/components/usuario/ConfirmarEstadoModal';
+import EditarUsuarioModal from '@/components/usuario/EditarUsuarioModal';
 import NuevoUsuarioModal from '@/components/usuario/NuevoUsuarioModal';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
@@ -28,6 +30,8 @@ export function ListaUsuariosPage() {
   const [estado, setEstado] = useState<EstadoUsuario | 'TODOS'>('TODOS');
   const [pagina, setPagina] = useState(1);
   const [modalNuevo, setModalNuevo] = useState(false);
+  const [usuarioEnEdicion, setUsuarioEnEdicion] = useState<Usuario | null>(null);
+  const [usuarioEnCambioEstado, setUsuarioEnCambioEstado] = useState<Usuario | null>(null);
 
   /** Aplica los tres criterios de la HU-06. */
   const filtrados = useMemo(() => {
@@ -123,17 +127,23 @@ export function ListaUsuariosPage() {
         <div className="flex justify-end gap-1">
           <button
             type="button"
-            disabled
-            title="Edición de usuarios — HU-04 (Dennis)"
-            className="flex size-8 cursor-not-allowed items-center justify-center rounded-field text-muted opacity-50"
+            onClick={() => setUsuarioEnEdicion(usuario)}
+            title="Editar usuario"
+            className="flex size-8 cursor-pointer items-center justify-center rounded-field text-muted transition-colors hover:bg-brand-50 hover:text-brand-600"
           >
             <i className="ri-pencil-line text-base" />
           </button>
           <button
             type="button"
-            disabled
-            title="Activar/Desactivar — HU-05 (Dennis)"
-            className="flex size-8 cursor-not-allowed items-center justify-center rounded-field text-muted opacity-50"
+            onClick={() => setUsuarioEnCambioEstado(usuario)}
+            title={usuario.estado === 'ACTIVO' ? 'Desactivar cuenta' : 'Activar cuenta'}
+            className={cn(
+              'flex size-8 cursor-pointer items-center justify-center rounded-field',
+              'text-muted transition-colors',
+              usuario.estado === 'ACTIVO'
+                ? 'hover:bg-danger-soft hover:text-danger'
+                : 'hover:bg-success-soft hover:text-success',
+            )}
           >
             <i
               className={cn(
@@ -227,6 +237,16 @@ export function ListaUsuariosPage() {
       />
 
       <NuevoUsuarioModal isOpen={modalNuevo} onClose={() => setModalNuevo(false)} />
+
+      <EditarUsuarioModal
+        usuario={usuarioEnEdicion}
+        onClose={() => setUsuarioEnEdicion(null)}
+      />
+
+      <ConfirmarEstadoModal
+        usuario={usuarioEnCambioEstado}
+        onClose={() => setUsuarioEnCambioEstado(null)}
+      />
     </div>
   );
 }

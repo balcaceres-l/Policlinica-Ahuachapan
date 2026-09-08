@@ -72,7 +72,17 @@ class UsuarioController extends Controller
             'estado' => ['required', Rule::in(['ACTIVO', 'INACTIVO'])],
         ]);
 
+        // Sin password reset, un administrador que se desactiva queda fuera
+        // del sistema y solo se recupera tocando la base a mano.
+        if ($validated['estado'] === 'INACTIVO' && $usuario->is($request->user())) {
+            return $this->failure('No puedes desactivar tu propia cuenta.', 422);
+        }
+
         $usuario->update($validated);
+
+        if ($validated['estado'] === 'INACTIVO') {
+            $usuario->tokens()->delete();
+        }
 
         return $this->success(
             (new UsuarioResource($usuario->refresh()))->resolve(),

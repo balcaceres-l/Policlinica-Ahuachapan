@@ -1,6 +1,6 @@
 import api from '@/services/api';
 import type { ApiResponse } from '@/types/api.types';
-import type { NuevoUsuario, Usuario } from '@/types/user.types';
+import type { EditarUsuario, EstadoUsuario, NuevoUsuario, Usuario } from '@/types/user.types';
 
 /**
  * El endpoint acepta `rol`, `estado` y `buscar`, pero con una plantilla de una
@@ -25,5 +25,21 @@ export const getUsuarioById = async (id: number): Promise<Usuario> => {
 
 export const crearUsuario = async (payload: NuevoUsuario): Promise<Usuario> => {
   const { data } = await api.post<ApiResponse<Usuario>>('/usuarios', payload);
+  return data.data;
+};
+
+export const actualizarUsuario = async (
+  id: number,
+  payload: EditarUsuario,
+): Promise<Usuario> => {
+  const { data } = await api.put<ApiResponse<Usuario>>(`/usuarios/${id}`, payload);
+  return data.data;
+};
+
+export const cambiarEstadoUsuario = async (
+  id: number,
+  estado: EstadoUsuario,
+): Promise<Usuario> => {
+  const { data } = await api.patch<ApiResponse<Usuario>>(`/usuarios/${id}/estado`, { estado });
   return data.data;
 };

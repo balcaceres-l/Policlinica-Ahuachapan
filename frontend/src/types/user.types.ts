@@ -15,12 +15,15 @@ export interface Usuario {
 }
 
 /** La entrada de la API va en snake_case; las respuestas vuelven en camelCase. */
-export interface NuevoUsuario {
+export interface EditarUsuario {
   nombre_completo: string;
   usuario: string;
   cargo: string;
   rol: RolUsuario;
   telefono?: string;
+}
+
+export interface NuevoUsuario extends EditarUsuario {
   password: string;
 }
 

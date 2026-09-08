@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Los nombres de campo son los que espera el backend, en snake_case. */
-export const usuarioSchema = z.object({
+export const editarUsuarioSchema = z.object({
   nombre_completo: z
     .string()
     .trim()
@@ -27,6 +27,9 @@ export const usuarioSchema = z.object({
     .trim()
     .max(25, 'No puede superar los 25 caracteres.')
     .optional(),
+});
+
+export const usuarioSchema = editarUsuarioSchema.extend({
   password: z
     .string()
     .min(8, 'Debe tener al menos 8 caracteres.')
@@ -34,6 +37,7 @@ export const usuarioSchema = z.object({
     .regex(/[0-9]/, 'Debe incluir al menos un número.'),
 });
 
+export type EditarUsuarioFormValues = z.infer<typeof editarUsuarioSchema>;
 export type UsuarioFormValues = z.infer<typeof usuarioSchema>;
 
 export const usuarioFormDefaults: UsuarioFormValues = {
