@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import RegistrarUsuarioModal from '@/components/admin/RegistrarUsuarioModal';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import DataTable from '@/components/ui/DataTable';
@@ -26,6 +27,7 @@ export function ListaUsuariosPage() {
   const [rol, setRol] = useState<RolUsuario | 'TODOS'>('TODOS');
   const [estado, setEstado] = useState<EstadoUsuario | 'TODOS'>('TODOS');
   const [pagina, setPagina] = useState(1);
+  const [modalRegistro, setModalRegistro] = useState(false);
 
   /** Aplica los tres criterios de la HU-06 sobre los datos mock. */
   const filtrados = useMemo(() => {
@@ -155,11 +157,8 @@ export function ListaUsuariosPage() {
             Administra el acceso y roles del personal clínico.
           </p>
         </div>
-        <Button
-          icon="ri-add-line"
-          disabled
-          title="Registro de usuarios — HU-03 (Dennis)"
-        >
+        {/* HU-03 */}
+        <Button icon="ri-add-line" onClick={() => setModalRegistro(true)}>
           Nuevo Usuario
         </Button>
       </div>
@@ -226,6 +225,11 @@ export function ListaUsuariosPage() {
             onCambiarPagina={setPagina}
           />
         }
+      />
+
+      <RegistrarUsuarioModal
+        isOpen={modalRegistro}
+        onClose={() => setModalRegistro(false)}
       />
     </div>
   );

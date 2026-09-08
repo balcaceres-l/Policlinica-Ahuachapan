@@ -189,6 +189,9 @@ export const mockMedicoEspecialidades: MedicoEspecialidad[] = [
   { medicoId: 7, especialidadId: 2 },
 ];
 
-/** Generador de IDs mientras no exista AUTO_INCREMENT. */
+/** Generadores de IDs mientras no exista AUTO_INCREMENT. */
 export const siguienteIdEspecialidad = (): number =>
   Math.max(0, ...mockEspecialidades.map((e) => e.id)) + 1;
+
+export const siguienteIdUsuario = (): number =>
+  Math.max(0, ...mockUsuarios.map((u) => u.id)) + 1;

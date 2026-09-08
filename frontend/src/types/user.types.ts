@@ -14,6 +14,16 @@ export interface Usuario {
   fechaRegistro: string;
 }
 
+/** HU-03 — datos que el administrador envía para crear una cuenta. */
+export interface NuevoUsuario {
+  nombreCompleto: string;
+  usuario: string;
+  cargo: string;
+  rol: RolUsuario;
+  telefono?: string;
+  password: string;
+}
+
 /** Filtros de la vista HU-06 */
 export interface FiltrosUsuario {
   busqueda: string;

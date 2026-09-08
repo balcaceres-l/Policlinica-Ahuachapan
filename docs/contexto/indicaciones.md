@@ -239,6 +239,18 @@ Administrador = `royal`. Ya definido en `lib/constants/roles.ts`.
   por médico desde el sistema.
 - Duración de cada consulta: **20 a 30 minutos**.
 
+### Decisiones tomadas durante la implementación (no volver a preguntar)
+
+- **Contraseña al registrar un usuario (HU-03):** la escribe el administrador,
+  con campo de confirmación y la misma política de HU-02 (mínimo 8 caracteres,
+  al menos una letra y un número).
+- **Campo `cargo`:** texto libre obligatorio para los tres roles; es solo una
+  etiqueta descriptiva bajo el nombre. La especialidad real del médico vive en
+  la relación médico ↔ especialidades (HU-08), que admite varias.
+- **Campo `usuario`:** es el correo institucional, lo escribe el administrador.
+  Se valida formato de correo y que no exista ya otra cuenta con el mismo correo.
+- **Estado inicial** de toda cuenta nueva: `ACTIVO` (se cambia luego con HU-05).
+
 ---
 
 ## 7. Las 21 HU del Sprint 1 — estado actual y lo que falta
@@ -254,7 +266,7 @@ Administrador = `royal`. Ya definido en `lib/constants/roles.ts`.
 |---|---|---|---|---|---|
 | SCRUM-87 | HU-01 | Inicio de sesión | Todos | ✅ | Nada — `LoginPage.tsx` funcional |
 | SCRUM-88 | HU-02 | Cambio de contraseña | Todos | ✅ | Nada — `CambiarPasswordModal.tsx` funcional |
-| SCRUM-89 | HU-03 | Registro de cuentas de usuario | Admin | 🔲 | Modal con formulario (nombre, usuario, cargo, rol, teléfono, contraseña). Botón "Nuevo Usuario" ya existe deshabilitado en `ListaUsuariosPage.tsx` |
+| SCRUM-89 | HU-03 | Registro de cuentas de usuario | Admin | 🟠 | Funcional sobre mock — **hecha**. `components/admin/RegistrarUsuarioModal.tsx` |
 | SCRUM-90 | HU-04 | Edición de perfil de usuario | Admin | 🔲 | Modal de edición (mismos campos sin contraseña). Botón de editar ya existe deshabilitado |
 | SCRUM-91 | HU-05 | Activación/desactivación de cuentas | Admin | 🔲 | Confirmar con diálogo + mutación mock que cambia estado en `mockData`. Botón ya existe deshabilitado |
 | SCRUM-92 | HU-06 | Consulta del listado de usuarios | Admin | 🟠 | Conectar a mock real (ya funciona sobre `mockData.ts`) — **lista completa** |
