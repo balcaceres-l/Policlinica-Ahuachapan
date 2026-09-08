@@ -35,7 +35,8 @@ class EspecialidadController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $especialidad = Especialidad::create($this->validatePayload($request));
+        // `estado` viene del default de la tabla: sin refresh se devuelve null.
+        $especialidad = Especialidad::create($this->validatePayload($request))->refresh();
         $especialidad->setAttribute('medicos_count', 0);
 
         return $this->success(
