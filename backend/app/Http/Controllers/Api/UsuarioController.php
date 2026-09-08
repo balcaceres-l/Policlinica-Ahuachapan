@@ -43,8 +43,9 @@ class UsuarioController extends Controller
     {
         $user = User::create($this->validatePayload($request));
 
+        // `estado` viene del default de la tabla: sin refresh se devuelve null.
         return $this->success(
-            (new UsuarioResource($user))->resolve(),
+            (new UsuarioResource($user->refresh()))->resolve(),
             'Usuario registrado correctamente.',
             201,
         );
@@ -95,10 +96,8 @@ class UsuarioController extends Controller
             'telefono' => ['nullable', 'string', 'max:25'],
         ];
 
-        // La contraseña solo se define al crear la cuenta. Cambiarla es HU-02 y
-        // pasa por PATCH /auth/change-password, que exige la contraseña actual;
-        // permitirla aquí dejaría a un administrador reasignando credenciales
-        // desde el formulario de edición de perfil, sin trazabilidad.
+        // Solo al crear. Cambiar la contraseña pasa por
+        // PATCH /auth/change-password, que exige la actual.
         if (! $user) {
             $reglas['password'] = ['required', 'string', Password::defaults()];
         }

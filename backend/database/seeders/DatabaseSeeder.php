@@ -31,16 +31,20 @@ class DatabaseSeeder extends Seeder
             ['Katherinne Algarín', 'kalgarin@policlinica.com', 'Coordinación TI', 'ADMINISTRADOR', 'ACTIVO', '2443-1011'],
         ];
 
+        // updateOrCreate y sync mantienen el seeder idempotente: `composer setup`
+        // puede ejecutarse sobre una base ya poblada.
         foreach ($usuarios as [$nombre, $usuario, $cargo, $rol, $estado, $telefono]) {
-            User::create([
-                'nombre_completo' => $nombre,
-                'usuario' => $usuario,
-                'cargo' => $cargo,
-                'rol' => $rol,
-                'estado' => $estado,
-                'telefono' => $telefono,
-                'password' => $password,
-            ]);
+            User::updateOrCreate(
+                ['usuario' => $usuario],
+                [
+                    'nombre_completo' => $nombre,
+                    'cargo' => $cargo,
+                    'rol' => $rol,
+                    'estado' => $estado,
+                    'telefono' => $telefono,
+                    'password' => $password,
+                ],
+            );
         }
 
         $especialidades = [
@@ -53,7 +57,7 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($especialidades as [$nombre, $descripcion, $estado]) {
-            Especialidad::create(compact('nombre', 'descripcion', 'estado'));
+            Especialidad::updateOrCreate(['nombre' => $nombre], compact('descripcion', 'estado'));
         }
 
         $asignaciones = [
@@ -69,7 +73,7 @@ class DatabaseSeeder extends Seeder
         foreach ($asignaciones as $usuario => $nombresEspecialidades) {
             $medico = User::where('usuario', $usuario)->firstOrFail();
             $ids = Especialidad::whereIn('nombre', $nombresEspecialidades)->pluck('id');
-            $medico->especialidades()->attach($ids);
+            $medico->especialidades()->sync($ids);
         }
     }
 }
