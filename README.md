@@ -44,12 +44,16 @@ Sistema web para la gestión de citas médicas, expedientes clínicos electróni
 ```bash
 cd backend
 composer install
-cp .env.example .env
-php artisan key:generate
-# Configurar credenciales de MariaDB en .env
-php artisan migrate --seed
+composer setup
 php artisan serve
 ```
+
+`composer setup` prepara el `.env`, genera la llave y carga las migraciones con seeders.
+Por defecto usa **SQLite**, así que no hace falta instalar MariaDB, ni credenciales, ni
+Tailscale: los seeders reproducen todos los datos de prueba.
+
+Si necesitas la base compartida del equipo —o vas a trabajar en agenda y citas— existe la
+opción de MariaDB por Tailscale. Ver [backend/README.md](backend/README.md).
 
 ### Frontend
 
@@ -59,6 +63,8 @@ npm install
 cp .env.example .env
 npm run dev
 ```
+
+El frontend necesita el backend corriendo: las pantallas están detrás del login.
 
 ## Licencia
 

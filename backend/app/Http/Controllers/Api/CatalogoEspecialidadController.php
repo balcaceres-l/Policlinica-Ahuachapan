@@ -14,10 +14,15 @@ class CatalogoEspecialidadController extends Controller
 
     public function index(): JsonResponse
     {
+        // Recepción usa este catálogo para agendar, así que solo debe ver
+        // médicos que puedan atender. El listado del administrador sí muestra
+        // los inactivos, porque ahí interesa la asignación completa.
+        $soloActivos = fn ($query) => $query->where('estado', 'ACTIVO');
+
         $especialidades = Especialidad::query()
             ->where('estado', 'ACTIVA')
-            ->withCount('medicos')
-            ->with(['medicos' => fn ($query) => $query->orderBy('nombre_completo')])
+            ->withCount(['medicos' => $soloActivos])
+            ->with(['medicos' => fn ($query) => $soloActivos($query)->orderBy('nombre_completo')])
             ->orderBy('nombre')
             ->get();
 

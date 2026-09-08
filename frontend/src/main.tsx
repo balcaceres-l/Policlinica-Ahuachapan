@@ -5,12 +5,16 @@ import { Toaster } from 'react-hot-toast';
 import 'remixicon/fonts/remixicon.css';
 import './index.css';
 import App from '@/App';
+import AuthProvider from '@/context/AuthProvider';
 import { queryClient } from '@/lib/queryClient';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <App />
+      {/* AuthProvider usa useQueryClient, por eso va dentro del QueryClientProvider. */}
+      <AuthProvider>
+        <App />
+      </AuthProvider>
       <Toaster
         position="top-right"
         toastOptions={{

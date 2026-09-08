@@ -14,6 +14,19 @@ export interface Usuario {
   fechaRegistro: string;
 }
 
+/** La entrada de la API va en snake_case; las respuestas vuelven en camelCase. */
+export interface EditarUsuario {
+  nombre_completo: string;
+  usuario: string;
+  cargo: string;
+  rol: RolUsuario;
+  telefono?: string;
+}
+
+export interface NuevoUsuario extends EditarUsuario {
+  password: string;
+}
+
 /** Filtros de la vista HU-06 */
 export interface FiltrosUsuario {
   busqueda: string;

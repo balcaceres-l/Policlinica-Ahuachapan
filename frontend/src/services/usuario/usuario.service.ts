@@ -1,21 +1,45 @@
-import type { Usuario } from '@/types/user.types';
-import { delay } from '@/lib/utils';
-import { mockUsuarios } from '@/services/mockData';
+import api from '@/services/api';
+import type { ApiResponse } from '@/types/api.types';
+import type { EditarUsuario, EstadoUsuario, NuevoUsuario, Usuario } from '@/types/user.types';
 
+/**
+ * El endpoint acepta `rol`, `estado` y `buscar`, pero con una plantilla de una
+ * docena de cuentas sale más barato traerlas todas y filtrar en el cliente.
+ */
 export const getUsuarios = async (): Promise<Usuario[]> => {
-  // TODO: reemplazar con llamada real -> api.get<ApiResponse<Usuario[]>>('/usuarios')
-  await delay(350);
-  return [...mockUsuarios];
+  const { data } = await api.get<ApiResponse<Usuario[]>>('/usuarios');
+  return data.data;
 };
 
 export const getMedicos = async (): Promise<Usuario[]> => {
-  // TODO: api.get<ApiResponse<Usuario[]>>('/usuarios?rol=MEDICO')
-  await delay(250);
-  return mockUsuarios.filter((u) => u.rol === 'MEDICO');
+  const { data } = await api.get<ApiResponse<Usuario[]>>('/usuarios', {
+    params: { rol: 'MEDICO' },
+  });
+  return data.data;
 };
 
-export const getUsuarioById = async (id: number): Promise<Usuario | null> => {
-  // TODO: api.get<ApiResponse<Usuario>>(`/usuarios/${id}`)
-  await delay(150);
-  return mockUsuarios.find((u) => u.id === id) ?? null;
+export const getUsuarioById = async (id: number): Promise<Usuario> => {
+  const { data } = await api.get<ApiResponse<Usuario>>(`/usuarios/${id}`);
+  return data.data;
+};
+
+export const crearUsuario = async (payload: NuevoUsuario): Promise<Usuario> => {
+  const { data } = await api.post<ApiResponse<Usuario>>('/usuarios', payload);
+  return data.data;
+};
+
+export const actualizarUsuario = async (
+  id: number,
+  payload: EditarUsuario,
+): Promise<Usuario> => {
+  const { data } = await api.put<ApiResponse<Usuario>>(`/usuarios/${id}`, payload);
+  return data.data;
+};
+
+export const cambiarEstadoUsuario = async (
+  id: number,
+  estado: EstadoUsuario,
+): Promise<Usuario> => {
+  const { data } = await api.patch<ApiResponse<Usuario>>(`/usuarios/${id}/estado`, { estado });
+  return data.data;
 };

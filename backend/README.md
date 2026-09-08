@@ -6,13 +6,44 @@ API REST construida con Laravel 12, PHP 8.2, Laravel Sanctum y MariaDB.
 
 ```bash
 composer install
-cp .env.example .env
-php artisan key:generate
-php artisan migrate --seed
+composer setup
 php artisan serve
 ```
 
-La API queda disponible en `http://localhost:8000/api`.
+`composer setup` copia `.env.example` a `.env`, genera la `APP_KEY` y corre las migraciones
+con seeders. La API queda en `http://localhost:8000/api`.
+
+Con la configuración por defecto eso es **todo** lo que hace falta: no requiere instalar
+MariaDB, ni credenciales, ni Tailscale.
+
+### Elegir base de datos
+
+`.env.example` trae las dos opciones; solo hay que dejar una activa.
+
+**Opción A — SQLite (por defecto).** Cero configuración: sin servidor de base de datos,
+sin usuario ni contraseña. Cada quien tiene su propia copia, así que nadie pisa los datos
+de otro. `php artisan migrate` crea el archivo automáticamente. Es lo indicado para
+frontend y diseño, que solo necesitan que la API responda para pasar del login.
+
+**Opción B — MariaDB compartida vía Tailscale.** Base común del equipo, igual que
+producción. Necesaria cuando todos deben ver los mismos datos, y **obligatoria para el
+trabajo de agenda y citas**: la regla RB-07 (dos reservas simultáneas no pueden ocupar el
+mismo bloque) depende de transacciones y bloqueos de fila que SQLite maneja distinto, y un
+bug de concurrencia que no aparece en SQLite y sí en producción cuesta días encontrarlo.
+
+Requiere Tailscale conectado y las credenciales, que se piden a Dennis y no van en el
+repositorio. En `.env`, comenta `DB_CONNECTION=sqlite` y descomenta el bloque de MariaDB.
+
+> **La opción B es una base compartida.** `migrate:fresh` y `composer fresh` borran los
+> datos de todo el equipo, no solo los tuyos. Avisa antes de ejecutarlos.
+
+### Reiniciar la base
+
+```bash
+composer fresh
+```
+
+Seguro en SQLite. En la base compartida, destructivo para todos.
 
 ## Credenciales de desarrollo
 

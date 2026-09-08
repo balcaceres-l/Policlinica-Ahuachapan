@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class UsuarioController extends Controller
 {
@@ -42,8 +43,9 @@ class UsuarioController extends Controller
     {
         $user = User::create($this->validatePayload($request));
 
+        // `estado` viene del default de la tabla: sin refresh se devuelve null.
         return $this->success(
-            (new UsuarioResource($user))->resolve(),
+            (new UsuarioResource($user->refresh()))->resolve(),
             'Usuario registrado correctamente.',
             201,
         );
@@ -70,7 +72,17 @@ class UsuarioController extends Controller
             'estado' => ['required', Rule::in(['ACTIVO', 'INACTIVO'])],
         ]);
 
+        // Sin password reset, un administrador que se desactiva queda fuera
+        // del sistema y solo se recupera tocando la base a mano.
+        if ($validated['estado'] === 'INACTIVO' && $usuario->is($request->user())) {
+            return $this->failure('No puedes desactivar tu propia cuenta.', 422);
+        }
+
         $usuario->update($validated);
+
+        if ($validated['estado'] === 'INACTIVO') {
+            $usuario->tokens()->delete();
+        }
 
         return $this->success(
             (new UsuarioResource($usuario->refresh()))->resolve(),
@@ -80,7 +92,7 @@ class UsuarioController extends Controller
 
     private function validatePayload(Request $request, ?User $user = null): array
     {
-        return $request->validate([
+        $reglas = [
             'nombre_completo' => ['required', 'string', 'max:150'],
             'usuario' => [
                 'required',
@@ -92,7 +104,14 @@ class UsuarioController extends Controller
             'rol' => ['required', Rule::in(['ADMINISTRADOR', 'MEDICO', 'RECEPCIONISTA'])],
             'estado' => ['sometimes', Rule::in(['ACTIVO', 'INACTIVO'])],
             'telefono' => ['nullable', 'string', 'max:25'],
-            'password' => [$user ? 'sometimes' : 'required', 'string', 'min:8'],
-        ]);
+        ];
+
+        // Solo al crear. Cambiar la contraseña pasa por
+        // PATCH /auth/change-password, que exige la actual.
+        if (! $user) {
+            $reglas['password'] = ['required', 'string', Password::defaults()];
+        }
+
+        return $request->validate($reglas);
     }
 }
