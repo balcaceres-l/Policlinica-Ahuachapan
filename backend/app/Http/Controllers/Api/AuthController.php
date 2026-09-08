@@ -4,12 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Concerns\RespondsWithJson;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\CambiarPasswordRequest;
 use App\Http\Resources\UsuarioResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
@@ -24,17 +24,16 @@ class AuthController extends Controller
 
         $user = User::where('usuario', $credentials['usuario'])->first();
 
+        // RB-32: mensaje idéntico para usuario inexistente y contraseña incorrecta.
         if (! $user || ! Hash::check($credentials['password'], $user->password)) {
-            throw ValidationException::withMessages([
-                'usuario' => ['Las credenciales proporcionadas no son válidas.'],
-            ]);
+            return $this->failure('Usuario o contraseña incorrectos.', 401);
         }
 
+        // RB-01: solo las cuentas activas pueden autenticarse.
         if ($user->estado !== 'ACTIVO') {
             return $this->failure('El usuario se encuentra inactivo.', 403);
         }
 
-        $user->tokens()->delete();
         $token = $user->createToken('frontend')->plainTextToken;
 
         return $this->success([
@@ -53,5 +52,28 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()?->delete();
 
         return $this->success(null, 'Sesión cerrada correctamente.');
+    }
+
+    /**
+     * HU-02 / RF-02 — cada usuario cambia su propia contraseña.
+     */
+    public function changePassword(CambiarPasswordRequest $request): JsonResponse
+    {
+        $user = $request->user();
+
+        // Se exige la contraseña actual: sin esto, una sesión abierta en un
+        // equipo compartido bastaría para apropiarse de la cuenta.
+        if (! Hash::check($request->validated('password_actual'), $user->password)) {
+            return $this->failure('La contraseña actual no es correcta.', 422);
+        }
+
+        $user->update(['password' => $request->validated('password')]);
+
+        // Se revocan las demás sesiones y se conserva la actual: cambiar la
+        // contraseña suele responder a sospecha de filtración.
+        $tokenActual = $request->user()->currentAccessToken();
+        $user->tokens()->where('id', '!=', $tokenActual->getKey())->delete();
+
+        return $this->success(null, 'Contraseña actualizada correctamente.');
     }
 }

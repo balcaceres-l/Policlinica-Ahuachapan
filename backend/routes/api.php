@@ -7,11 +7,15 @@ use App\Http\Controllers\Api\MedicoEspecialidadController;
 use App\Http\Controllers\Api\UsuarioController;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
+Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:login');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+
+    // HU-02 — disponible para los tres roles (RF-02: todos los usuarios).
+    Route::patch('/auth/change-password', [AuthController::class, 'changePassword'])
+        ->middleware('throttle:6,1');
 
     Route::middleware('role:ADMINISTRADOR')->group(function () {
         Route::apiResource('usuarios', UsuarioController::class)->except('destroy');

@@ -1,7 +1,11 @@
 import { Outlet } from 'react-router-dom';
 import Sidebar from '@/components/layout/Sidebar';
+import useAuth from '@/hooks/auth/useAuth';
+import { ROL_LABEL } from '@/lib/constants/roles';
 
 export function AppLayout() {
+  const { usuario } = useAuth();
+
   return (
     <div className="flex h-screen overflow-hidden bg-canvas">
       <Sidebar />
@@ -10,8 +14,8 @@ export function AppLayout() {
         {/* Barra superior */}
         <header className="flex h-16 shrink-0 items-center justify-between border-b border-line bg-surface px-6">
           <div className="flex items-center gap-2 text-sm text-muted">
-            <i className="ri-shield-user-line text-base" />
-            <span>Modo demostración — sin autenticación</span>
+            <i className="ri-shield-check-line text-base" />
+            <span className="truncate">{usuario?.nombreCompleto}</span>
           </div>
 
           <div className="flex items-center gap-3">
@@ -23,7 +27,7 @@ export function AppLayout() {
               <i className="ri-notification-3-line text-lg" />
             </button>
             <span className="rounded-full bg-royal-soft px-3 py-1 text-xs font-semibold text-royal">
-              Rol: Administrador
+              {usuario ? `Rol: ${ROL_LABEL[usuario.rol]}` : ''}
             </span>
           </div>
         </header>

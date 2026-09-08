@@ -50,7 +50,7 @@ return [
     |
     */
 
-    'expiration' => null,
+    'expiration' => (int) env('AUTH_TOKEN_EXPIRATION', 480),
 
     /*
     |--------------------------------------------------------------------------
