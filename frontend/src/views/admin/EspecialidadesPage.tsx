@@ -1,72 +1,30 @@
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import toast from 'react-hot-toast';
+import ConfirmarEstadoEspecialidadModal from '@/components/especialidad/ConfirmarEstadoEspecialidadModal';
+import EspecialidadModal from '@/components/especialidad/EspecialidadModal';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import DataTable from '@/components/ui/DataTable';
-import Modal from '@/components/ui/Modal';
 import type { Column } from '@/components/ui/DataTable';
-import { useCrearEspecialidad, useEspecialidades } from '@/hooks/especialidad/useEspecialidades';
-import {
-  especialidadFormDefaults,
-  especialidadSchema,
-} from '@/lib/validations/especialidadSchema';
-import type { EspecialidadFormValues } from '@/lib/validations/especialidadSchema';
-import { cn, normalizar } from '@/lib/utils';
+import { useEspecialidades } from '@/hooks/especialidad/useEspecialidades';
+import { cn } from '@/lib/utils';
 import type { Especialidad } from '@/types/especialidad.types';
 
 export function EspecialidadesPage() {
-  const [modalAbierto, setModalAbierto] = useState(false);
   const { data: especialidades = [], isLoading } = useEspecialidades();
-  const crear = useCrearEspecialidad();
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    setError,
-    watch,
-    formState: { errors },
-  } = useForm<EspecialidadFormValues>({
-    resolver: zodResolver(especialidadSchema),
-    defaultValues: especialidadFormDefaults,
-    mode: 'onBlur',
-  });
+  const [modalAbierto, setModalAbierto] = useState(false);
+  const [enEdicion, setEnEdicion] = useState<Especialidad | null>(null);
+  const [enCambioEstado, setEnCambioEstado] = useState<Especialidad | null>(null);
 
-  const descripcion = watch('descripcion');
-
-  const cerrarModal = () => {
-    setModalAbierto(false);
-    reset(especialidadFormDefaults);
+  const abrirAlta = () => {
+    setEnEdicion(null);
+    setModalAbierto(true);
   };
 
-  const onSubmit = (valores: EspecialidadFormValues) => {
-    // Regla de negocio: no se permiten nombres duplicados
-    const duplicada = especialidades.some(
-      (esp) => normalizar(esp.nombre) === normalizar(valores.nombre),
-    );
-
-    if (duplicada) {
-      setError('nombre', {
-        type: 'manual',
-        message: 'Ya existe una especialidad registrada con ese nombre.',
-      });
-      return;
-    }
-
-    crear.mutate(
-      { nombre: valores.nombre, descripcion: valores.descripcion },
-      {
-        onSuccess: (nueva) => {
-          toast.success(`Especialidad "${nueva.nombre}" registrada correctamente.`);
-          cerrarModal();
-        },
-        onError: (error: Error) => {
-          toast.error(error.message || 'No se pudo registrar la especialidad.');
-        },
-      },
-    );
+  /** HU-07 */
+  const abrirEdicion = (especialidad: Especialidad) => {
+    setEnEdicion(especialidad);
+    setModalAbierto(true);
   };
 
   const columnas: Array<Column<Especialidad>> = [
@@ -111,6 +69,42 @@ export function EspecialidadesPage() {
         </Badge>
       ),
     },
+    {
+      key: 'acciones',
+      header: 'Acciones',
+      className: 'w-28 text-right',
+      render: (esp) => (
+        <div className="flex justify-end gap-1">
+          <button
+            type="button"
+            onClick={() => abrirEdicion(esp)}
+            title="Editar especialidad"
+            className="flex size-8 cursor-pointer items-center justify-center rounded-field text-muted transition-colors hover:bg-brand-50 hover:text-brand-600"
+          >
+            <i className="ri-pencil-line text-base" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setEnCambioEstado(esp)}
+            title={esp.estado === 'ACTIVA' ? 'Desactivar especialidad' : 'Activar especialidad'}
+            className={cn(
+              'flex size-8 cursor-pointer items-center justify-center rounded-field',
+              'text-muted transition-colors',
+              esp.estado === 'ACTIVA'
+                ? 'hover:bg-danger-soft hover:text-danger'
+                : 'hover:bg-success-soft hover:text-success',
+            )}
+          >
+            <i
+              className={cn(
+                'text-base',
+                esp.estado === 'ACTIVA' ? 'ri-forbid-line' : 'ri-checkbox-circle-line',
+              )}
+            />
+          </button>
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -122,7 +116,7 @@ export function EspecialidadesPage() {
             Catálogo de servicios que ofrece la Policlínica Ahuachapaneca.
           </p>
         </div>
-        <Button icon="ri-add-line" onClick={() => setModalAbierto(true)}>
+        <Button icon="ri-add-line" onClick={abrirAlta}>
           Nueva Especialidad
         </Button>
       </div>
@@ -137,90 +131,16 @@ export function EspecialidadesPage() {
         emptyMessage="Registra la primera especialidad para comenzar a construir el catálogo."
       />
 
-      <Modal
+      <EspecialidadModal
         isOpen={modalAbierto}
-        onClose={cerrarModal}
-        title="Nueva Especialidad"
-        subtitle="Registra un servicio médico en el catálogo de la policlínica."
-        footer={
-          <>
-            <Button variant="secondary" onClick={cerrarModal} disabled={crear.isPending}>
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              form="form-especialidad"
-              icon="ri-check-line"
-              loading={crear.isPending}
-            >
-              Registrar
-            </Button>
-          </>
-        }
-      >
-        <form
-          id="form-especialidad"
-          onSubmit={handleSubmit(onSubmit)}
-          className="flex flex-col gap-4"
-          noValidate
-        >
-          <div>
-            <label htmlFor="nombre" className="mb-1.5 block text-sm font-semibold text-ink">
-              Nombre de la especialidad <span className="text-danger">*</span>
-            </label>
-            <input
-              id="nombre"
-              type="text"
-              autoFocus
-              placeholder="Ej. Cardiología"
-              {...register('nombre')}
-              className={cn(
-                'h-10 w-full rounded-field border bg-surface px-3 text-sm text-ink placeholder:text-muted',
-                'focus:outline-none focus:ring-4',
-                errors.nombre
-                  ? 'border-danger focus:ring-danger/15'
-                  : 'border-line focus:border-brand-400 focus:ring-brand-600/10',
-              )}
-            />
-            {errors.nombre && (
-              <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-danger">
-                <i className="ri-error-warning-line" />
-                {errors.nombre.message}
-              </p>
-            )}
-          </div>
+        especialidad={enEdicion}
+        onClose={() => setModalAbierto(false)}
+      />
 
-          <div>
-            <label htmlFor="descripcion" className="mb-1.5 block text-sm font-semibold text-ink">
-              Descripción <span className="font-normal text-muted">(opcional)</span>
-            </label>
-            <textarea
-              id="descripcion"
-              rows={3}
-              placeholder="Breve descripción del servicio que se ofrece..."
-              {...register('descripcion')}
-              className={cn(
-                'w-full resize-none rounded-field border bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted',
-                'focus:outline-none focus:ring-4',
-                errors.descripcion
-                  ? 'border-danger focus:ring-danger/15'
-                  : 'border-line focus:border-brand-400 focus:ring-brand-600/10',
-              )}
-            />
-            <div className="mt-1.5 flex items-center justify-between">
-              {errors.descripcion ? (
-                <p className="flex items-center gap-1 text-xs font-medium text-danger">
-                  <i className="ri-error-warning-line" />
-                  {errors.descripcion.message}
-                </p>
-              ) : (
-                <span />
-              )}
-              <span className="text-xs text-muted">{descripcion?.length ?? 0}/200</span>
-            </div>
-          </div>
-        </form>
-      </Modal>
+      <ConfirmarEstadoEspecialidadModal
+        especialidad={enCambioEstado}
+        onClose={() => setEnCambioEstado(null)}
+      />
     </div>
   );
 }

@@ -22,12 +22,6 @@ export interface NuevaEspecialidad {
   descripcion?: string;
 }
 
-/** Tabla puente médico ↔ especialidad (HU-08). */
-export interface MedicoEspecialidad {
-  medicoId: number;
-  especialidadId: number;
-}
-
 /** Especialidad con sus médicos — usado por el catálogo (HU-09). */
 export interface EspecialidadConMedicos extends Especialidad {
   medicos: Usuario[];
