@@ -50,11 +50,7 @@
         ],
         "setup": [
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
-            "@php artisan key:generate --ansi",
-            "@php artisan migrate --seed"
-        ],
-        "fresh": [
-            "@php artisan migrate:fresh --seed"
+            "@php artisan key:generate --ansi"
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",

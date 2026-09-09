@@ -39,21 +39,27 @@ Sistema web para la gestión de citas médicas, expedientes clínicos electróni
 
 ## Instalación
 
+El equipo trabaja contra **una sola base de datos**: el servidor MariaDB al que se llega
+por Tailscale. Antes de empezar necesitas acceso al tailnet y las credenciales, que no
+están en el repositorio.
+
 ### Backend
 
 ```bash
 cd backend
 composer install
 composer setup
+```
+
+`composer setup` prepara el `.env` y genera la llave. Escribe `DB_USERNAME` y
+`DB_PASSWORD` en `backend/.env` y arranca:
+
+```bash
 php artisan serve
 ```
 
-`composer setup` prepara el `.env`, genera la llave y carga las migraciones con seeders.
-Por defecto usa **SQLite**, así que no hace falta instalar MariaDB, ni credenciales, ni
-Tailscale: los seeders reproducen todos los datos de prueba.
-
-Si necesitas la base compartida del equipo —o vas a trabajar en agenda y citas— existe la
-opción de MariaDB por Tailscale. Ver [backend/README.md](backend/README.md).
+No hace falta migrar ni sembrar: la base ya está creada. Ver
+[backend/README.md](backend/README.md) para los comandos que sí afectan a todo el equipo.
 
 ### Frontend
 

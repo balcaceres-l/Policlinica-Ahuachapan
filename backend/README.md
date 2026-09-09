@@ -2,48 +2,49 @@
 
 API REST construida con Laravel 12, PHP 8.2, Laravel Sanctum y MariaDB.
 
+## Base de datos
+
+El equipo trabaja contra **una sola base**: el servidor MariaDB al que se llega por
+Tailscale. No hay copias locales.
+
+Antes de instalar necesitas dos cosas de Dennis: acceso al tailnet y las credenciales de
+MariaDB, que no viajan en el repositorio.
+
 ## Instalación
 
 ```bash
 composer install
 composer setup
+```
+
+`composer setup` copia `.env.example` a `.env` y genera la `APP_KEY`. Luego escribe
+`DB_USERNAME` y `DB_PASSWORD` en tu `.env` y levanta la API:
+
+```bash
 php artisan serve
 ```
 
-`composer setup` copia `.env.example` a `.env`, genera la `APP_KEY` y corre las migraciones
-con seeders. La API queda en `http://localhost:8000/api`.
+Queda en `http://localhost:8000/api`. **No hace falta migrar ni sembrar**: la base ya está
+creada y con datos.
 
-Con la configuración por defecto eso es **todo** lo que hace falta: no requiere instalar
-MariaDB, ni credenciales, ni Tailscale.
+### Comandos de base de datos
 
-### Elegir base de datos
+| Comando | Efecto |
+|---|---|
+| `php artisan migrate` | Aplica migraciones pendientes. Seguro |
+| `php artisan migrate:status` | Muestra qué falta por aplicar |
+| `php artisan db:seed` | Reescribe las 12 cuentas del seeder **para todos** |
+| `php artisan migrate:fresh` | Borra la base **de todo el equipo** |
 
-`.env.example` trae las dos opciones; solo hay que dejar una activa.
+Los dos últimos afectan a los demás. Avisa antes de ejecutarlos.
 
-**Opción A — SQLite (por defecto).** Cero configuración: sin servidor de base de datos,
-sin usuario ni contraseña. Cada quien tiene su propia copia, así que nadie pisa los datos
-de otro. `php artisan migrate` crea el archivo automáticamente. Es lo indicado para
-frontend y diseño, que solo necesitan que la API responda para pasar del login.
+Al agregar una migración nueva, aplícala tú y avisa al equipo para que hagan `pull`:
+mientras no tengan el archivo, su `migrate:status` mostrará migraciones que no poseen.
 
-**Opción B — MariaDB compartida vía Tailscale.** Base común del equipo, igual que
-producción. Necesaria cuando todos deben ver los mismos datos, y **obligatoria para el
-trabajo de agenda y citas**: la regla RB-07 (dos reservas simultáneas no pueden ocupar el
-mismo bloque) depende de transacciones y bloqueos de fila que SQLite maneja distinto, y un
-bug de concurrencia que no aparece en SQLite y sí en producción cuesta días encontrarlo.
+### Pruebas
 
-Requiere Tailscale conectado y las credenciales, que se piden a Dennis y no van en el
-repositorio. En `.env`, comenta `DB_CONNECTION=sqlite` y descomenta el bloque de MariaDB.
-
-> **La opción B es una base compartida.** `migrate:fresh` y `composer fresh` borran los
-> datos de todo el equipo, no solo los tuyos. Avisa antes de ejecutarlos.
-
-### Reiniciar la base
-
-```bash
-composer fresh
-```
-
-Seguro en SQLite. En la base compartida, destructivo para todos.
+`php artisan test` corre sobre SQLite en memoria (ver `phpunit.xml`), así que **no toca la
+base compartida** y puede ejecutarse en cualquier momento.
 
 ## Credenciales de desarrollo
 
