@@ -17,11 +17,11 @@ const NAV_ADMIN: ItemNav[] = [
   { to: '/admin/usuarios', label: 'Usuarios', icon: 'ri-group-line' },
   { to: '/admin/especialidades', label: 'Especialidades', icon: 'ri-stethoscope-line' },
   { to: '/admin/asociar-especialidades', label: 'Asociar médicos', icon: 'ri-links-line' },
+  { to: '/admin/horarios', label: 'Horarios', icon: 'ri-time-line' },
   { to: '/secretaria/especialidades', label: 'Catálogo (Recepción)', icon: 'ri-book-open-line' },
 ];
 
 const NAV_PLACEHOLDER: ItemNav[] = [
-  { to: '#', label: 'Horarios', icon: 'ri-time-line', placeholder: true },
   { to: '#', label: 'Calendario', icon: 'ri-calendar-line', placeholder: true },
   { to: '#', label: 'Pacientes', icon: 'ri-user-heart-line', placeholder: true },
   { to: '#', label: 'Fila del día', icon: 'ri-list-ordered', placeholder: true },
