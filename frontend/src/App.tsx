@@ -7,6 +7,10 @@ import EspecialidadesPage from '@/views/admin/EspecialidadesPage';
 import HorariosPage from '@/views/admin/HorariosPage';
 import ListaUsuariosPage from '@/views/admin/ListaUsuariosPage';
 import CatalogoEspecialidadesPage from '@/views/secretaria/CatalogoEspecialidadesPage';
+import BloqueosAgendaPage from '@/views/secretaria/BloqueosAgendaPage';
+import CalendarioGlobalPage from '@/views/secretaria/CalendarioGlobalPage';
+import CitasRecepcionPage from '@/views/secretaria/CitasRecepcionPage';
+import PacientesRecepcionPage from '@/views/secretaria/PacientesRecepcionPage';
 import CalendarioPage from '@/views/medico/CalendarioPage';
 import CitasPage from '@/views/medico/CitasPage';
 import ExpedientePage from '@/views/medico/ExpedientePage';
@@ -40,6 +44,16 @@ function App() {
             <Route path="/medico/calendario" element={<CalendarioPage />} />
             <Route path="/medico/expediente" element={<ExpedientePage />} />
             <Route path="/medico/laboratorio" element={<LaboratorioClinicoPage />} />
+          </Route>
+        </Route>
+
+        {/* Recepción y Citas */}
+        <Route element={<ProtectedRoute roles={['RECEPCIONISTA', 'ADMINISTRADOR']} />}>
+          <Route element={<AppLayout />}>
+            <Route path="/secretaria/calendario" element={<CalendarioGlobalPage />} />
+            <Route path="/secretaria/citas" element={<CitasRecepcionPage />} />
+            <Route path="/secretaria/pacientes" element={<PacientesRecepcionPage />} />
+            <Route path="/secretaria/bloqueos" element={<BloqueosAgendaPage />} />
           </Route>
         </Route>
 

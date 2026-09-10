@@ -13,9 +13,8 @@ export function AppLayout() {
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Barra superior */}
         <header className="flex h-16 shrink-0 items-center justify-between border-b border-line bg-surface px-6">
-          <div className="flex items-center gap-2 text-sm text-muted">
-            <i className="ri-shield-check-line text-base" />
-            <span className="truncate">{usuario?.nombreCompleto}</span>
+          <div className="flex items-center text-sm font-medium text-ink">
+            <span>{usuario?.nombreCompleto}</span>
           </div>
 
           <div className="flex items-center gap-3">

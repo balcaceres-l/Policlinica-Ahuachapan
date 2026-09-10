@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import toast from 'react-hot-toast';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { extraerMensajeError } from '@/lib/apiError';
+import { cn } from '@/lib/utils';
 import {
   cambiarPasswordDefaults,
   cambiarPasswordSchema,
@@ -22,6 +24,10 @@ const CLASE_INPUT =
   'focus:ring-brand-600/15 disabled:opacity-60';
 
 export function CambiarPasswordModal({ isOpen, onClose }: CambiarPasswordModalProps) {
+  const [mostrarActual, setMostrarActual] = useState(false);
+  const [mostrarNueva, setMostrarNueva] = useState(false);
+  const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -35,6 +41,9 @@ export function CambiarPasswordModal({ isOpen, onClose }: CambiarPasswordModalPr
 
   const cerrar = () => {
     reset(cambiarPasswordDefaults);
+    setMostrarActual(false);
+    setMostrarNueva(false);
+    setMostrarConfirmacion(false);
     onClose();
   };
 
@@ -78,15 +87,26 @@ export function CambiarPasswordModal({ isOpen, onClose }: CambiarPasswordModalPr
           <label htmlFor="password_actual" className="mb-1.5 block text-sm font-medium text-ink">
             Contraseña actual
           </label>
-          <input
-            id="password_actual"
-            type="password"
-            autoComplete="current-password"
-            disabled={isSubmitting}
-            aria-invalid={Boolean(errors.password_actual)}
-            className={CLASE_INPUT}
-            {...register('password_actual')}
-          />
+          <div className="relative">
+            <input
+              id="password_actual"
+              type={mostrarActual ? 'text' : 'password'}
+              autoComplete="current-password"
+              disabled={isSubmitting}
+              aria-invalid={Boolean(errors.password_actual)}
+              className={cn(CLASE_INPUT, 'pr-10')}
+              {...register('password_actual')}
+            />
+            <button
+              type="button"
+              onClick={() => setMostrarActual((prev) => !prev)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-muted transition-colors hover:text-ink focus:outline-none"
+              title={mostrarActual ? 'Ocultar contraseña' : 'Ver contraseña'}
+              tabIndex={-1}
+            >
+              <i className={mostrarActual ? 'ri-eye-off-line text-base' : 'ri-eye-line text-base'} />
+            </button>
+          </div>
           {errors.password_actual && (
             <p className="mt-1.5 text-xs text-danger">{errors.password_actual.message}</p>
           )}
@@ -96,15 +116,26 @@ export function CambiarPasswordModal({ isOpen, onClose }: CambiarPasswordModalPr
           <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-ink">
             Nueva contraseña
           </label>
-          <input
-            id="password"
-            type="password"
-            autoComplete="new-password"
-            disabled={isSubmitting}
-            aria-invalid={Boolean(errors.password)}
-            className={CLASE_INPUT}
-            {...register('password')}
-          />
+          <div className="relative">
+            <input
+              id="password"
+              type={mostrarNueva ? 'text' : 'password'}
+              autoComplete="new-password"
+              disabled={isSubmitting}
+              aria-invalid={Boolean(errors.password)}
+              className={cn(CLASE_INPUT, 'pr-10')}
+              {...register('password')}
+            />
+            <button
+              type="button"
+              onClick={() => setMostrarNueva((prev) => !prev)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-muted transition-colors hover:text-ink focus:outline-none"
+              title={mostrarNueva ? 'Ocultar contraseña' : 'Ver contraseña'}
+              tabIndex={-1}
+            >
+              <i className={mostrarNueva ? 'ri-eye-off-line text-base' : 'ri-eye-line text-base'} />
+            </button>
+          </div>
           {errors.password ? (
             <p className="mt-1.5 text-xs text-danger">{errors.password.message}</p>
           ) : (
@@ -121,15 +152,30 @@ export function CambiarPasswordModal({ isOpen, onClose }: CambiarPasswordModalPr
           >
             Confirmar nueva contraseña
           </label>
-          <input
-            id="password_confirmation"
-            type="password"
-            autoComplete="new-password"
-            disabled={isSubmitting}
-            aria-invalid={Boolean(errors.password_confirmation)}
-            className={CLASE_INPUT}
-            {...register('password_confirmation')}
-          />
+          <div className="relative">
+            <input
+              id="password_confirmation"
+              type={mostrarConfirmacion ? 'text' : 'password'}
+              autoComplete="new-password"
+              disabled={isSubmitting}
+              aria-invalid={Boolean(errors.password_confirmation)}
+              className={cn(CLASE_INPUT, 'pr-10')}
+              {...register('password_confirmation')}
+            />
+            <button
+              type="button"
+              onClick={() => setMostrarConfirmacion((prev) => !prev)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-muted transition-colors hover:text-ink focus:outline-none"
+              title={mostrarConfirmacion ? 'Ocultar contraseña' : 'Ver contraseña'}
+              tabIndex={-1}
+            >
+              <i
+                className={
+                  mostrarConfirmacion ? 'ri-eye-off-line text-base' : 'ri-eye-line text-base'
+                }
+              />
+            </button>
+          </div>
           {errors.password_confirmation && (
             <p className="mt-1.5 text-xs text-danger">{errors.password_confirmation.message}</p>
           )}

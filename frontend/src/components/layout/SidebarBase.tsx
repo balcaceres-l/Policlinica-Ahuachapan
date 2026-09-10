@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import CambiarPasswordModal from '@/components/auth/CambiarPasswordModal';
 import useAuth from '@/hooks/auth/useAuth';
 import { ROL_LABEL } from '@/lib/constants/roles';
-import { cn, getIniciales } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 export interface ItemNav {
   to: string;
@@ -90,33 +90,34 @@ export function SidebarBase({ tituloSeccion, items, children }: SidebarBaseProps
 
       {/* Usuario autenticado */}
       <div className="mt-auto border-t border-white/10 pt-4">
-        <div className="flex items-center gap-3 rounded-field px-2 py-2">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-sm font-bold text-white">
-            {usuario ? getIniciales(usuario.nombreCompleto) : ''}
-          </span>
+        <div className="flex items-center justify-between gap-2 rounded-field px-2 py-2">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-white">{usuario?.nombreCompleto}</p>
-            <p className="truncate text-xs text-brand-200">
+            <p className="text-sm font-semibold text-white leading-tight break-words">
+              {usuario?.nombreCompleto}
+            </p>
+            <p className="mt-0.5 truncate text-xs text-brand-200">
               {usuario ? `Rol: ${ROL_LABEL[usuario.rol]}` : ''}
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setModalPassword(true)}
-            title="Cambiar contraseña"
-            className="flex size-8 cursor-pointer items-center justify-center rounded-field text-brand-200 transition-colors hover:bg-white/10 hover:text-white"
-          >
-            <i className="ri-key-2-line text-lg" />
-          </button>
-          <button
-            type="button"
-            onClick={() => void cerrarSesion()}
-            title="Cerrar sesión"
-            className="flex size-8 cursor-pointer items-center justify-center rounded-field text-brand-200 transition-colors hover:bg-white/10 hover:text-white"
-          >
-            <i className="ri-logout-box-r-line text-lg" />
-          </button>
+          <div className="flex items-center shrink-0">
+            <button
+              type="button"
+              onClick={() => setModalPassword(true)}
+              title="Cambiar contraseña"
+              className="flex size-8 cursor-pointer items-center justify-center rounded-field text-brand-200 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <i className="ri-key-2-line text-lg" />
+            </button>
+            <button
+              type="button"
+              onClick={() => void cerrarSesion()}
+              title="Cerrar sesión"
+              className="flex size-8 cursor-pointer items-center justify-center rounded-field text-brand-200 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <i className="ri-logout-box-r-line text-lg" />
+            </button>
+          </div>
         </div>
       </div>
 
