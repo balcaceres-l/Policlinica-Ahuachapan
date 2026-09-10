@@ -14,7 +14,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $password = Hash::make('Policlinica2026!');
+        $password = Hash::make('1234');
 
         $usuarios = [
             ['Dra. Elena Ramírez Alfaro', 'eramirez@policlinica.com', 'Ginecología', 'MEDICO', 'ACTIVO', '2443-1020'],
