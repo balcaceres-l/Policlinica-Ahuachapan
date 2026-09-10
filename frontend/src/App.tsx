@@ -7,6 +7,11 @@ import EspecialidadesPage from '@/views/admin/EspecialidadesPage';
 import HorariosPage from '@/views/admin/HorariosPage';
 import ListaUsuariosPage from '@/views/admin/ListaUsuariosPage';
 import CatalogoEspecialidadesPage from '@/views/secretaria/CatalogoEspecialidadesPage';
+import CalendarioPage from '@/views/medico/CalendarioPage';
+import CitasPage from '@/views/medico/CitasPage';
+import ExpedientePage from '@/views/medico/ExpedientePage';
+import LaboratorioClinicoPage from '@/views/medico/LaboratorioClinicoPage';
+import PacientesPage from '@/views/medico/PacientesPage';
 
 // Los roles de cada ProtectedRoute deben coincidir con el middleware
 // `role:` de backend/routes/api.php.
@@ -24,6 +29,17 @@ function App() {
             <Route path="/admin/asociar-especialidades" element={<AsociarEspecialidadesPage />} />
             {/* HU-34 */}
             <Route path="/admin/horarios" element={<HorariosPage />} />
+          </Route>
+        </Route>
+
+        {/* Atención Médica (Doctor) */}
+        <Route element={<ProtectedRoute roles={['MEDICO', 'ADMINISTRADOR']} />}>
+          <Route element={<AppLayout />}>
+            <Route path="/medico/pacientes" element={<PacientesPage />} />
+            <Route path="/medico/citas" element={<CitasPage />} />
+            <Route path="/medico/calendario" element={<CalendarioPage />} />
+            <Route path="/medico/expediente" element={<ExpedientePage />} />
+            <Route path="/medico/laboratorio" element={<LaboratorioClinicoPage />} />
           </Route>
         </Route>
 

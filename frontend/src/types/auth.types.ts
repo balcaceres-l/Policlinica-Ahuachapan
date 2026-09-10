@@ -29,6 +29,5 @@ export interface EstadoAuth {
 export const RUTA_INICIO_POR_ROL: Record<RolUsuario, string> = {
   ADMINISTRADOR: '/admin/usuarios',
   RECEPCIONISTA: '/secretaria/especialidades',
-  // TODO(HU-15): apuntar a la agenda del médico cuando exista esa vista.
-  MEDICO: '/secretaria/especialidades',
+  MEDICO: '/medico/citas',
 };
