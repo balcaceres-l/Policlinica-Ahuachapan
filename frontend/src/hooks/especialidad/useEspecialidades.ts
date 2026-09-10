@@ -1,7 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { NuevaEspecialidad } from '@/types/especialidad.types';
+import type {
+  Especialidad,
+  EstadoEspecialidad,
+  NuevaEspecialidad,
+} from '@/types/especialidad.types';
 import {
+  actualizarEspecialidad,
   asignarEspecialidad,
+  cambiarEstadoEspecialidad,
   crearEspecialidad,
   getCatalogoEspecialidades,
   getEspecialidades,
@@ -55,6 +61,24 @@ export const useCrearEspecialidad = () => {
   const invalidar = useInvalidarEspecialidades();
   return useMutation({
     mutationFn: (payload: NuevaEspecialidad) => crearEspecialidad(payload),
+    onSuccess: invalidar,
+  });
+};
+
+export const useActualizarEspecialidad = () => {
+  const invalidar = useInvalidarEspecialidades();
+  return useMutation({
+    mutationFn: (vars: { id: number; payload: NuevaEspecialidad }) =>
+      actualizarEspecialidad(vars.id, vars.payload),
+    onSuccess: invalidar,
+  });
+};
+
+export const useCambiarEstadoEspecialidad = () => {
+  const invalidar = useInvalidarEspecialidades();
+  return useMutation({
+    mutationFn: (vars: { especialidad: Especialidad; estado: EstadoEspecialidad }) =>
+      cambiarEstadoEspecialidad(vars.especialidad, vars.estado),
     onSuccess: invalidar,
   });
 };

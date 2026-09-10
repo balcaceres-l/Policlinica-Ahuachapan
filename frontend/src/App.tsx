@@ -4,6 +4,7 @@ import AppLayout from '@/components/layout/AppLayout';
 import LoginPage from '@/views/auth/LoginPage';
 import AsociarEspecialidadesPage from '@/views/admin/AsociarEspecialidadesPage';
 import EspecialidadesPage from '@/views/admin/EspecialidadesPage';
+import HorariosPage from '@/views/admin/HorariosPage';
 import ListaUsuariosPage from '@/views/admin/ListaUsuariosPage';
 import CatalogoEspecialidadesPage from '@/views/secretaria/CatalogoEspecialidadesPage';
 
@@ -21,6 +22,8 @@ function App() {
             <Route path="/admin/usuarios" element={<ListaUsuariosPage />} />
             <Route path="/admin/especialidades" element={<EspecialidadesPage />} />
             <Route path="/admin/asociar-especialidades" element={<AsociarEspecialidadesPage />} />
+            {/* HU-34 */}
+            <Route path="/admin/horarios" element={<HorariosPage />} />
           </Route>
         </Route>
 
