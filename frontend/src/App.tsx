@@ -7,6 +7,10 @@ import EspecialidadesPage from '@/views/admin/EspecialidadesPage';
 import HorariosPage from '@/views/admin/HorariosPage';
 import ListaUsuariosPage from '@/views/admin/ListaUsuariosPage';
 import CatalogoEspecialidadesPage from '@/views/secretaria/CatalogoEspecialidadesPage';
+import BloqueosAgendaPage from '@/views/secretaria/BloqueosAgendaPage';
+import CalendarioGlobalPage from '@/views/secretaria/CalendarioGlobalPage';
+import CitasRecepcionPage from '@/views/secretaria/CitasRecepcionPage';
+import PacientesRecepcionPage from '@/views/secretaria/PacientesRecepcionPage';
 import CalendarioPage from '@/views/medico/CalendarioPage';
 import CitasPage from '@/views/medico/CitasPage';
 import ExpedientePage from '@/views/medico/ExpedientePage';
@@ -33,7 +37,7 @@ function App() {
         </Route>
 
         {/* Atención Médica (Doctor) */}
-        <Route element={<ProtectedRoute roles={['MEDICO', 'ADMINISTRADOR']} />}>
+        <Route element={<ProtectedRoute roles={['MEDICO']} />}>
           <Route element={<AppLayout />}>
             <Route path="/medico/pacientes" element={<PacientesPage />} />
             <Route path="/medico/citas" element={<CitasPage />} />
@@ -43,10 +47,15 @@ function App() {
           </Route>
         </Route>
 
-        {/* Catálogo de especialidades — RF-10 */}
-        <Route element={<ProtectedRoute roles={['ADMINISTRADOR', 'RECEPCIONISTA', 'MEDICO']} />}>
+        {/* Recepción y Citas */}
+        <Route element={<ProtectedRoute roles={['RECEPCIONISTA']} />}>
           <Route element={<AppLayout />}>
+            {/* HU-09 — pantalla de inicio de la recepcionista */}
             <Route path="/secretaria/especialidades" element={<CatalogoEspecialidadesPage />} />
+            <Route path="/secretaria/calendario" element={<CalendarioGlobalPage />} />
+            <Route path="/secretaria/citas" element={<CitasRecepcionPage />} />
+            <Route path="/secretaria/pacientes" element={<PacientesRecepcionPage />} />
+            <Route path="/secretaria/bloqueos" element={<BloqueosAgendaPage />} />
           </Route>
         </Route>
 

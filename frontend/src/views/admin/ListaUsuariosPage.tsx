@@ -13,11 +13,10 @@ import {
   ESTADO_LABEL,
   OPCIONES_ESTADO,
   OPCIONES_ROL,
-  ROL_AVATAR,
   ROL_BADGE,
   ROL_LABEL,
 } from '@/lib/constants/roles';
-import { cn, getIniciales, normalizar } from '@/lib/utils';
+import { cn, normalizar } from '@/lib/utils';
 import type { EstadoUsuario, RolUsuario, Usuario } from '@/types/user.types';
 
 const POR_PAGINA = 5;
@@ -75,19 +74,9 @@ export function ListaUsuariosPage() {
       key: 'nombre',
       header: 'Nombre completo',
       render: (usuario) => (
-        <div className="flex items-center gap-3">
-          <span
-            className={cn(
-              'flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-bold',
-              ROL_AVATAR[usuario.rol],
-            )}
-          >
-            {getIniciales(usuario.nombreCompleto)}
-          </span>
-          <div className="min-w-0">
-            <p className="truncate font-semibold text-ink">{usuario.nombreCompleto}</p>
-            <p className="truncate text-xs text-muted">{usuario.cargo}</p>
-          </div>
+        <div>
+          <p className="font-semibold text-ink">{usuario.nombreCompleto}</p>
+          <p className="text-xs text-muted">{usuario.cargo}</p>
         </div>
       ),
     },

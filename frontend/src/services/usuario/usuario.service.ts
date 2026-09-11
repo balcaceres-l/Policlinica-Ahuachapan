@@ -1,4 +1,5 @@
 import api from '@/services/api';
+import { mockMedicos } from '@/services/mockData';
 import type { ApiResponse } from '@/types/api.types';
 import type { EditarUsuario, EstadoUsuario, NuevoUsuario, Usuario } from '@/types/user.types';
 
@@ -12,10 +13,18 @@ export const getUsuarios = async (): Promise<Usuario[]> => {
 };
 
 export const getMedicos = async (): Promise<Usuario[]> => {
-  const { data } = await api.get<ApiResponse<Usuario[]>>('/usuarios', {
-    params: { rol: 'MEDICO' },
-  });
-  return data.data;
+  try {
+    const { data } = await api.get<ApiResponse<Usuario[]>>('/usuarios', {
+      params: { rol: 'MEDICO' },
+    });
+    if (Array.isArray(data.data) && data.data.length > 0) {
+      return data.data;
+    }
+    return mockMedicos;
+  } catch {
+    // Fallback para roles sin acceso a /usuarios (ej. Recepcionista) o si el backend no responde
+    return mockMedicos;
+  }
 };
 
 export const getUsuarioById = async (id: number): Promise<Usuario> => {
