@@ -37,7 +37,7 @@ function App() {
         </Route>
 
         {/* Atención Médica (Doctor) */}
-        <Route element={<ProtectedRoute roles={['MEDICO', 'ADMINISTRADOR']} />}>
+        <Route element={<ProtectedRoute roles={['MEDICO']} />}>
           <Route element={<AppLayout />}>
             <Route path="/medico/pacientes" element={<PacientesPage />} />
             <Route path="/medico/citas" element={<CitasPage />} />
@@ -48,19 +48,14 @@ function App() {
         </Route>
 
         {/* Recepción y Citas */}
-        <Route element={<ProtectedRoute roles={['RECEPCIONISTA', 'ADMINISTRADOR']} />}>
+        <Route element={<ProtectedRoute roles={['RECEPCIONISTA']} />}>
           <Route element={<AppLayout />}>
+            {/* HU-09 — pantalla de inicio de la recepcionista */}
+            <Route path="/secretaria/especialidades" element={<CatalogoEspecialidadesPage />} />
             <Route path="/secretaria/calendario" element={<CalendarioGlobalPage />} />
             <Route path="/secretaria/citas" element={<CitasRecepcionPage />} />
             <Route path="/secretaria/pacientes" element={<PacientesRecepcionPage />} />
             <Route path="/secretaria/bloqueos" element={<BloqueosAgendaPage />} />
-          </Route>
-        </Route>
-
-        {/* Catálogo de especialidades — RF-10 */}
-        <Route element={<ProtectedRoute roles={['ADMINISTRADOR', 'RECEPCIONISTA', 'MEDICO']} />}>
-          <Route element={<AppLayout />}>
-            <Route path="/secretaria/especialidades" element={<CatalogoEspecialidadesPage />} />
           </Route>
         </Route>
 
