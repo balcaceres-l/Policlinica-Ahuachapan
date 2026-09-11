@@ -28,6 +28,6 @@ export interface EstadoAuth {
 /** Pantalla inicial de cada rol tras autenticarse. */
 export const RUTA_INICIO_POR_ROL: Record<RolUsuario, string> = {
   ADMINISTRADOR: '/admin/usuarios',
-  RECEPCIONISTA: '/secretaria/calendario',
+  RECEPCIONISTA: '/secretaria/especialidades',
   MEDICO: '/medico/citas',
 };
