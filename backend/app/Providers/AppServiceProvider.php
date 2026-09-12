@@ -20,14 +20,14 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // uncompromised() consulta HaveIBeenPwned, por eso solo en producción.
-        Password::defaults(fn () => $this->app->isProduction()
+        Password::defaults(fn () => app()->isProduction()
             ? Password::min(10)->letters()->mixedCase()->numbers()->symbols()->uncompromised()
             : Password::min(8)->letters()->numbers());
 
-        Model::preventLazyLoading(! $this->app->isProduction());
-        Model::preventSilentlyDiscardingAttributes(! $this->app->isProduction());
+        Model::preventLazyLoading(! app()->isProduction());
+        Model::preventSilentlyDiscardingAttributes(! app()->isProduction());
 
-        if ($this->app->isProduction()) {
+        if (app()->isProduction()) {
             URL::forceScheme('https');
         }
 

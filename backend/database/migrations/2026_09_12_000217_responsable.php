@@ -8,18 +8,18 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('responsables', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table ->string('nombre_completo', 150);
+        Schema::create('responsable', function (Blueprint $table) {
+            $table->uuid('id_responsable')->primary();
+
+            $table->string('nombre_completo', 150);
             $table->string('dui', 15)->nullable()->unique();
             $table->string('telefono', 15)->nullable();
             $table->string('parentesco', 50)->nullable();
-            $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('responsables');
+        Schema::dropIfExists('responsable');
     }
 };
