@@ -4,7 +4,7 @@ export type EstadoEspecialidad = 'ACTIVA' | 'INACTIVA';
 
 /** Fila tal cual vive en la tabla `especialidades`. */
 export interface EspecialidadBase {
-  id: number;
+  id: string;
   nombre: string;
   descripcion: string;
   estado: EstadoEspecialidad;

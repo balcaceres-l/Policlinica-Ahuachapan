@@ -20,7 +20,7 @@ export const especialidadesKeys = {
   all: ['especialidades'] as const,
   activas: ['especialidades', 'activas'] as const,
   catalogo: ['especialidades', 'catalogo'] as const,
-  deMedico: (medicoId: number) => ['especialidades', 'medico', medicoId] as const,
+  deMedico: (medicoId: string) => ['especialidades', 'medico', medicoId] as const,
 };
 
 /** Invalida todo lo que depende del catálogo tras una mutación. */
@@ -49,10 +49,10 @@ export const useCatalogoEspecialidades = () =>
     queryFn: getCatalogoEspecialidades,
   });
 
-export const useEspecialidadesDeMedico = (medicoId: number | null) =>
+export const useEspecialidadesDeMedico = (medicoId: string | null) =>
   useQuery({
-    queryKey: especialidadesKeys.deMedico(medicoId ?? 0),
-    queryFn: () => getEspecialidadesDeMedico(medicoId as number),
+    queryKey: especialidadesKeys.deMedico(medicoId ?? ''),
+    queryFn: () => getEspecialidadesDeMedico(medicoId as string),
     enabled: medicoId !== null,
   });
 
@@ -68,7 +68,7 @@ export const useCrearEspecialidad = () => {
 export const useActualizarEspecialidad = () => {
   const invalidar = useInvalidarEspecialidades();
   return useMutation({
-    mutationFn: (vars: { id: number; payload: NuevaEspecialidad }) =>
+    mutationFn: (vars: { id: string; payload: NuevaEspecialidad }) =>
       actualizarEspecialidad(vars.id, vars.payload),
     onSuccess: invalidar,
   });
@@ -87,7 +87,7 @@ export const useCambiarEstadoEspecialidad = () => {
 export const useAsignarEspecialidad = () => {
   const invalidar = useInvalidarEspecialidades();
   return useMutation({
-    mutationFn: (vars: { medicoId: number; especialidadId: number }) =>
+    mutationFn: (vars: { medicoId: string; especialidadId: string }) =>
       asignarEspecialidad(vars.medicoId, vars.especialidadId),
     onSuccess: invalidar,
   });
@@ -96,7 +96,7 @@ export const useAsignarEspecialidad = () => {
 export const useQuitarEspecialidad = () => {
   const invalidar = useInvalidarEspecialidades();
   return useMutation({
-    mutationFn: (vars: { medicoId: number; especialidadId: number }) =>
+    mutationFn: (vars: { medicoId: string; especialidadId: string }) =>
       quitarEspecialidad(vars.medicoId, vars.especialidadId),
     onSuccess: invalidar,
   });

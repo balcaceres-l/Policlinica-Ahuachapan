@@ -12,7 +12,7 @@ interface AgendarCitaModalProps {
   isOpen: boolean;
   onClose: () => void;
   fechaPredeterminada?: string;
-  medicoIdPredeterminado?: number;
+  medicoIdPredeterminado?: string;
 }
 
 const CLASE_INPUT =
@@ -28,8 +28,8 @@ export function AgendarCitaModal({
 }: AgendarCitaModalProps) {
   const hoy = new Date().toISOString().split('T')[0];
 
-  const [pacienteId, setPacienteId] = useState<number | ''>('');
-  const [medicoId, setMedicoId] = useState<number | ''>(medicoIdPredeterminado ?? '');
+  const [pacienteId, setPacienteId] = useState<string | ''>('');
+  const [medicoId, setMedicoId] = useState<string | ''>(medicoIdPredeterminado ?? '');
   const [fecha, setFecha] = useState(fechaPredeterminada ?? hoy);
   const [horaInicio, setHoraInicio] = useState('15:00');
   const [horaFin, setHoraFin] = useState('15:30');
@@ -73,8 +73,8 @@ export function AgendarCitaModal({
 
     try {
       await agendarMutation.mutateAsync({
-        paciente_id: Number(pacienteId),
-        medico_id: Number(medicoId),
+        paciente_id: pacienteId,
+        medico_id: medicoId,
         fecha,
         hora_inicio: horaInicio,
         hora_fin: horaFin,
@@ -125,7 +125,7 @@ export function AgendarCitaModal({
           </label>
           <select
             value={pacienteId}
-            onChange={(e) => setPacienteId(e.target.value ? Number(e.target.value) : '')}
+            onChange={(e) => setPacienteId(e.target.value)}
             className={CLASE_INPUT}
           >
             <option value="">Selecciona un paciente...</option>
@@ -143,7 +143,7 @@ export function AgendarCitaModal({
           </label>
           <select
             value={medicoId}
-            onChange={(e) => setMedicoId(e.target.value ? Number(e.target.value) : '')}
+            onChange={(e) => setMedicoId(e.target.value)}
             className={CLASE_INPUT}
           >
             <option value="">Selecciona un médico...</option>

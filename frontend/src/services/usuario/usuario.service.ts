@@ -27,7 +27,7 @@ export const getMedicos = async (): Promise<Usuario[]> => {
   }
 };
 
-export const getUsuarioById = async (id: number): Promise<Usuario> => {
+export const getUsuarioById = async (id: string): Promise<Usuario> => {
   const { data } = await api.get<ApiResponse<Usuario>>(`/usuarios/${id}`);
   return data.data;
 };
@@ -38,7 +38,7 @@ export const crearUsuario = async (payload: NuevoUsuario): Promise<Usuario> => {
 };
 
 export const actualizarUsuario = async (
-  id: number,
+  id: string,
   payload: EditarUsuario,
 ): Promise<Usuario> => {
   const { data } = await api.put<ApiResponse<Usuario>>(`/usuarios/${id}`, payload);
@@ -46,7 +46,7 @@ export const actualizarUsuario = async (
 };
 
 export const cambiarEstadoUsuario = async (
-  id: number,
+  id: string,
   estado: EstadoUsuario,
 ): Promise<Usuario> => {
   const { data } = await api.patch<ApiResponse<Usuario>>(`/usuarios/${id}/estado`, { estado });

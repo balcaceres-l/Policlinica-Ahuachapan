@@ -33,7 +33,7 @@ export function CitasRecepcionPage() {
   const [busqueda, setBusqueda] = useState('');
   const [fechaFiltro, setFechaFiltro] = useState(hoyStr);
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoCita | 'TODOS'>('TODOS');
-  const [medicoFiltro, setMedicoFiltro] = useState<number | 'TODOS'>('TODOS');
+  const [medicoFiltro, setMedicoFiltro] = useState<string | 'TODOS'>('TODOS');
   const [tipoCitaFiltro, setTipoCitaFiltro] = useState<TipoCita | 'TODOS'>('TODOS');
 
   // Modales
@@ -279,7 +279,7 @@ export function CitasRecepcionPage() {
           value={busqueda}
           onChange={setBusqueda}
           placeholder="Buscar paciente, expediente o médico..."
-          className="min-w-[220px] flex-1"
+          className="min-w-55 flex-1"
         />
 
         <div className="flex items-center gap-1">
@@ -305,7 +305,7 @@ export function CitasRecepcionPage() {
         <select
           value={medicoFiltro}
           onChange={(e) =>
-            setMedicoFiltro(e.target.value === 'TODOS' ? 'TODOS' : Number(e.target.value))
+            setMedicoFiltro(e.target.value)
           }
           className="h-10 rounded-field border border-line bg-surface px-3 text-xs font-medium text-ink outline-none focus:border-brand-600"
         >

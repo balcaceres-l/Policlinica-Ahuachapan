@@ -1,6 +1,6 @@
 import type { NuevoPaciente, Paciente } from '@/types/paciente.types';
 import { delay, normalizar } from '@/lib/utils';
-import { mockPacientes, siguienteIdPaciente } from '@/services/mockData';
+import { mockPacientes, nuevoUuid } from '@/services/mockData';
 
 const generarNumeroExpediente = (nombreCompleto: string): string => {
   const palabras = nombreCompleto.trim().split(/\s+/);
@@ -30,7 +30,7 @@ export const crearPaciente = async (payload: NuevoPaciente): Promise<Paciente> =
 
   const expediente = generarNumeroExpediente(payload.nombre_completo);
   const nuevo: Paciente = {
-    id: siguienteIdPaciente(),
+    id: nuevoUuid(),
     numero_expediente: expediente,
     nombre_completo: payload.nombre_completo,
     fecha_nacimiento: payload.fecha_nacimiento,

@@ -17,7 +17,7 @@ import type { HorarioMedico } from '@/types/horario.types';
 interface HorarioModalProps {
   isOpen: boolean;
   /** Médico dueño del bloque; el modal solo se abre con uno seleccionado. */
-  medicoId: number;
+  medicoId: string;
   /** `null` = alta de un bloque nuevo; con valor = edición de ese bloque. */
   horario: HorarioMedico | null;
   onClose: () => void;

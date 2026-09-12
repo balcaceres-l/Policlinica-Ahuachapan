@@ -21,18 +21,18 @@ export interface SignosVitales {
   imc?: number;
   saturacion_oxigeno?: number;
   observaciones?: string;
-  registrado_por_id?: number;
+  registrado_por_id?: string;
   fecha_registro?: string;
 }
 
 export interface Cita {
   id: number;
-  paciente_id: number;
+  paciente_id: string;
   pacienteNombre: string;
   pacienteExpediente: string;
-  medico_id: number;
+  medico_id: string;
   medicoNombre: string;
-  especialidad_id?: number;
+  especialidad_id?: string;
   especialidadNombre?: string;
   fecha: string; // YYYY-MM-DD
   hora_inicio: string; // HH:MM
@@ -42,14 +42,14 @@ export interface Cita {
   motivo_cancelacion?: string;
   hora_llegada?: string;
   orden_atencion?: number;
-  creado_por_id: number;
+  creado_por_id: string;
   signos_vitales?: SignosVitales;
 }
 
 export interface NuevaCita {
-  paciente_id: number;
-  medico_id: number;
-  especialidad_id?: number;
+  paciente_id: string;
+  medico_id: string;
+  especialidad_id?: string;
   fecha: string;
   hora_inicio: string;
   hora_fin: string;

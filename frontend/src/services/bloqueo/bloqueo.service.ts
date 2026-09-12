@@ -3,7 +3,7 @@ import { delay } from '@/lib/utils';
 import { mockBloqueosAgenda, siguienteIdBloqueo } from '@/services/mockData';
 
 export interface FiltrosBloqueoQuery {
-  medicoId?: number;
+  medicoId?: string;
   fecha?: string;
   tipoBloqueo?: string;
 }
@@ -28,7 +28,7 @@ export const getBloqueos = async (filtros?: FiltrosBloqueoQuery): Promise<Bloque
 export const crearBloqueo = async (
   payload: NuevoBloqueo,
   medicoNombre: string,
-  usuarioId = 1,
+  usuarioId = '',
 ): Promise<BloqueoAgenda> => {
   await delay(350);
 

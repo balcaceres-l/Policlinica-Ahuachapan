@@ -2,7 +2,7 @@ export type RolUsuario = 'ADMINISTRADOR' | 'MEDICO' | 'RECEPCIONISTA';
 export type EstadoUsuario = 'ACTIVO' | 'INACTIVO';
 
 export interface Usuario {
-  id: number;
+  id: string;
   nombreCompleto: string;
   /** Usuario de acceso / correo institucional */
   usuario: string;

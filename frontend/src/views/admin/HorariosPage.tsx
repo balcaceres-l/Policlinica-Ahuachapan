@@ -26,7 +26,7 @@ const duracionEnHoras = (inicio: string, fin: string): number => {
 /** HU-34 — el administrador configura los horarios de atención de cada médico. */
 export function HorariosPage() {
   const [busqueda, setBusqueda] = useState('');
-  const [medicoId, setMedicoId] = useState<number | null>(null);
+  const [medicoId, setMedicoId] = useState<string | null>(null);
   const [modalAbierto, setModalAbierto] = useState(false);
   const [horarioEnEdicion, setHorarioEnEdicion] = useState<HorarioMedico | null>(null);
   const [horarioAEliminar, setHorarioAEliminar] = useState<HorarioMedico | null>(null);

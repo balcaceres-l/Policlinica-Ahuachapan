@@ -21,6 +21,8 @@ return new class extends Migration
                 ->on('paciente')
                 ->cascadeOnDelete()
                 ->cascadeOnUpdate();
+
+            $table->timestamps();
         });
     }
 

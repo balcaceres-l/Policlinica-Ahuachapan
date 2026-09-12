@@ -41,11 +41,11 @@ export function CalendarioGlobalPage() {
   const hoyStr = useMemo(() => obtenerFechaLocal(), []);
   const [fechaSeleccionada, setFechaSeleccionada] = useState(hoyStr);
   const [modoVista, setModoVista] = useState<ModoVista>('dia');
-  const [medicoFiltro, setMedicoFiltro] = useState<number | 'TODOS'>('TODOS');
+  const [medicoFiltro, setMedicoFiltro] = useState<string | 'TODOS'>('TODOS');
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoCita | 'TODOS'>('TODOS');
 
   const [modalAgendar, setModalAgendar] = useState(false);
-  const [medicoSeleccionadoParaCita, setMedicoSeleccionadoParaCita] = useState<number | undefined>(
+  const [medicoSeleccionadoParaCita, setMedicoSeleccionadoParaCita] = useState<string | undefined>(
     undefined,
   );
 
@@ -126,7 +126,7 @@ export function CalendarioGlobalPage() {
     };
   }, [fechaSeleccionada]);
 
-  const abrirAgendarParaMedico = (mId?: number) => {
+  const abrirAgendarParaMedico = (mId?: string) => {
     setMedicoSeleccionadoParaCita(mId);
     setModalAgendar(true);
   };
@@ -249,9 +249,7 @@ export function CalendarioGlobalPage() {
           {/* Filtro por médico */}
           <select
             value={medicoFiltro}
-            onChange={(e) =>
-              setMedicoFiltro(e.target.value === 'TODOS' ? 'TODOS' : Number(e.target.value))
-            }
+              onChange={(e) => setMedicoFiltro(e.target.value)}
             className="h-9 rounded-field border border-line bg-canvas px-3 text-xs font-medium text-ink outline-none focus:border-brand-600"
           >
             <option value="TODOS">Todos los Médicos ({medicos.length})</option>
@@ -316,7 +314,7 @@ export function CalendarioGlobalPage() {
                     </div>
 
                     {/* Lista de citas o estado de agenda */}
-                    <div className="flex-1 p-3 space-y-2.5 min-h-[220px]">
+                    <div className="flex-1 p-3 space-y-2.5 min-h-55">
                       {bloqueoDelDia ? (
                         <div className="flex flex-col items-center justify-center rounded-field border border-dashed border-danger/40 bg-danger-soft/40 p-4 text-center">
                           <i className="ri-calendar-close-line text-2xl text-danger mb-1" />
@@ -425,7 +423,7 @@ export function CalendarioGlobalPage() {
                   <span className="text-[10px] opacity-80">{dia.fechaStr}</span>
                 </div>
 
-                <div className="flex-1 p-2 space-y-2 min-h-[220px]">
+                <div className="flex-1 p-2 space-y-2 min-h-55">
                   {citasDelDia.length === 0 ? (
                     <div className="flex h-full flex-col items-center justify-center p-3 text-center text-muted">
                       <p className="text-[11px]">Sin citas</p>
@@ -472,7 +470,7 @@ export function CalendarioGlobalPage() {
           <div className="grid grid-cols-7 auto-rows-fr">
             {/* Espacios vacíos antes del día 1 */}
             {Array.from({ length: diasMes.offsetInicio }).map((_, i) => (
-              <div key={`vacio-${i}`} className="min-h-[90px] border-b border-r border-line bg-canvas/30" />
+              <div key={`vacio-${i}`} className="min-h-22.5 border-b border-r border-line bg-canvas/30" />
             ))}
 
             {/* Días del mes */}
@@ -490,7 +488,7 @@ export function CalendarioGlobalPage() {
                     setFechaSeleccionada(diaStr);
                     setModoVista('dia');
                   }}
-                  className={`min-h-[90px] cursor-pointer border-b border-r border-line p-2 transition-colors hover:bg-brand-50/40 ${
+                  className={`min-h-22.5 cursor-pointer border-b border-r border-line p-2 transition-colors hover:bg-brand-50/40 ${
                     esHoy ? 'bg-brand-50/70 font-bold' : ''
                   }`}
                 >

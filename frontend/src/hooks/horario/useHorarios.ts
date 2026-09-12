@@ -9,7 +9,7 @@ import {
 
 export const horariosKeys = {
   all: ['horarios'] as const,
-  deMedico: (medicoId: number) => ['horarios', 'medico', medicoId] as const,
+  deMedico: (medicoId: string) => ['horarios', 'medico', medicoId] as const,
 };
 
 /** Invalida los horarios de todos los médicos tras una mutación. */
@@ -20,10 +20,10 @@ const useInvalidarHorarios = () => {
   };
 };
 
-export const useHorariosDeMedico = (medicoId: number | null) =>
+export const useHorariosDeMedico = (medicoId: string | null) =>
   useQuery({
-    queryKey: horariosKeys.deMedico(medicoId ?? 0),
-    queryFn: () => getHorariosDeMedico(medicoId as number),
+    queryKey: horariosKeys.deMedico(medicoId ?? ''),
+    queryFn: () => getHorariosDeMedico(medicoId as string),
     enabled: medicoId !== null,
   });
 

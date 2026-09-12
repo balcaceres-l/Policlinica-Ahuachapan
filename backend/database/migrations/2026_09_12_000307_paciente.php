@@ -22,7 +22,7 @@ return new class extends Migration
 
             $table->uuid('id_responsable')->nullable();
 
-            $table->foreignId('id_registrado_por')
+            $table->uuid('id_registrado_por')
                 ->constrained('users')
                 ->restrictOnDelete()
                 ->cascadeOnUpdate();

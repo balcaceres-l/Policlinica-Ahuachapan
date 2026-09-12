@@ -43,7 +43,7 @@ const buscarIndice = (id: number): number => {
   return indice;
 };
 
-export const getHorariosDeMedico = async (medicoId: number): Promise<HorarioMedico[]> => {
+export const getHorariosDeMedico = async (medicoId: string): Promise<HorarioMedico[]> => {
   // TODO: api.get<ApiResponse<HorarioMedico[]>>(`/medicos/${medicoId}/horarios`)
   await delay(300);
   return ordenar(mockHorariosMedicos.filter((horario) => horario.medico_id === medicoId));

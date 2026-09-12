@@ -14,7 +14,7 @@ export type DiaSemana =
  */
 export interface HorarioMedico {
   id: number;
-  medico_id: number;
+  medico_id: string;
   dia_semana: DiaSemana;
   /** Formato 'HH:mm' — la columna es TIME en la base. */
   hora_inicio: string;

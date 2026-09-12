@@ -18,7 +18,7 @@ const CLASE_INPUT =
   'focus:ring-brand-600/15 disabled:opacity-60';
 
 export function BloqueoAgendaModal({ isOpen, onClose }: BloqueoAgendaModalProps) {
-  const [medicoId, setMedicoId] = useState<number | ''>('');
+  const [medicoId, setMedicoId] = useState<string | ''>('');
   const [fecha, setFecha] = useState('');
   const [tipoBloqueo, setTipoBloqueo] = useState<TipoBloqueo>('COMPLETO');
   const [horaInicio, setHoraInicio] = useState('08:00');
@@ -56,13 +56,13 @@ export function BloqueoAgendaModal({ isOpen, onClose }: BloqueoAgendaModalProps)
       return;
     }
 
-    const medicoSeleccionado = medicos.find((m) => m.id === Number(medicoId));
+    const medicoSeleccionado = medicos.find((m) => m.id === medicoId);
     const medicoNombre = medicoSeleccionado?.nombreCompleto ?? 'Médico';
 
     try {
       await crearBloqueoMutation.mutateAsync({
         payload: {
-          medico_id: Number(medicoId),
+          medico_id: medicoId,
           fecha,
           tipo_bloqueo: tipoBloqueo,
           hora_inicio: tipoBloqueo === 'PARCIAL' ? horaInicio : undefined,
@@ -122,7 +122,7 @@ export function BloqueoAgendaModal({ isOpen, onClose }: BloqueoAgendaModalProps)
           </label>
           <select
             value={medicoId}
-            onChange={(e) => setMedicoId(e.target.value ? Number(e.target.value) : '')}
+            onChange={(e) => setMedicoId(e.target.value)}
             className={CLASE_INPUT}
           >
             <option value="">Selecciona un médico...</option>

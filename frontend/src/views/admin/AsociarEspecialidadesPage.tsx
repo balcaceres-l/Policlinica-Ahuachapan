@@ -15,7 +15,7 @@ import { cn, getIniciales, normalizar } from '@/lib/utils';
 
 export function AsociarEspecialidadesPage() {
   const [busqueda, setBusqueda] = useState('');
-  const [medicoId, setMedicoId] = useState<number | null>(null);
+  const [medicoId, setMedicoId] = useState<string | null>(null);
 
   const { data: medicos = [], isLoading: cargandoMedicos } = useMedicos();
   const { data: especialidades = [], isLoading: cargandoEspecialidades } =
@@ -41,7 +41,7 @@ export function AsociarEspecialidadesPage() {
   }, [medicos, busqueda]);
 
   /** Un clic sobre el chip alterna la relación médico ↔ especialidad. */
-  const alternar = (especialidadId: number, nombre: string) => {
+  const alternar = (especialidadId: string, nombre: string) => {
     if (medicoId === null || mutando) return;
 
     if (idsAsignadas.has(especialidadId)) {

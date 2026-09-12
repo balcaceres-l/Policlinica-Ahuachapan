@@ -31,7 +31,7 @@ export const crearEspecialidad = async (payload: NuevaEspecialidad): Promise<Esp
 
 /** HU-07 — edición de nombre y descripción. */
 export const actualizarEspecialidad = async (
-  id: number,
+  id: string,
   payload: NuevaEspecialidad,
 ): Promise<Especialidad> => {
   const { data } = await api.put<ApiResponse<Especialidad>>(`/especialidades/${id}`, payload);
@@ -57,7 +57,7 @@ export const cambiarEstadoEspecialidad = async (
 };
 
 /** HU-08 — especialidades asignadas a un médico. */
-export const getEspecialidadesDeMedico = async (medicoId: number): Promise<Especialidad[]> => {
+export const getEspecialidadesDeMedico = async (medicoId: string): Promise<Especialidad[]> => {
   const { data } = await api.get<ApiResponse<Especialidad[]>>(
     `/medicos/${medicoId}/especialidades`,
   );
@@ -65,15 +65,15 @@ export const getEspecialidadesDeMedico = async (medicoId: number): Promise<Espec
 };
 
 export const asignarEspecialidad = async (
-  medicoId: number,
-  especialidadId: number,
+  medicoId: string,
+  especialidadId: string,
 ): Promise<void> => {
   await api.post(`/medicos/${medicoId}/especialidades`, { especialidadId });
 };
 
 export const quitarEspecialidad = async (
-  medicoId: number,
-  especialidadId: number,
+  medicoId: string,
+  especialidadId: string,
 ): Promise<void> => {
   await api.delete(`/medicos/${medicoId}/especialidades/${especialidadId}`);
 };

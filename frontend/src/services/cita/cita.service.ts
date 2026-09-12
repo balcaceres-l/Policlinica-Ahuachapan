@@ -4,7 +4,7 @@ import { mockCitas, mockPacientes, siguienteIdCita } from '@/services/mockData';
 
 export interface FiltrosCitasQuery {
   fecha?: string;
-  medico_id?: number;
+  medico_id?: string;
   estado?: string;
 }
 
@@ -25,7 +25,7 @@ export const getCitas = async (filtros?: FiltrosCitasQuery): Promise<Cita[]> => 
   return resultado.sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio));
 };
 
-export const agendarCita = async (payload: NuevaCita, usuarioId = 1): Promise<Cita> => {
+export const agendarCita = async (payload: NuevaCita, usuarioId = ''): Promise<Cita> => {
   await delay(350);
 
   // Validación de disponibilidad si no es emergencia ni sobrecupo
@@ -133,7 +133,7 @@ export const cancelarCita = async (id: number, motivo: string): Promise<Cita> =>
 export const guardarSignosVitales = async (
   id: number,
   datos: SignosVitales,
-  usuarioId = 1,
+  usuarioId = '',
 ): Promise<Cita> => {
   await delay(300);
   const cita = mockCitas.find((c) => c.id === id);

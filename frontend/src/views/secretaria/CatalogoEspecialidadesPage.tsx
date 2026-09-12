@@ -9,7 +9,7 @@ import { cn, getIniciales, normalizar } from '@/lib/utils';
 export function CatalogoEspecialidadesPage() {
   const { data: catalogo = [], isLoading } = useCatalogoEspecialidades();
   const [busqueda, setBusqueda] = useState('');
-  const [expandidas, setExpandidas] = useState<number[]>([]);
+  const [expandidas, setExpandidas] = useState<string[]>([]);
 
   const filtrado = useMemo(() => {
     const termino = normalizar(busqueda);
@@ -22,7 +22,7 @@ export function CatalogoEspecialidadesPage() {
     );
   }, [catalogo, busqueda]);
 
-  const alternar = (id: number) =>
+  const alternar = (id: string) =>
     setExpandidas((previas) =>
       previas.includes(id) ? previas.filter((valor) => valor !== id) : [...previas, id],
     );
@@ -46,7 +46,7 @@ export function CatalogoEspecialidadesPage() {
           value={busqueda}
           onChange={setBusqueda}
           placeholder="Buscar especialidad o médico..."
-          className="min-w-[260px] flex-1"
+          className="min-w-65 flex-1"
         />
         <span className="inline-flex items-center gap-1.5 rounded-full bg-info-soft px-3 py-1.5 text-xs font-semibold text-info">
           <i className="ri-eye-line" />
