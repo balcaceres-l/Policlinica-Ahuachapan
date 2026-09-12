@@ -14,9 +14,11 @@ export const getIniciales = (nombreCompleto: string): string => {
   return (primera + segunda).toUpperCase();
 };
 
-/** Simula la latencia de red mientras no exista backend. */
-export const delay = (ms = 300): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+/** Resuelve de inmediato sin demoras artificiales. */
+export const delay = (ms?: number): Promise<void> => {
+  void ms;
+  return Promise.resolve();
+};
 
 /** Normaliza texto para comparar/buscar sin tildes ni mayúsculas. */
 export const normalizar = (texto: string): string =>
@@ -32,3 +34,25 @@ export const formatearFecha = (iso: string): string =>
     month: 'short',
     year: 'numeric',
   });
+
+/** Formatea teléfono salvadoreño: "11112222" -> "1111-2222" (máximo 8 dígitos) */
+export const formatearTelefono = (valor: string): string => {
+  const digitos = valor.replace(/\D/g, '').slice(0, 8);
+  if (digitos.length <= 4) return digitos;
+  return `${digitos.slice(0, 4)}-${digitos.slice(4)}`;
+};
+
+/** Formatea DUI salvadoreño: "000000000" -> "00000000-0" (máximo 9 dígitos) */
+export const formatearDui = (valor: string): string => {
+  const digitos = valor.replace(/\D/g, '').slice(0, 9);
+  if (digitos.length <= 8) return digitos;
+  return `${digitos.slice(0, 8)}-${digitos.slice(8)}`;
+};
+
+/**
+ * Detecta si una cadena contiene letras o caracteres especiales distintos de números, espacios o guión.
+ */
+export const contieneLetrasOCaracteresEspeciales = (valor: string): boolean => {
+  return /[^\d\s-]/.test(valor);
+};
+

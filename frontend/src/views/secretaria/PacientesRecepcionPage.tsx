@@ -59,9 +59,16 @@ export function PacientesRecepcionPage() {
     },
     {
       key: 'dui',
-      header: 'DUI',
-      className: 'w-28 text-muted',
-      render: (p) => p.dui,
+      header: 'Documento',
+      className: 'w-32',
+      render: (p) => (
+        <div>
+          <span className="text-xs font-semibold text-ink">{p.dui}</span>
+          <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted">
+            {p.tipo_documento === 'PASAPORTE' ? 'Pasaporte' : 'DUI'}
+          </span>
+        </div>
+      ),
     },
     {
       key: 'telefono',
@@ -88,6 +95,9 @@ export function PacientesRecepcionPage() {
             <p className="text-xs font-semibold text-ink">{p.responsable_nombre}</p>
             <p className="text-[11px] text-muted">
               {p.responsable_parentesco} · {p.responsable_telefono}
+              {p.responsable_documento
+                ? ` · ${p.responsable_tipo_documento === 'PASAPORTE' ? 'Pasaporte' : 'DUI'}: ${p.responsable_documento}`
+                : ''}
             </p>
           </div>
         ) : (
@@ -122,7 +132,7 @@ export function PacientesRecepcionPage() {
         <SearchBar
           value={busqueda}
           onChange={setBusqueda}
-          placeholder="Buscar por nombre, expediente o número de DUI..."
+          placeholder="Buscar por nombre, expediente o documento..."
           className="min-w-[260px] flex-1"
         />
 

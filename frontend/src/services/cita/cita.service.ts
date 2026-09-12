@@ -1,6 +1,5 @@
 import type { Cita, NuevaCita, ReprogramarCitaPayload, SignosVitales } from '@/types/cita.types';
-import { delay } from '@/lib/utils';
-import { mockCitas, mockPacientes, siguienteIdCita } from '@/services/mockData';
+import { mockCitas, mockMedicos, mockPacientes, siguienteIdCita } from '@/services/mockData';
 
 export interface FiltrosCitasQuery {
   fecha?: string;
@@ -9,7 +8,6 @@ export interface FiltrosCitasQuery {
 }
 
 export const getCitas = async (filtros?: FiltrosCitasQuery): Promise<Cita[]> => {
-  await delay(250);
   let resultado = [...mockCitas];
 
   if (filtros?.fecha) {
@@ -26,8 +24,6 @@ export const getCitas = async (filtros?: FiltrosCitasQuery): Promise<Cita[]> => 
 };
 
 export const agendarCita = async (payload: NuevaCita, usuarioId = ''): Promise<Cita> => {
-  await delay(350);
-
   // Validación de disponibilidad si no es emergencia ni sobrecupo
   if (payload.tipo_cita === 'REGULAR') {
     const colision = mockCitas.find(
@@ -47,6 +43,7 @@ export const agendarCita = async (payload: NuevaCita, usuarioId = ''): Promise<C
   }
 
   const paciente = mockPacientes.find((p) => p.id === payload.paciente_id);
+  const medico = mockMedicos.find((m) => m.id === payload.medico_id);
 
   const nueva: Cita = {
     id: siguienteIdCita(),
@@ -54,8 +51,9 @@ export const agendarCita = async (payload: NuevaCita, usuarioId = ''): Promise<C
     pacienteNombre: paciente?.nombre_completo ?? 'Paciente desconocido',
     pacienteExpediente: paciente?.numero_expediente ?? 'S/E',
     medico_id: payload.medico_id,
-    medicoNombre: 'Médico Asignado', // se resolverá según el select
+    medicoNombre: medico?.nombreCompleto ?? 'Médico Especialista',
     especialidad_id: payload.especialidad_id,
+    especialidadNombre: medico?.cargo,
     fecha: payload.fecha,
     hora_inicio: payload.hora_inicio,
     hora_fin: payload.hora_fin,
@@ -69,7 +67,6 @@ export const agendarCita = async (payload: NuevaCita, usuarioId = ''): Promise<C
 };
 
 export const marcarLlegadaCita = async (id: number): Promise<Cita> => {
-  await delay(300);
   const cita = mockCitas.find((c) => c.id === id);
   if (!cita) throw new Error('La cita no fue encontrada.');
 
@@ -93,7 +90,6 @@ export const reprogramarCita = async (
   id: number,
   payload: ReprogramarCitaPayload,
 ): Promise<Cita> => {
-  await delay(350);
   const cita = mockCitas.find((c) => c.id === id);
   if (!cita) throw new Error('La cita no fue encontrada.');
 
@@ -121,7 +117,6 @@ export const reprogramarCita = async (
 };
 
 export const cancelarCita = async (id: number, motivo: string): Promise<Cita> => {
-  await delay(300);
   const cita = mockCitas.find((c) => c.id === id);
   if (!cita) throw new Error('La cita no fue encontrada.');
 
@@ -135,7 +130,6 @@ export const guardarSignosVitales = async (
   datos: SignosVitales,
   usuarioId = '',
 ): Promise<Cita> => {
-  await delay(300);
   const cita = mockCitas.find((c) => c.id === id);
   if (!cita) throw new Error('La cita no fue encontrada.');
 

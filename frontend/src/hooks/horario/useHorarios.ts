@@ -5,6 +5,8 @@ import {
   crearHorario,
   eliminarHorario,
   getHorariosDeMedico,
+  guardarHorariosSemanales,
+  type BloqueHorarioSemanal,
 } from '@/services/horario/horario.service';
 
 export const horariosKeys = {
@@ -52,3 +54,13 @@ export const useEliminarHorario = () => {
     onSuccess: invalidar,
   });
 };
+
+export const useGuardarHorariosSemanales = () => {
+  const invalidar = useInvalidarHorarios();
+  return useMutation({
+    mutationFn: (vars: { medicoId: string; bloques: BloqueHorarioSemanal[] }) =>
+      guardarHorariosSemanales(vars.medicoId, vars.bloques),
+    onSuccess: invalidar,
+  });
+};
+

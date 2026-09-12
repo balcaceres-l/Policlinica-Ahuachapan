@@ -1,5 +1,4 @@
 import type { BloqueoAgenda, NuevoBloqueo } from '@/types/bloqueo.types';
-import { delay } from '@/lib/utils';
 import { mockBloqueosAgenda, siguienteIdBloqueo } from '@/services/mockData';
 
 export interface FiltrosBloqueoQuery {
@@ -9,7 +8,6 @@ export interface FiltrosBloqueoQuery {
 }
 
 export const getBloqueos = async (filtros?: FiltrosBloqueoQuery): Promise<BloqueoAgenda[]> => {
-  await delay(250);
   let lista = [...mockBloqueosAgenda];
 
   if (filtros?.medicoId) {
@@ -30,8 +28,6 @@ export const crearBloqueo = async (
   medicoNombre: string,
   usuarioId = '',
 ): Promise<BloqueoAgenda> => {
-  await delay(350);
-
   // Validación: si es completo, no puede haber otro bloqueo en la misma fecha
   if (payload.tipo_bloqueo === 'COMPLETO') {
     const duplicado = mockBloqueosAgenda.find(
@@ -89,7 +85,6 @@ export const crearBloqueo = async (
 };
 
 export const eliminarBloqueo = async (id: number): Promise<void> => {
-  await delay(250);
   const idx = mockBloqueosAgenda.findIndex((b) => b.id === id);
   if (idx >= 0) {
     mockBloqueosAgenda.splice(idx, 1);

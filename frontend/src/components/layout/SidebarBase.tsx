@@ -40,8 +40,12 @@ export function SidebarBase({ tituloSeccion, items, children }: SidebarBaseProps
     <aside className="flex h-full w-64 shrink-0 flex-col bg-brand-800 px-4 py-5">
       {/* Marca institucional */}
       <div className="flex items-center gap-3 px-2 pb-6">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-field bg-white/10 text-white">
-          <i className="ri-hospital-line text-xl" />
+        <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-field bg-white p-1 shadow-sm">
+          <img
+            src="/images/logo.png"
+            alt="Logo Policlínica Ahuachapaneca"
+            className="h-full w-full object-contain"
+          />
         </span>
         <div className="min-w-0">
           <p className="truncate text-sm font-bold leading-tight text-white">Policlínica</p>

@@ -100,6 +100,13 @@ function SignosVitalesModalContent({ cita, onClose }: { cita: Cita; onClose: () 
       datos.presion_diastolica = val;
     }
 
+    if (datos.presion_sistolica !== undefined && datos.presion_diastolica !== undefined) {
+      if (datos.presion_sistolica <= datos.presion_diastolica) {
+        setError('La presión sistólica debe ser mayor que la presión diastólica.');
+        return;
+      }
+    }
+
     if (frecCardiaca) {
       const val = parseInt(frecCardiaca, 10);
       if (isNaN(val) || val < 30 || val > 250) {

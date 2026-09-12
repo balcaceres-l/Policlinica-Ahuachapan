@@ -1,5 +1,5 @@
 import type { NuevoPaciente, Paciente } from '@/types/paciente.types';
-import { delay, normalizar } from '@/lib/utils';
+import { normalizar } from '@/lib/utils';
 import { mockPacientes, nuevoUuid } from '@/services/mockData';
 
 const generarNumeroExpediente = (nombreCompleto: string): string => {
@@ -13,7 +13,6 @@ const generarNumeroExpediente = (nombreCompleto: string): string => {
 };
 
 export const getPacientes = async (busqueda = ''): Promise<Paciente[]> => {
-  await delay(250);
   const termino = normalizar(busqueda);
   if (!termino) return [...mockPacientes];
 
@@ -26,20 +25,21 @@ export const getPacientes = async (busqueda = ''): Promise<Paciente[]> => {
 };
 
 export const crearPaciente = async (payload: NuevoPaciente): Promise<Paciente> => {
-  await delay(400);
-
   const expediente = generarNumeroExpediente(payload.nombre_completo);
   const nuevo: Paciente = {
     id: nuevoUuid(),
     numero_expediente: expediente,
     nombre_completo: payload.nombre_completo,
     fecha_nacimiento: payload.fecha_nacimiento,
+    tipo_documento: payload.tipo_documento ?? 'DUI',
     dui: payload.dui,
     telefono: payload.telefono,
     es_menor_edad: payload.es_menor_edad,
     responsable_nombre: payload.responsable_nombre,
+    responsable_tipo_documento: payload.responsable_tipo_documento ?? 'DUI',
     responsable_telefono: payload.responsable_telefono,
     responsable_parentesco: payload.responsable_parentesco,
+    responsable_documento: payload.responsable_documento,
     fecha_registro: new Date().toISOString().split('T')[0],
   };
 

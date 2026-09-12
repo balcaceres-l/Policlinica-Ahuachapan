@@ -43,8 +43,25 @@ function FormularioReprogramar({ cita, onClose }: FormularioProps) {
       setError('Debes ingresar la nueva fecha.');
       return;
     }
+    const hoyStr = new Date().toISOString().split('T')[0];
+    if (nuevaFecha < hoyStr) {
+      setError('No se puede reprogramar una cita para una fecha en el pasado.');
+      return;
+    }
+    if (!nuevaHoraInicio || !nuevaHoraFin) {
+      setError('Debes ingresar la hora de inicio y de fin.');
+      return;
+    }
     if (nuevaHoraInicio >= nuevaHoraFin) {
       setError('La hora de inicio debe ser anterior a la hora de fin.');
+      return;
+    }
+    if (
+      nuevaFecha === cita.fecha &&
+      nuevaHoraInicio === cita.hora_inicio &&
+      nuevaHoraFin === cita.hora_fin
+    ) {
+      setError('La nueva fecha y horario deben ser diferentes al horario actual.');
       return;
     }
 

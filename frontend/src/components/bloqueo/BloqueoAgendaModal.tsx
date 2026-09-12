@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import SelectorMedicoCascada from '@/components/cita/SelectorMedicoCascada';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { useCrearBloqueo } from '@/hooks/bloqueo/useBloqueos';
@@ -41,6 +42,11 @@ export function BloqueoAgendaModal({ isOpen, onClose }: BloqueoAgendaModalProps)
       setError('Debes seleccionar la fecha a bloquear.');
       return;
     }
+    const hoyStr = new Date().toISOString().split('T')[0];
+    if (fecha < hoyStr) {
+      setError('No se puede registrar un bloqueo de agenda para una fecha en el pasado.');
+      return;
+    }
     if (tipoBloqueo === 'PARCIAL') {
       if (!horaInicio || !horaFin) {
         setError('Debes indicar la hora de inicio y fin para el bloqueo parcial.');
@@ -51,8 +57,13 @@ export function BloqueoAgendaModal({ isOpen, onClose }: BloqueoAgendaModalProps)
         return;
       }
     }
-    if (!motivo.trim()) {
+    const motivoLimpio = motivo.trim();
+    if (!motivoLimpio) {
       setError('Debes especificar el motivo del bloqueo o ausencia.');
+      return;
+    }
+    if (motivoLimpio.length < 5) {
+      setError('El motivo del bloqueo debe tener al menos 5 caracteres explicativos.');
       return;
     }
 
@@ -116,23 +127,12 @@ export function BloqueoAgendaModal({ isOpen, onClose }: BloqueoAgendaModalProps)
           </div>
         )}
 
-        <div>
-          <label className="mb-1 block text-xs font-semibold text-ink">
-            Médico <span className="text-danger">*</span>
-          </label>
-          <select
-            value={medicoId}
-            onChange={(e) => setMedicoId(e.target.value)}
-            className={CLASE_INPUT}
-          >
-            <option value="">Selecciona un médico...</option>
-            {medicos.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.nombreCompleto} — {m.cargo}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Selector de Médico con Filtro en Cascada y Autocompletado */}
+        <SelectorMedicoCascada
+          medicoId={medicoId}
+          onSelectMedico={(mId) => setMedicoId(mId)}
+          label="Médico para Bloqueo de Agenda"
+        />
 
         <div>
           <label className="mb-1 block text-xs font-semibold text-ink">

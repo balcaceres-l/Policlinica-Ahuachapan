@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
-type ModalSize = 'sm' | 'md' | 'lg';
+type ModalSize = 'sm' | 'md' | 'lg' | 'xl';
 
 interface ModalProps {
   isOpen: boolean;
@@ -19,6 +19,7 @@ const TAMANOS: Record<ModalSize, string> = {
   sm: 'max-w-md',
   md: 'max-w-lg',
   lg: 'max-w-2xl',
+  xl: 'max-w-4xl',
 };
 
 export function Modal({
@@ -81,7 +82,7 @@ export function Modal({
           </button>
         </header>
 
-        <div className="px-6 py-5">{children}</div>
+        <div className="max-h-[calc(85vh-130px)] overflow-y-auto px-6 py-5">{children}</div>
 
         {footer && (
           <footer className="flex justify-end gap-3 border-t border-line bg-canvas px-6 py-4">

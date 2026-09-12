@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import SelectorMedicoCascada from '@/components/cita/SelectorMedicoCascada';
+import SelectorPacienteAutocomplete from '@/components/paciente/SelectorPacienteAutocomplete';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { useAgendarCita } from '@/hooks/cita/useCitas';
-import { usePacientes } from '@/hooks/paciente/usePacientes';
-import { useMedicos } from '@/hooks/usuario/useUsuarios';
-import { mockMedicos } from '@/services/mockData';
 import type { TipoCita } from '@/types/cita.types';
 
 interface AgendarCitaModalProps {
@@ -30,15 +29,19 @@ export function AgendarCitaModal({
 
   const [pacienteId, setPacienteId] = useState<string | ''>('');
   const [medicoId, setMedicoId] = useState<string | ''>(medicoIdPredeterminado ?? '');
+  const [especialidadId, setEspecialidadId] = useState<string | undefined>(undefined);
   const [fecha, setFecha] = useState(fechaPredeterminada ?? hoy);
   const [horaInicio, setHoraInicio] = useState('15:00');
   const [horaFin, setHoraFin] = useState('15:30');
   const [tipoCita, setTipoCita] = useState<TipoCita>('REGULAR');
   const [error, setError] = useState<string | null>(null);
 
-  const { data: pacientes = [] } = usePacientes();
-  const { data: medicos = mockMedicos } = useMedicos();
   const agendarMutation = useAgendarCita();
+
+  const handleSelectMedico = (mId: string, espId?: string) => {
+    setMedicoId(mId);
+    setEspecialidadId(espId);
+  };
 
   const handleHoraInicioChange = (inicio: string) => {
     setHoraInicio(inicio);
@@ -66,6 +69,15 @@ export function AgendarCitaModal({
       setError('Debes indicar la fecha de la cita.');
       return;
     }
+    const hoyStr = new Date().toISOString().split('T')[0];
+    if (fecha < hoyStr) {
+      setError('No se pueden agendar citas para fechas en el pasado.');
+      return;
+    }
+    if (!horaInicio || !horaFin) {
+      setError('Debes especificar la hora de inicio y de fin.');
+      return;
+    }
     if (horaInicio >= horaFin) {
       setError('La hora de inicio debe ser anterior a la hora de fin.');
       return;
@@ -75,6 +87,7 @@ export function AgendarCitaModal({
       await agendarMutation.mutateAsync({
         paciente_id: pacienteId,
         medico_id: medicoId,
+        especialidad_id: especialidadId,
         fecha,
         hora_inicio: horaInicio,
         hora_fin: horaFin,
@@ -83,6 +96,12 @@ export function AgendarCitaModal({
 
       toast.success('Cita agendada exitosamente.');
       onClose();
+      // Limpiar formulario al cerrar
+      setPacienteId('');
+      if (!medicoIdPredeterminado) {
+        setMedicoId('');
+        setEspecialidadId(undefined);
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al agendar cita.';
       setError(msg);
@@ -119,41 +138,17 @@ export function AgendarCitaModal({
           </div>
         )}
 
-        <div>
-          <label className="mb-1 block text-xs font-semibold text-ink">
-            Paciente <span className="text-danger">*</span>
-          </label>
-          <select
-            value={pacienteId}
-            onChange={(e) => setPacienteId(e.target.value)}
-            className={CLASE_INPUT}
-          >
-            <option value="">Selecciona un paciente...</option>
-            {pacientes.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nombre_completo} ({p.numero_expediente}) - DUI: {p.dui}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Selector de Paciente con Autocompletado */}
+        <SelectorPacienteAutocomplete
+          pacienteId={pacienteId}
+          onSelectPaciente={setPacienteId}
+        />
 
-        <div>
-          <label className="mb-1 block text-xs font-semibold text-ink">
-            Médico Asignado <span className="text-danger">*</span>
-          </label>
-          <select
-            value={medicoId}
-            onChange={(e) => setMedicoId(e.target.value)}
-            className={CLASE_INPUT}
-          >
-            <option value="">Selecciona un médico...</option>
-            {medicos.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.nombreCompleto} — {m.cargo}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Selector de Médico con Filtro en Cascada por Especialidad y Autocompletado */}
+        <SelectorMedicoCascada
+          medicoId={medicoId}
+          onSelectMedico={handleSelectMedico}
+        />
 
         <div className="grid grid-cols-3 gap-3">
           <div>

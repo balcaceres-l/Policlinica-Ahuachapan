@@ -3,6 +3,8 @@ import toast from 'react-hot-toast';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { useCrearPaciente } from '@/hooks/paciente/usePacientes';
+import { contieneLetrasOCaracteresEspeciales, formatearDui, formatearTelefono } from '@/lib/utils';
+import type { TipoDocumento } from '@/types/paciente.types';
 
 interface NuevoPacienteModalProps {
   isOpen: boolean;
@@ -17,10 +19,13 @@ const CLASE_INPUT =
 export function NuevoPacienteModal({ isOpen, onClose }: NuevoPacienteModalProps) {
   const [nombreCompleto, setNombreCompleto] = useState('');
   const [fechaNacimiento, setFechaNacimiento] = useState('');
+  const [tipoDocumento, setTipoDocumento] = useState<TipoDocumento>('DUI');
   const [dui, setDui] = useState('');
   const [telefono, setTelefono] = useState('');
   const [esMenorEdad, setEsMenorEdad] = useState(false);
   const [responsableNombre, setResponsableNombre] = useState('');
+  const [responsableTipoDocumento, setResponsableTipoDocumento] = useState<TipoDocumento>('DUI');
+  const [responsableDocumento, setResponsableDocumento] = useState('');
   const [responsableTelefono, setResponsableTelefono] = useState('');
   const [responsableParentesco, setResponsableParentesco] = useState('Madre');
   const [error, setError] = useState<string | null>(null);
@@ -45,31 +50,110 @@ export function NuevoPacienteModal({ isOpen, onClose }: NuevoPacienteModalProps)
     e.preventDefault();
     setError(null);
 
-    if (!nombreCompleto.trim()) {
+    const nombreLimpio = nombreCompleto.trim();
+    if (!nombreLimpio) {
       setError('El nombre completo es obligatorio.');
       return;
     }
+    if (nombreLimpio.length < 3) {
+      setError('El nombre completo debe tener al menos 3 caracteres.');
+      return;
+    }
+    if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s.'-]+$/.test(nombreLimpio)) {
+      setError('El nombre completo solo puede contener letras y espacios.');
+      return;
+    }
+
     if (!fechaNacimiento) {
       setError('La fecha de nacimiento es obligatoria.');
       return;
     }
-    if (!esMenorEdad && !dui.trim()) {
-      setError('El DUI es obligatorio para mayores de edad.');
+    const hoyStr = new Date().toISOString().split('T')[0];
+    if (fechaNacimiento > hoyStr) {
+      setError('La fecha de nacimiento no puede ser posterior a la fecha actual.');
       return;
     }
-    if (esMenorEdad && (!responsableNombre.trim() || !responsableTelefono.trim())) {
-      setError('Los datos del responsable son obligatorios para menores de edad.');
+
+    // Validación de teléfono (solo valida letras y caracteres especiales)
+    const telLimpio = telefono.trim();
+    if (telLimpio && contieneLetrasOCaracteresEspeciales(telLimpio)) {
+      setError('El teléfono de contacto no debe contener letras ni caracteres especiales (solo números).');
       return;
+    }
+
+    const docLimpio = dui.trim();
+    if (!esMenorEdad) {
+      if (!docLimpio) {
+        setError(`El ${tipoDocumento === 'DUI' ? 'DUI' : 'Pasaporte'} es obligatorio para mayores de edad.`);
+        return;
+      }
+      if (tipoDocumento === 'DUI') {
+        if (!/^\d{8}-\d$/.test(docLimpio)) {
+          setError('El DUI debe tener el formato 00000000-0 (9 dígitos).');
+          return;
+        }
+      } else {
+        if (!/^[A-Z0-9]{6,15}$/.test(docLimpio)) {
+          setError('El Pasaporte debe contener entre 6 y 15 caracteres alfanuméricos (sin espacios ni símbolos).');
+          return;
+        }
+      }
+    } else if (docLimpio) {
+      if (tipoDocumento === 'DUI' && !/^\d{8}-\d$/.test(docLimpio)) {
+        setError('Si ingresa DUI para el menor, debe tener el formato 00000000-0.');
+        return;
+      } else if (tipoDocumento === 'PASAPORTE' && !/^[A-Z0-9]{6,15}$/.test(docLimpio)) {
+        setError('Si ingresa Pasaporte para el menor, debe contener entre 6 y 15 caracteres alfanuméricos.');
+        return;
+      }
+    }
+
+    if (esMenorEdad) {
+      if (!responsableNombre.trim()) {
+        setError('El nombre del responsable es obligatorio para menores de edad.');
+        return;
+      }
+      if (responsableNombre.trim().length < 3) {
+        setError('El nombre del responsable debe tener al menos 3 caracteres.');
+        return;
+      }
+      const respDocLimpio = responsableDocumento.trim();
+      if (!respDocLimpio) {
+        setError(`El ${responsableTipoDocumento === 'DUI' ? 'DUI' : 'Pasaporte'} del responsable es obligatorio.`);
+        return;
+      }
+      if (responsableTipoDocumento === 'DUI') {
+        if (!/^\d{8}-\d$/.test(respDocLimpio)) {
+          setError('El DUI del responsable debe tener el formato 00000000-0 (9 dígitos).');
+          return;
+        }
+      } else {
+        if (!/^[A-Z0-9]{6,15}$/.test(respDocLimpio)) {
+          setError('El Pasaporte del responsable debe contener entre 6 y 15 caracteres alfanuméricos.');
+          return;
+        }
+      }
+      if (!responsableTelefono.trim()) {
+        setError('El teléfono del responsable es obligatorio.');
+        return;
+      }
+      if (contieneLetrasOCaracteresEspeciales(responsableTelefono.trim())) {
+        setError('El teléfono del responsable no debe contener letras ni caracteres especiales (solo números).');
+        return;
+      }
     }
 
     try {
       await crearMutation.mutateAsync({
-        nombre_completo: nombreCompleto.trim(),
+        nombre_completo: nombreLimpio,
         fecha_nacimiento: fechaNacimiento,
-        dui: esMenorEdad && !dui.trim() ? 'MENOR' : dui.trim(),
-        telefono: telefono.trim() || undefined,
+        tipo_documento: tipoDocumento,
+        dui: esMenorEdad && !docLimpio ? 'MENOR' : docLimpio,
+        telefono: telLimpio || undefined,
         es_menor_edad: esMenorEdad,
         responsable_nombre: esMenorEdad ? responsableNombre.trim() : undefined,
+        responsable_tipo_documento: esMenorEdad ? responsableTipoDocumento : undefined,
+        responsable_documento: esMenorEdad ? responsableDocumento.trim() : undefined,
         responsable_telefono: esMenorEdad ? responsableTelefono.trim() : undefined,
         responsable_parentesco: esMenorEdad ? responsableParentesco : undefined,
       });
@@ -79,11 +163,15 @@ export function NuevoPacienteModal({ isOpen, onClose }: NuevoPacienteModalProps)
       // Reset
       setNombreCompleto('');
       setFechaNacimiento('');
+      setTipoDocumento('DUI');
       setDui('');
       setTelefono('');
       setEsMenorEdad(false);
       setResponsableNombre('');
+      setResponsableTipoDocumento('DUI');
+      setResponsableDocumento('');
       setResponsableTelefono('');
+      setResponsableParentesco('Madre');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al registrar paciente.';
       setError(msg);
@@ -152,27 +240,52 @@ export function NuevoPacienteModal({ isOpen, onClose }: NuevoPacienteModalProps)
             <input
               type="text"
               value={telefono}
-              onChange={(e) => setTelefono(e.target.value)}
+              onChange={(e) => setTelefono(formatearTelefono(e.target.value))}
               placeholder="7000-0000"
+              maxLength={9}
               className={CLASE_INPUT}
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 items-center gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
           <div>
             <label className="mb-1 block text-xs font-semibold text-ink">
-              DUI {esMenorEdad ? '(Opcional)' : <span className="text-danger">*</span>}
+              Tipo de Documento
+            </label>
+            <select
+              value={tipoDocumento}
+              onChange={(e) => {
+                setTipoDocumento(e.target.value as TipoDocumento);
+                setDui('');
+              }}
+              className={CLASE_INPUT}
+            >
+              <option value="DUI">DUI (Nacional)</option>
+              <option value="PASAPORTE">Pasaporte (Extranjero)</option>
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-ink">
+              {tipoDocumento === 'DUI' ? 'DUI' : 'Pasaporte'}{' '}
+              {esMenorEdad ? '(Opcional)' : <span className="text-danger">*</span>}
             </label>
             <input
               type="text"
               value={dui}
-              onChange={(e) => setDui(e.target.value)}
-              placeholder="00000000-0"
+              onChange={(e) => {
+                if (tipoDocumento === 'DUI') {
+                  setDui(formatearDui(e.target.value));
+                } else {
+                  setDui(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''));
+                }
+              }}
+              placeholder={tipoDocumento === 'DUI' ? '00000000-0' : 'Ej: A12345678'}
+              maxLength={tipoDocumento === 'DUI' ? 10 : 15}
               className={CLASE_INPUT}
             />
           </div>
-          <div className="pt-4">
+          <div className="pb-2 sm:pb-3">
             <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-ink">
               <input
                 type="checkbox"
@@ -203,6 +316,50 @@ export function NuevoPacienteModal({ isOpen, onClose }: NuevoPacienteModalProps)
                 className={CLASE_INPUT}
               />
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-ink">
+                  Tipo Doc. Responsable
+                </label>
+                <select
+                  value={responsableTipoDocumento}
+                  onChange={(e) => {
+                    setResponsableTipoDocumento(e.target.value as TipoDocumento);
+                    setResponsableDocumento('');
+                  }}
+                  className={CLASE_INPUT}
+                >
+                  <option value="DUI">DUI (Nacional)</option>
+                  <option value="PASAPORTE">Pasaporte (Extranjero)</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-ink">
+                  {responsableTipoDocumento === 'DUI'
+                    ? 'DUI del Responsable'
+                    : 'Pasaporte del Responsable'}{' '}
+                  <span className="text-danger">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={responsableDocumento}
+                  onChange={(e) => {
+                    if (responsableTipoDocumento === 'DUI') {
+                      setResponsableDocumento(formatearDui(e.target.value));
+                    } else {
+                      setResponsableDocumento(
+                        e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''),
+                      );
+                    }
+                  }}
+                  placeholder={
+                    responsableTipoDocumento === 'DUI' ? '00000000-0' : 'Ej: A12345678'
+                  }
+                  maxLength={responsableTipoDocumento === 'DUI' ? 10 : 15}
+                  className={CLASE_INPUT}
+                />
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="mb-1 block text-xs font-semibold text-ink">
@@ -211,8 +368,9 @@ export function NuevoPacienteModal({ isOpen, onClose }: NuevoPacienteModalProps)
                 <input
                   type="text"
                   value={responsableTelefono}
-                  onChange={(e) => setResponsableTelefono(e.target.value)}
+                  onChange={(e) => setResponsableTelefono(formatearTelefono(e.target.value))}
                   placeholder="7000-0000"
+                  maxLength={9}
                   className={CLASE_INPUT}
                 />
               </div>
