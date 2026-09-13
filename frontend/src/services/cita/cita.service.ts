@@ -1,6 +1,13 @@
-import type { Cita, NuevaCita, ReprogramarCitaPayload, SignosVitales } from '@/types/cita.types';
-import { delay } from '@/lib/utils';
-import { mockCitas, mockPacientes, siguienteIdCita } from '@/services/mockData';
+import type {
+  AtrasoMedicoPayload,
+  Cita,
+  CitaReubicada,
+  NuevaCita,
+  ReprogramarCitaPayload,
+  SignosVitales,
+} from '@/types/cita.types';
+import { delay, sumarMinutos } from '@/lib/utils';
+import { mockBloqueosAgenda, mockCitas, mockPacientes, siguienteIdCita } from '@/services/mockData';
 
 export interface FiltrosCitasQuery {
   fecha?: string;
@@ -158,5 +165,105 @@ export const guardarSignosVitales = async (
   };
 
   return cita;
+};
+
+/**
+ * HU-37 — citas que se recorren cuando el médico presenta atraso: todo lo
+ * pendiente del día (regular y emergencia), sin tocar sobrecupos, que quedan
+ * fijos porque ya fueron acordados con el paciente en un bloque específico.
+ */
+const citasQueSeRecorren = (medico_id: number, fecha: string): Cita[] =>
+  mockCitas
+    .filter(
+      (c) =>
+        c.medico_id === medico_id &&
+        c.fecha === fecha &&
+        c.tipo_cita !== 'SOBRECUPO' &&
+        c.estado !== 'CANCELADA' &&
+        c.estado !== 'ATENDIDA',
+    )
+    .sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio));
+
+/** Choca contra un sobrecupo fijo de ese médico/fecha o contra un bloqueo de agenda. */
+const tieneColisionEnNuevoHorario = (
+  medico_id: number,
+  fecha: string,
+  horaInicioNueva: string,
+  horaFinNueva: string,
+  citaIdExcluida: number,
+): boolean => {
+  const chocaConSobrecupo = mockCitas.some(
+    (c) =>
+      c.id !== citaIdExcluida &&
+      c.medico_id === medico_id &&
+      c.fecha === fecha &&
+      c.tipo_cita === 'SOBRECUPO' &&
+      c.estado !== 'CANCELADA' &&
+      c.hora_inicio < horaFinNueva &&
+      horaInicioNueva < c.hora_fin,
+  );
+
+  const chocaConBloqueo = mockBloqueosAgenda.some((b) => {
+    if (b.medico_id !== medico_id || b.fecha !== fecha) return false;
+    if (b.tipo_bloqueo === 'COMPLETO') return true;
+    if (!b.hora_inicio || !b.hora_fin) return false;
+    return b.hora_inicio < horaFinNueva && horaInicioNueva < b.hora_fin;
+  });
+
+  return chocaConSobrecupo || chocaConBloqueo;
+};
+
+/** HU-37 — vista previa del corrimiento, antes de aplicarlo. */
+export const previsualizarReubicacionPorAtraso = async (
+  payload: AtrasoMedicoPayload,
+): Promise<CitaReubicada[]> => {
+  // TODO: GET /citas/reubicacion-por-atraso/preview?medico_id=&fecha=&minutos_atraso=
+  await delay(250);
+
+  const { medico_id, fecha, minutos_atraso } = payload;
+  const citas = citasQueSeRecorren(medico_id, fecha);
+
+  if (citas.length === 0) {
+    throw new Error('El médico no tiene citas pendientes para reubicar en esa fecha.');
+  }
+
+  return citas.map((c) => {
+    const horaInicioNueva = sumarMinutos(c.hora_inicio, minutos_atraso);
+    const horaFinNueva = sumarMinutos(c.hora_fin, minutos_atraso);
+
+    return {
+      citaId: c.id,
+      pacienteNombre: c.pacienteNombre,
+      horaInicioAnterior: c.hora_inicio,
+      horaFinAnterior: c.hora_fin,
+      horaInicioNueva,
+      horaFinNueva,
+      tieneColision: tieneColisionEnNuevoHorario(
+        medico_id,
+        fecha,
+        horaInicioNueva,
+        horaFinNueva,
+        c.id,
+      ),
+    };
+  });
+};
+
+/** HU-37 — aplica el corrimiento a todas las citas siguientes del médico ese día. */
+export const aplicarReubicacionPorAtraso = async (
+  payload: AtrasoMedicoPayload,
+): Promise<Cita[]> => {
+  // TODO: POST /citas/reubicacion-por-atraso { medico_id, fecha, minutos_atraso }
+  await delay(400);
+
+  const { medico_id, fecha, minutos_atraso } = payload;
+  const citas = citasQueSeRecorren(medico_id, fecha);
+
+  citas.forEach((c) => {
+    c.hora_inicio = sumarMinutos(c.hora_inicio, minutos_atraso);
+    c.hora_fin = sumarMinutos(c.hora_fin, minutos_atraso);
+  });
+
+  return citas;
 };
 

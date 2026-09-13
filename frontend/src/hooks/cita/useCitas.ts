@@ -1,14 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   agendarCita,
+  aplicarReubicacionPorAtraso,
   cancelarCita,
   getCitas,
   guardarSignosVitales,
   marcarLlegadaCita,
+  previsualizarReubicacionPorAtraso,
   reprogramarCita,
   type FiltrosCitasQuery,
 } from '@/services/cita/cita.service';
-import type { NuevaCita, ReprogramarCitaPayload, SignosVitales } from '@/types/cita.types';
+import type {
+  AtrasoMedicoPayload,
+  NuevaCita,
+  ReprogramarCitaPayload,
+  SignosVitales,
+} from '@/types/cita.types';
 
 export const citasKeys = {
   all: ['citas'] as const,
@@ -68,6 +75,23 @@ export const useGuardarSignosVitales = () => {
   return useMutation({
     mutationFn: ({ id, datos }: { id: number; datos: SignosVitales }) =>
       guardarSignosVitales(id, datos),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: citasKeys.all });
+    },
+  });
+};
+
+/** HU-37 — no muta datos, solo calcula el corrimiento propuesto para mostrarlo antes de aplicarlo. */
+export const usePrevisualizarReubicacionPorAtraso = () => {
+  return useMutation({
+    mutationFn: (payload: AtrasoMedicoPayload) => previsualizarReubicacionPorAtraso(payload),
+  });
+};
+
+export const useAplicarReubicacionPorAtraso = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: AtrasoMedicoPayload) => aplicarReubicacionPorAtraso(payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: citasKeys.all });
     },

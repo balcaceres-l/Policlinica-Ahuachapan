@@ -62,6 +62,25 @@ export interface ReprogramarCitaPayload {
   hora_fin: string;
 }
 
+/** HU-37 — datos para recorrer la agenda de un médico cuando presenta atraso. */
+export interface AtrasoMedicoPayload {
+  medico_id: number;
+  fecha: string;
+  minutos_atraso: number;
+}
+
+/** HU-37 — resultado de comparar el horario anterior contra el propuesto por el atraso. */
+export interface CitaReubicada {
+  citaId: number;
+  pacienteNombre: string;
+  horaInicioAnterior: string;
+  horaFinAnterior: string;
+  horaInicioNueva: string;
+  horaFinNueva: string;
+  /** true si el nuevo horario choca con un sobrecupo fijo o un bloqueo de agenda. */
+  tieneColision: boolean;
+}
+
 export const ESTADO_CITA_LABEL: Record<EstadoCita, string> = {
   AGENDADA: 'Agendada',
   EN_ESPERA: 'En espera',

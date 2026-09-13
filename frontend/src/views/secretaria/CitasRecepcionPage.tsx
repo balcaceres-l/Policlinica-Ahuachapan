@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import AgendarCitaModal from '@/components/cita/AgendarCitaModal';
+import AlertaRetrasoPacientes from '@/components/cita/AlertaRetrasoPacientes';
 import CancelarCitaModal from '@/components/cita/CancelarCitaModal';
 import ReprogramarCitaModal from '@/components/cita/ReprogramarCitaModal';
+import ReubicarPorAtrasoModal from '@/components/cita/ReubicarPorAtrasoModal';
 import SignosVitalesModal from '@/components/cita/SignosVitalesModal';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
@@ -11,7 +13,7 @@ import SearchBar from '@/components/ui/SearchBar';
 import { useCitas, useMarcarLlegada } from '@/hooks/cita/useCitas';
 import { useMedicos } from '@/hooks/usuario/useUsuarios';
 import { mockMedicos } from '@/services/mockData';
-import { cn, normalizar } from '@/lib/utils';
+import { cn, minutosTranscurridosDesde, normalizar } from '@/lib/utils';
 import {
   ESTADO_CITA_LABEL,
   TIPO_CITA_LABEL,
@@ -19,6 +21,9 @@ import {
   type EstadoCita,
   type TipoCita,
 } from '@/types/cita.types';
+
+/** AC-43 de HU-38: umbral desde el que se considera que un paciente está atrasado. */
+const UMBRAL_RETRASO_MIN = 20;
 
 const obtenerFechaLocal = (d = new Date()) => {
   const anio = d.getFullYear();
@@ -38,6 +43,7 @@ export function CitasRecepcionPage() {
 
   // Modales
   const [modalAgendar, setModalAgendar] = useState(false);
+  const [modalReubicarAtraso, setModalReubicarAtraso] = useState(false);
   const [citaAReprogramar, setCitaAReprogramar] = useState<Cita | null>(null);
   const [citaACancelar, setCitaACancelar] = useState<Cita | null>(null);
   const [citaSignosVitales, setCitaSignosVitales] = useState<Cita | null>(null);
@@ -90,17 +96,31 @@ export function CitasRecepcionPage() {
       key: 'horario',
       header: 'Horario',
       className: 'w-28 font-semibold text-ink',
-      render: (cita) => (
-        <div>
-          <span>{cita.hora_inicio} - {cita.hora_fin}</span>
-          {cita.fecha !== hoyStr && (
-            <p className="text-[10px] text-brand-600 font-semibold">{cita.fecha}</p>
-          )}
-          {cita.hora_llegada && (
-            <p className="text-[10px] text-muted">Llegó: {cita.hora_llegada}</p>
-          )}
-        </div>
-      ),
+      render: (cita) => {
+        // HU-38: marca visualmente la cita de hoy que superó los 20 min de retraso.
+        const conRetraso =
+          cita.estado === 'AGENDADA' &&
+          !cita.hora_llegada &&
+          cita.fecha === hoyStr &&
+          minutosTranscurridosDesde(cita.hora_inicio) > UMBRAL_RETRASO_MIN;
+
+        return (
+          <div>
+            <span>{cita.hora_inicio} - {cita.hora_fin}</span>
+            {cita.fecha !== hoyStr && (
+              <p className="text-[10px] text-brand-600 font-semibold">{cita.fecha}</p>
+            )}
+            {cita.hora_llegada && (
+              <p className="text-[10px] text-muted">Llegó: {cita.hora_llegada}</p>
+            )}
+            {conRetraso && (
+              <p className="mt-0.5 flex items-center gap-1 text-[10px] font-bold uppercase text-danger">
+                <i className="ri-alarm-warning-line" /> Con retraso
+              </p>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'paciente',
@@ -235,10 +255,22 @@ export function CitasRecepcionPage() {
             Registro de citas, confirmación de sala de espera y control del flujo de pacientes.
           </p>
         </div>
-        <Button icon="ri-calendar-check-line" onClick={() => setModalAgendar(true)}>
-          Nueva Cita
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="secondary"
+            icon="ri-time-line"
+            onClick={() => setModalReubicarAtraso(true)}
+          >
+            Registrar atraso de médico
+          </Button>
+          <Button icon="ri-calendar-check-line" onClick={() => setModalAgendar(true)}>
+            Nueva Cita
+          </Button>
+        </div>
       </div>
+
+      {/* Alerta de retraso del paciente (HU-38) */}
+      <AlertaRetrasoPacientes />
 
       {/* Tarjetas de métricas rápidas */}
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -366,6 +398,12 @@ export function CitasRecepcionPage() {
         cita={citaAReprogramar}
         isOpen={citaAReprogramar !== null}
         onClose={() => setCitaAReprogramar(null)}
+      />
+
+      <ReubicarPorAtrasoModal
+        isOpen={modalReubicarAtraso}
+        onClose={() => setModalReubicarAtraso(false)}
+        fechaPredeterminada={fechaFiltro || hoyStr}
       />
 
       <CancelarCitaModal
