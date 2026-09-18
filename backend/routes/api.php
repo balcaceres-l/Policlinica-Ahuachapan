@@ -32,8 +32,8 @@ Route::middleware('auth:sanctum')->group(function () {
         );
     });
 
-    Route::middleware('role:ADMINISTRADOR,RECEPCIONISTA')->get(
-        '/catalogo/especialidades',
-        [CatalogoEspecialidadController::class, 'index'],
-    );
+    Route::middleware('role:ADMINISTRADOR,RECEPCIONISTA')->group(function () {
+        Route::get('/catalogo/especialidades', [CatalogoEspecialidadController::class, 'index']);
+        Route::get('/medicos', [UsuarioController::class, 'medicos']);
+    });
 });

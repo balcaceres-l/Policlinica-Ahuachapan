@@ -39,6 +39,21 @@ class UsuarioController extends Controller
         return $this->success(UsuarioResource::collection($usuarios)->resolve());
     }
 
+    /**
+     * Médicos activos, para los selectores de agenda y asignación. Recepción
+     * los necesita pero no debe ver el resto del padrón de usuarios.
+     */
+    public function medicos(): JsonResponse
+    {
+        $medicos = User::query()
+            ->where('rol', 'MEDICO')
+            ->where('estado', 'ACTIVO')
+            ->orderBy('nombre_completo')
+            ->get();
+
+        return $this->success(UsuarioResource::collection($medicos)->resolve());
+    }
+
     public function store(Request $request): JsonResponse
     {
         $user = User::create($this->validatePayload($request));

@@ -1,5 +1,4 @@
 import api from '@/services/api';
-import { mockCatalogoEspecialidades, mockEspecialidades } from '@/services/mockData';
 import type { ApiResponse } from '@/types/api.types';
 import type {
   Especialidad,
@@ -13,29 +12,15 @@ import type {
  * activas e inactivas, así que solo se filtra donde hace falta.
  */
 export const getEspecialidades = async (): Promise<Especialidad[]> => {
-  try {
-    const { data } = await api.get<ApiResponse<Especialidad[]>>('/especialidades');
-    if (Array.isArray(data.data) && data.data.length > 0) {
-      return data.data;
-    }
-    return mockEspecialidades;
-  } catch {
-    return mockEspecialidades;
-  }
+  const { data } = await api.get<ApiResponse<Especialidad[]>>('/especialidades');
+  return data.data;
 };
 
 export const getEspecialidadesActivas = async (): Promise<Especialidad[]> => {
-  try {
-    const { data } = await api.get<ApiResponse<Especialidad[]>>('/especialidades', {
-      params: { estado: 'ACTIVA' },
-    });
-    if (Array.isArray(data.data) && data.data.length > 0) {
-      return data.data;
-    }
-    return mockEspecialidades.filter((e) => e.estado === 'ACTIVA');
-  } catch {
-    return mockEspecialidades.filter((e) => e.estado === 'ACTIVA');
-  }
+  const { data } = await api.get<ApiResponse<Especialidad[]>>('/especialidades', {
+    params: { estado: 'ACTIVA' },
+  });
+  return data.data;
 };
 
 /** HU-07 — registro de una especialidad. El duplicado lo rechaza el backend. */
@@ -73,35 +58,10 @@ export const cambiarEstadoEspecialidad = async (
 
 /** HU-08 — especialidades asignadas a un médico. */
 export const getEspecialidadesDeMedico = async (medicoId: string): Promise<Especialidad[]> => {
-  try {
-    const { data } = await api.get<ApiResponse<Especialidad[]>>(
-      `/medicos/${medicoId}/especialidades`,
-    );
-    if (Array.isArray(data.data) && data.data.length > 0) {
-      return data.data;
-    }
-    return mockCatalogoEspecialidades
-      .filter((esp) => esp.medicos.some((m) => m.id === medicoId))
-      .map((esp) => ({
-        id: esp.id,
-        nombre: esp.nombre,
-        descripcion: esp.descripcion,
-        estado: esp.estado,
-        cantidadMedicos: esp.cantidadMedicos,
-        fechaRegistro: esp.fechaRegistro,
-      }));
-  } catch {
-    return mockCatalogoEspecialidades
-      .filter((esp) => esp.medicos.some((m) => m.id === medicoId))
-      .map((esp) => ({
-        id: esp.id,
-        nombre: esp.nombre,
-        descripcion: esp.descripcion,
-        estado: esp.estado,
-        cantidadMedicos: esp.cantidadMedicos,
-        fechaRegistro: esp.fechaRegistro,
-      }));
-  }
+  const { data } = await api.get<ApiResponse<Especialidad[]>>(
+    `/medicos/${medicoId}/especialidades`,
+  );
+  return data.data;
 };
 
 export const asignarEspecialidad = async (
@@ -120,15 +80,8 @@ export const quitarEspecialidad = async (
 
 /** HU-09 — catálogo para recepción: solo especialidades activas con médicos activos. */
 export const getCatalogoEspecialidades = async (): Promise<EspecialidadConMedicos[]> => {
-  try {
-    const { data } = await api.get<ApiResponse<EspecialidadConMedicos[]>>(
-      '/catalogo/especialidades',
-    );
-    if (Array.isArray(data.data) && data.data.length > 0) {
-      return data.data;
-    }
-    return mockCatalogoEspecialidades;
-  } catch {
-    return mockCatalogoEspecialidades;
-  }
+  const { data } = await api.get<ApiResponse<EspecialidadConMedicos[]>>(
+    '/catalogo/especialidades',
+  );
+  return data.data;
 };
