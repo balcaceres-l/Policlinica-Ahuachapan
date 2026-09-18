@@ -56,6 +56,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/citas/{cita}/reprogramar', [CitaController::class, 'reprogramar']);
         Route::patch('/citas/{cita}/llegada', [CitaController::class, 'registrarLlegada']);
         Route::patch('/citas/{cita}/mover-al-final', [CitaController::class, 'moverAlFinal']);
+
+        // HU-37 — corre las citas pendientes cuando el médico llega tarde.
+        Route::patch(
+            '/medicos/{medico}/agenda/desplazar',
+            [CitaController::class, 'desplazarPorAtraso'],
+        );
     });
 
     // HU-10, HU-11, HU-12, HU-15, HU-16 — el médico consulta y agenda en su

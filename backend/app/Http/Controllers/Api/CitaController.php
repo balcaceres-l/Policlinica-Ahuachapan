@@ -184,6 +184,41 @@ class CitaController extends Controller
         );
     }
 
+    /**
+     * HU-37 — el médico llega tarde y las citas pendientes se corren.
+     */
+    public function desplazarPorAtraso(Request $request, User $medico): JsonResponse
+    {
+        if ($medico->rol !== 'MEDICO') {
+            return $this->failure('El usuario indicado no es médico.', 422);
+        }
+
+        $validado = $request->validate([
+            'fecha' => ['required', 'date_format:Y-m-d'],
+            'minutos' => ['required', 'integer', 'min:1', 'max:480'],
+            'desde_hora' => ['nullable', 'date_format:H:i'],
+        ]);
+
+        $usuario = $request->user();
+        if ($usuario->rol === 'MEDICO' && $usuario->id !== $medico->id) {
+            return $this->failure('Solo puedes mover citas de tu propia agenda.', 403);
+        }
+
+        $resultado = $this->agenda->desplazarPorAtraso(
+            $medico->id,
+            $validado['fecha'],
+            $validado['minutos'],
+            $validado['desde_hora'] ?? null,
+        );
+
+        $citas = collect($resultado['citas'])->each->load(['paciente', 'medico']);
+
+        return $this->success([
+            'citas' => CitaResource::collection($citas)->resolve(),
+            'fueraDeHorario' => $resultado['fuera_de_horario'],
+        ], count($citas).' cita(s) desplazada(s) '.$validado['minutos'].' minutos.');
+    }
+
     /** Mueve al paciente al final de la fila cuando llega con retraso. */
     public function moverAlFinal(Request $request, cita $cita): JsonResponse
     {

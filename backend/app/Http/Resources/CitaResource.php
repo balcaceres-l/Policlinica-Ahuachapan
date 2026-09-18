@@ -27,6 +27,23 @@ class CitaResource extends JsonResource
             'hora_llegada' => $this->hora_llegada?->toDateTimeString(),
             'orden_atencion' => $this->orden_atencion,
             'creado_por_id' => $this->id_creado_por,
+            'minutos_retraso' => $this->minutosDeRetraso(),
+            'retrasada' => $this->minutosDeRetraso() > config('clinica.retraso_paciente_min'),
         ];
+    }
+
+    /**
+     * Minutos transcurridos desde la hora agendada mientras el paciente no
+     * llega. Solo aplica a citas de hoy que siguen esperando (RF-44).
+     */
+    private function minutosDeRetraso(): int
+    {
+        if ($this->estado !== 'AGENDADA' || ! $this->fecha?->isToday()) {
+            return 0;
+        }
+
+        $agendada = $this->fecha->copy()->setTimeFromTimeString((string) $this->hora_inicio);
+
+        return $agendada->isPast() ? (int) $agendada->diffInMinutes(now()) : 0;
     }
 }

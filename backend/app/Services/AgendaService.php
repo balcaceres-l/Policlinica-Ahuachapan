@@ -161,6 +161,51 @@ class AgendaService
     }
 
     /**
+     * Corre las citas pendientes de un médico cuando llega tarde. Conserva la
+     * duración de cada una y respeta el orden; las que quedan fuera de la
+     * jornada se desplazan igual y se devuelven señaladas, porque el médico ya
+     * va tarde y recepción necesita verlas para decidir.
+     *
+     * @return array{citas: array<int, cita>, fuera_de_horario: array<int, string>}
+     */
+    public function desplazarPorAtraso(
+        string $medicoId,
+        string $fecha,
+        int $minutos,
+        ?string $desdeHora = null,
+    ): array {
+        return DB::transaction(function () use ($medicoId, $fecha, $minutos, $desdeHora) {
+            User::where('id', $medicoId)->lockForUpdate()->first();
+
+            $citas = cita::where('id_medico', $medicoId)
+                ->whereDate('fecha', $fecha)
+                ->whereIn('estado', ['AGENDADA', 'EN_ESPERA'])
+                ->when($desdeHora, fn ($q) => $q->where('hora_inicio', '>=', $desdeHora))
+                ->orderBy('hora_inicio')
+                ->lockForUpdate()
+                ->get();
+
+            $fueraDeHorario = [];
+
+            foreach ($citas as $c) {
+                $inicio = Carbon::parse((string) $c->hora_inicio)->addMinutes($minutos);
+                $fin = Carbon::parse((string) $c->hora_fin)->addMinutes($minutos);
+
+                $c->update([
+                    'hora_inicio' => $inicio->format('H:i'),
+                    'hora_fin' => $fin->format('H:i'),
+                ]);
+
+                if (! $this->dentroDelHorario($medicoId, $fecha, $inicio->format('H:i'), $fin->format('H:i'))) {
+                    $fueraDeHorario[] = $c->id_cita;
+                }
+            }
+
+            return ['citas' => $citas->all(), 'fuera_de_horario' => $fueraDeHorario];
+        });
+    }
+
+    /**
      * @throws RuntimeException si el bloque no puede ocuparse
      */
     private function asegurarDisponible(
