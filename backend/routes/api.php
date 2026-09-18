@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BloqueoAgendaController;
 use App\Http\Controllers\Api\CatalogoEspecialidadController;
 use App\Http\Controllers\Api\CitaController;
+use App\Http\Controllers\Api\ConsultaController;
 use App\Http\Controllers\Api\EspecialidadController;
 use App\Http\Controllers\Api\HorarioMedicoController;
 use App\Http\Controllers\Api\MedicoEspecialidadController;
@@ -69,4 +70,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/citas', [CitaController::class, 'index']);
     Route::post('/citas', [CitaController::class, 'store']);
     Route::get('/agenda/disponibilidad', [CitaController::class, 'disponibilidad']);
+
+    // HU-39 — el médico abre la consulta eligiendo con qué especialidad atiende.
+    Route::middleware('role:MEDICO')->group(function () {
+        Route::get(
+            '/consultas/especialidades-disponibles',
+            [ConsultaController::class, 'especialidadesDisponibles'],
+        );
+        Route::post('/citas/{cita}/consulta', [ConsultaController::class, 'store']);
+        Route::get('/consultas/{consulta}', [ConsultaController::class, 'show']);
+        Route::patch('/consultas/{consulta}/finalizar', [ConsultaController::class, 'finalizar']);
+    });
 });
