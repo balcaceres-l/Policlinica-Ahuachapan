@@ -3,6 +3,7 @@ import {
   agendarCita,
   cancelarCita,
   getCitas,
+  getDisponibilidad,
   guardarSignosVitales,
   marcarLlegadaCita,
   reprogramarCita,
@@ -13,7 +14,21 @@ import type { NuevaCita, ReprogramarCitaPayload, SignosVitales } from '@/types/c
 export const citasKeys = {
   all: ['citas'] as const,
   filtradas: (filtros?: FiltrosCitasQuery) => ['citas', filtros] as const,
+  disponibilidad: (medicoId: string, fecha: string) =>
+    ['citas', 'disponibilidad', medicoId, fecha] as const,
 };
+
+/**
+ * HU-17 — bloques libres de un médico en una fecha. Solo consulta cuando hay
+ * médico y fecha; sin ambos no hay nada que mostrar.
+ */
+export const useDisponibilidad = (medicoId?: string, fecha?: string) =>
+  useQuery({
+    queryKey: citasKeys.disponibilidad(medicoId ?? '', fecha ?? ''),
+    queryFn: () => getDisponibilidad(medicoId as string, fecha as string),
+    enabled: Boolean(medicoId) && Boolean(fecha),
+    staleTime: 0,
+  });
 
 export const useCitas = (filtros?: FiltrosCitasQuery) => {
   return useQuery({

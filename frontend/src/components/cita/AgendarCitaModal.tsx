@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import IndicadorDisponibilidad from '@/components/cita/IndicadorDisponibilidad';
 import SelectorMedicoCascada from '@/components/cita/SelectorMedicoCascada';
 import SelectorPacienteAutocomplete from '@/components/paciente/SelectorPacienteAutocomplete';
 import Button from '@/components/ui/Button';
@@ -150,41 +151,56 @@ export function AgendarCitaModal({
           onSelectMedico={handleSelectMedico}
         />
 
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-ink">
-              Fecha <span className="text-danger">*</span>
-            </label>
-            <input
-              type="date"
-              value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
-              className={CLASE_INPUT}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-ink">
-              Hora Inicio <span className="text-danger">*</span>
-            </label>
-            <input
-              type="time"
-              value={horaInicio}
-              onChange={(e) => handleHoraInicioChange(e.target.value)}
-              className={CLASE_INPUT}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-ink">
-              Hora Fin <span className="text-danger">*</span>
-            </label>
-            <input
-              type="time"
-              value={horaFin}
-              onChange={(e) => setHoraFin(e.target.value)}
-              className={CLASE_INPUT}
-            />
-          </div>
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-ink">
+            Fecha <span className="text-danger">*</span>
+          </label>
+          <input
+            type="date"
+            value={fecha}
+            min={hoy}
+            onChange={(e) => setFecha(e.target.value)}
+            className={CLASE_INPUT}
+          />
         </div>
+
+        {tipoCita === 'REGULAR' ? (
+          <IndicadorDisponibilidad
+            medicoId={medicoId || undefined}
+            fecha={fecha || undefined}
+            horaSeleccionada={horaInicio}
+            onSelect={(inicio, fin) => {
+              setHoraInicio(inicio);
+              setHoraFin(fin);
+              setError(null);
+            }}
+          />
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-ink">
+                Hora Inicio <span className="text-danger">*</span>
+              </label>
+              <input
+                type="time"
+                value={horaInicio}
+                onChange={(e) => handleHoraInicioChange(e.target.value)}
+                className={CLASE_INPUT}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-ink">
+                Hora Fin <span className="text-danger">*</span>
+              </label>
+              <input
+                type="time"
+                value={horaFin}
+                onChange={(e) => setHoraFin(e.target.value)}
+                className={CLASE_INPUT}
+              />
+            </div>
+          </div>
+        )}
 
         <div>
           <label className="mb-1 block text-xs font-semibold text-ink">Tipo de Cita</label>

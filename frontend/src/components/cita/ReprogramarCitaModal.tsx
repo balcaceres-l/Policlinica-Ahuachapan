@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import IndicadorDisponibilidad from '@/components/cita/IndicadorDisponibilidad';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { useReprogramarCita } from '@/hooks/cita/useCitas';
@@ -101,41 +102,55 @@ function FormularioReprogramar({ cita, onClose }: FormularioProps) {
           </div>
         )}
 
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-ink">
-              Nueva Fecha <span className="text-danger">*</span>
-            </label>
-            <input
-              type="date"
-              value={nuevaFecha}
-              onChange={(e) => setNuevaFecha(e.target.value)}
-              className={CLASE_INPUT}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-ink">
-              Nueva Hora Inicio <span className="text-danger">*</span>
-            </label>
-            <input
-              type="time"
-              value={nuevaHoraInicio}
-              onChange={(e) => handleHoraInicioChange(e.target.value)}
-              className={CLASE_INPUT}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-ink">
-              Nueva Hora Fin <span className="text-danger">*</span>
-            </label>
-            <input
-              type="time"
-              value={nuevaHoraFin}
-              onChange={(e) => setNuevaHoraFin(e.target.value)}
-              className={CLASE_INPUT}
-            />
-          </div>
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-ink">
+            Nueva Fecha <span className="text-danger">*</span>
+          </label>
+          <input
+            type="date"
+            value={nuevaFecha}
+            onChange={(e) => setNuevaFecha(e.target.value)}
+            className={CLASE_INPUT}
+          />
         </div>
+
+        {cita.tipo_cita === 'REGULAR' ? (
+          <IndicadorDisponibilidad
+            medicoId={cita.medico_id}
+            fecha={nuevaFecha || undefined}
+            horaSeleccionada={nuevaHoraInicio}
+            onSelect={(inicio, fin) => {
+              setNuevaHoraInicio(inicio);
+              setNuevaHoraFin(fin);
+              setError(null);
+            }}
+          />
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-ink">
+                Nueva Hora Inicio <span className="text-danger">*</span>
+              </label>
+              <input
+                type="time"
+                value={nuevaHoraInicio}
+                onChange={(e) => handleHoraInicioChange(e.target.value)}
+                className={CLASE_INPUT}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-ink">
+                Nueva Hora Fin <span className="text-danger">*</span>
+              </label>
+              <input
+                type="time"
+                value={nuevaHoraFin}
+                onChange={(e) => setNuevaHoraFin(e.target.value)}
+                className={CLASE_INPUT}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="mt-6 flex justify-end gap-3 border-t border-line pt-4">
