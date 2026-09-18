@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import AgendarCitaModal from '@/components/cita/AgendarCitaModal';
 import CancelarCitaModal from '@/components/cita/CancelarCitaModal';
 import DesplazarAgendaModal from '@/components/cita/DesplazarAgendaModal';
+import FilaAtencion from '@/components/cita/FilaAtencion';
 import ReprogramarCitaModal from '@/components/cita/ReprogramarCitaModal';
 import SignosVitalesModal from '@/components/cita/SignosVitalesModal';
 import Badge from '@/components/ui/Badge';
@@ -114,6 +115,19 @@ export function CitasRecepcionPage() {
           )}
         </div>
       ),
+    },
+    {
+      key: 'turno',
+      header: 'Turno',
+      className: 'w-20 text-center',
+      render: (cita) =>
+        cita.orden_atencion ? (
+          <span className="inline-flex size-7 items-center justify-center rounded-full bg-brand-50 text-xs font-bold text-brand-700">
+            {cita.orden_atencion}
+          </span>
+        ) : (
+          <span className="text-xs text-muted">—</span>
+        ),
     },
     {
       key: 'paciente',
@@ -364,6 +378,11 @@ export function CitasRecepcionPage() {
           <option value="ATENDIDA">Atendida</option>
           <option value="CANCELADA">Cancelada</option>
         </select>
+      </div>
+
+      {/* HU-43 — orden de atención por llegada */}
+      <div className="mb-6">
+        <FilaAtencion citas={citas} />
       </div>
 
       {/* Tabla de Citas */}
