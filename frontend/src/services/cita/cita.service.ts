@@ -1,6 +1,13 @@
 import api from '@/services/api';
 import type { ApiResponse } from '@/types/api.types';
-import type { Cita, NuevaCita, ReprogramarCitaPayload, SignosVitales } from '@/types/cita.types';
+import type {
+  AgendaDesplazada,
+  Cita,
+  DesplazarAgendaPayload,
+  NuevaCita,
+  ReprogramarCitaPayload,
+  SignosVitales,
+} from '@/types/cita.types';
 
 export interface FiltrosCitasQuery {
   fecha?: string;
@@ -74,6 +81,18 @@ export const cancelarCita = async (id: string, motivo: string): Promise<Cita> =>
   const { data } = await api.patch<ApiResponse<Cita>>(`/citas/${id}/cancelar`, {
     motivo_cancelacion: motivo,
   });
+  return data.data;
+};
+
+/** HU-37 — corre las citas pendientes cuando el médico llega tarde. */
+export const desplazarAgenda = async (
+  medicoId: string,
+  payload: DesplazarAgendaPayload,
+): Promise<AgendaDesplazada> => {
+  const { data } = await api.patch<ApiResponse<AgendaDesplazada>>(
+    `/medicos/${medicoId}/agenda/desplazar`,
+    payload,
+  );
   return data.data;
 };
 

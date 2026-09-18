@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import AgendarCitaModal from '@/components/cita/AgendarCitaModal';
 import CancelarCitaModal from '@/components/cita/CancelarCitaModal';
+import DesplazarAgendaModal from '@/components/cita/DesplazarAgendaModal';
 import ReprogramarCitaModal from '@/components/cita/ReprogramarCitaModal';
 import SignosVitalesModal from '@/components/cita/SignosVitalesModal';
 import Badge from '@/components/ui/Badge';
@@ -38,6 +39,7 @@ export function CitasRecepcionPage() {
 
   // Modales
   const [modalAgendar, setModalAgendar] = useState(false);
+  const [modalDesplazar, setModalDesplazar] = useState(false);
   const [citaAReprogramar, setCitaAReprogramar] = useState<Cita | null>(null);
   const [citaACancelar, setCitaACancelar] = useState<Cita | null>(null);
   const [citaSignosVitales, setCitaSignosVitales] = useState<Cita | null>(null);
@@ -89,7 +91,7 @@ export function CitasRecepcionPage() {
     {
       key: 'horario',
       header: 'Horario',
-      className: 'w-28 font-semibold text-ink',
+      className: 'w-32 font-semibold text-ink',
       render: (cita) => (
         <div>
           <span>{cita.hora_inicio} - {cita.hora_fin}</span>
@@ -98,6 +100,17 @@ export function CitasRecepcionPage() {
           )}
           {cita.hora_llegada && (
             <p className="text-[10px] text-muted">Llegó: {cita.hora_llegada}</p>
+          )}
+          {cita.minutos_retraso > 0 && (
+            <p
+              className={cn(
+                'text-[10px] font-bold',
+                cita.retrasada ? 'text-danger' : 'text-warning',
+              )}
+            >
+              <i className="ri-alarm-warning-line mr-0.5 align-middle" />
+              {cita.minutos_retraso} min de retraso
+            </p>
           )}
         </div>
       ),
@@ -235,9 +248,18 @@ export function CitasRecepcionPage() {
             Registro de citas, confirmación de sala de espera y control del flujo de pacientes.
           </p>
         </div>
-        <Button icon="ri-calendar-check-line" onClick={() => setModalAgendar(true)}>
-          Nueva Cita
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            icon="ri-time-line"
+            onClick={() => setModalDesplazar(true)}
+          >
+            Médico con atraso
+          </Button>
+          <Button icon="ri-calendar-check-line" onClick={() => setModalAgendar(true)}>
+            Nueva Cita
+          </Button>
+        </div>
       </div>
 
       {/* Tarjetas de métricas rápidas */}
@@ -360,6 +382,13 @@ export function CitasRecepcionPage() {
         isOpen={modalAgendar}
         onClose={() => setModalAgendar(false)}
         fechaPredeterminada={fechaFiltro || hoyStr}
+      />
+
+      <DesplazarAgendaModal
+        isOpen={modalDesplazar}
+        onClose={() => setModalDesplazar(false)}
+        fechaPredeterminada={fechaFiltro || hoyStr}
+        medicoIdPredeterminado={medicoFiltro === 'TODOS' ? undefined : medicoFiltro}
       />
 
       <ReprogramarCitaModal

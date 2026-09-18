@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   agendarCita,
   cancelarCita,
+  desplazarAgenda,
   getCitas,
   getDisponibilidad,
   guardarSignosVitales,
@@ -9,7 +10,12 @@ import {
   reprogramarCita,
   type FiltrosCitasQuery,
 } from '@/services/cita/cita.service';
-import type { NuevaCita, ReprogramarCitaPayload, SignosVitales } from '@/types/cita.types';
+import type {
+  DesplazarAgendaPayload,
+  NuevaCita,
+  ReprogramarCitaPayload,
+  SignosVitales,
+} from '@/types/cita.types';
 
 export const citasKeys = {
   all: ['citas'] as const,
@@ -89,3 +95,14 @@ export const useGuardarSignosVitales = () => {
   });
 };
 
+/** HU-37 — desplaza la agenda del médico por atraso. */
+export const useDesplazarAgenda = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ medicoId, payload }: { medicoId: string; payload: DesplazarAgendaPayload }) =>
+      desplazarAgenda(medicoId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: citasKeys.all });
+    },
+  });
+};

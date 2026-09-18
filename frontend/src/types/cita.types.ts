@@ -44,6 +44,22 @@ export interface Cita {
   orden_atencion?: number;
   creado_por_id: string;
   signos_vitales?: SignosVitales;
+  /** Minutos desde la hora agendada mientras el paciente no llega (RF-44). */
+  minutos_retraso: number;
+  retrasada: boolean;
+}
+
+export interface DesplazarAgendaPayload {
+  fecha: string;
+  minutos: number;
+  /** Si se omite, se corre toda la jornada del día. */
+  desde_hora?: string;
+}
+
+export interface AgendaDesplazada {
+  citas: Cita[];
+  /** Citas que quedaron fuera del horario del médico tras el desplazamiento. */
+  fueraDeHorario: string[];
 }
 
 export interface NuevaCita {
