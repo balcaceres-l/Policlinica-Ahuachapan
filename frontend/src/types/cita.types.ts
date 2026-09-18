@@ -9,8 +9,8 @@ export type EstadoCita =
   | 'NO_ASISTIO';
 
 export interface SignosVitales {
-  id?: number;
-  cita_id?: number;
+  id?: string;
+  cita_id?: string;
   presion_sistolica?: number;
   presion_diastolica?: number;
   frecuencia_cardiaca?: number;
@@ -26,7 +26,7 @@ export interface SignosVitales {
 }
 
 export interface Cita {
-  id: number;
+  id: string;
   paciente_id: string;
   pacienteNombre: string;
   pacienteExpediente: string;

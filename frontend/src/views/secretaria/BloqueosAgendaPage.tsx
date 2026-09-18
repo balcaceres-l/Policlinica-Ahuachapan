@@ -18,8 +18,8 @@ export function BloqueosAgendaPage() {
   const { data: medicos = mockMedicos } = useMedicos();
   const { data: bloqueos = [], isLoading } = useBloqueos({
     medicoId: medicoFiltro === 'TODOS' ? undefined : medicoFiltro,
-    fecha: fechaFiltro || undefined,
-    tipoBloqueo: tipoBloqueoFiltro,
+    desde: fechaFiltro || undefined,
+    hasta: fechaFiltro || undefined,
   });
   const eliminarMutation = useEliminarBloqueo();
 

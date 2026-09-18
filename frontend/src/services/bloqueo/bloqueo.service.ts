@@ -1,92 +1,46 @@
+import api from '@/services/api';
+import type { ApiResponse } from '@/types/api.types';
 import type { BloqueoAgenda, NuevoBloqueo } from '@/types/bloqueo.types';
-import { mockBloqueosAgenda, siguienteIdBloqueo } from '@/services/mockData';
+import type { Cita } from '@/types/cita.types';
 
 export interface FiltrosBloqueoQuery {
   medicoId?: string;
-  fecha?: string;
-  tipoBloqueo?: string;
+  desde?: string;
+  hasta?: string;
+}
+
+/** El backend devuelve las citas del día bloqueado para que recepción las gestione. */
+export interface BloqueoCreado {
+  bloqueo: BloqueoAgenda;
+  citasAfectadas: Cita[];
 }
 
 export const getBloqueos = async (filtros?: FiltrosBloqueoQuery): Promise<BloqueoAgenda[]> => {
-  let lista = [...mockBloqueosAgenda];
-
-  if (filtros?.medicoId) {
-    lista = lista.filter((b) => b.medico_id === filtros.medicoId);
-  }
-  if (filtros?.fecha) {
-    lista = lista.filter((b) => b.fecha === filtros.fecha);
-  }
-  if (filtros?.tipoBloqueo && filtros.tipoBloqueo !== 'TODOS') {
-    lista = lista.filter((b) => b.tipo_bloqueo === filtros.tipoBloqueo);
-  }
-
-  return lista.sort((a, b) => b.fecha.localeCompare(a.fecha));
+  const { data } = await api.get<ApiResponse<BloqueoAgenda[]>>('/bloqueos', {
+    params: {
+      medico_id: filtros?.medicoId,
+      desde: filtros?.desde,
+      hasta: filtros?.hasta,
+    },
+  });
+  return data.data;
 };
 
-export const crearBloqueo = async (
-  payload: NuevoBloqueo,
-  medicoNombre: string,
-  usuarioId = '',
-): Promise<BloqueoAgenda> => {
-  // Validación: si es completo, no puede haber otro bloqueo en la misma fecha
-  if (payload.tipo_bloqueo === 'COMPLETO') {
-    const duplicado = mockBloqueosAgenda.find(
-      (b) => b.medico_id === payload.medico_id && b.fecha === payload.fecha,
-    );
-    if (duplicado) {
-      throw new Error('El médico ya tiene un bloqueo de agenda registrado para esta fecha.');
-    }
-  } else {
-    // Si es parcial, verificar si ya hay uno completo o si se cruzan las horas
-    const bloqueoCompleto = mockBloqueosAgenda.find(
-      (b) =>
-        b.medico_id === payload.medico_id &&
-        b.fecha === payload.fecha &&
-        b.tipo_bloqueo === 'COMPLETO',
-    );
-    if (bloqueoCompleto) {
-      throw new Error('El médico ya tiene un bloqueo completo para todo el día en esta fecha.');
-    }
-
-    if (payload.hora_inicio && payload.hora_fin) {
-      const traslape = mockBloqueosAgenda.find(
-        (b) =>
-          b.medico_id === payload.medico_id &&
-          b.fecha === payload.fecha &&
-          b.tipo_bloqueo === 'PARCIAL' &&
-          b.hora_inicio &&
-          b.hora_fin &&
-          b.hora_inicio < payload.hora_fin! &&
-          payload.hora_inicio! < b.hora_fin,
-      );
-      if (traslape) {
-        throw new Error(
-          `Ya existe un bloqueo parcial en ese horario (${traslape.hora_inicio} - ${traslape.hora_fin}).`,
-        );
-      }
-    }
+export const crearBloqueo = async (payload: NuevoBloqueo): Promise<BloqueoCreado> => {
+  // El bloqueo parcial existe en la interfaz pero no está soportado: RF-38 y el
+  // ERD solo contemplan bloquear el día completo.
+  if (payload.tipo_bloqueo === 'PARCIAL') {
+    throw new Error('Por ahora solo puede bloquearse el día completo.');
   }
 
-  const nuevo: BloqueoAgenda = {
-    id: siguienteIdBloqueo(),
+  const { data } = await api.post<ApiResponse<BloqueoCreado>>('/bloqueos', {
     medico_id: payload.medico_id,
-    medicoNombre,
     fecha: payload.fecha,
-    tipo_bloqueo: payload.tipo_bloqueo,
-    hora_inicio: payload.hora_inicio,
-    hora_fin: payload.hora_fin,
     motivo: payload.motivo,
-    creado_por_id: usuarioId,
-    fecha_creacion: new Date().toISOString().split('T')[0],
-  };
-
-  mockBloqueosAgenda.unshift(nuevo);
-  return nuevo;
+  });
+  return data.data;
 };
 
-export const eliminarBloqueo = async (id: number): Promise<void> => {
-  const idx = mockBloqueosAgenda.findIndex((b) => b.id === id);
-  if (idx >= 0) {
-    mockBloqueosAgenda.splice(idx, 1);
-  }
+export const eliminarBloqueo = async (id: string): Promise<void> => {
+  await api.delete(`/bloqueos/${id}`);
 };

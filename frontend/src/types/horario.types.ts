@@ -13,7 +13,7 @@ export type DiaSemana =
  * conectar la API real no haya que renombrar nada.
  */
 export interface HorarioMedico {
-  id: number;
+  id: string;
   medico_id: string;
   dia_semana: DiaSemana;
   /** Formato 'HH:mm' — la columna es TIME en la base. */

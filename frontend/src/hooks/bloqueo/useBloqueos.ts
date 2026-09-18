@@ -22,13 +22,7 @@ export const useBloqueos = (filtros?: FiltrosBloqueoQuery) => {
 export const useCrearBloqueo = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      payload,
-      medicoNombre,
-    }: {
-      payload: NuevoBloqueo;
-      medicoNombre: string;
-    }) => crearBloqueo(payload, medicoNombre),
+    mutationFn: (payload: NuevoBloqueo) => crearBloqueo(payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: bloqueosKeys.all });
     },
@@ -38,7 +32,7 @@ export const useCrearBloqueo = () => {
 export const useEliminarBloqueo = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => eliminarBloqueo(id),
+    mutationFn: (id: string) => eliminarBloqueo(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: bloqueosKeys.all });
     },

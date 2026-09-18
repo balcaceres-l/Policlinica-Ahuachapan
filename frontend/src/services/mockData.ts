@@ -1,5 +1,3 @@
-import type { BloqueoAgenda } from '@/types/bloqueo.types';
-import type { Cita } from '@/types/cita.types';
 import type { Especialidad, EspecialidadConMedicos } from '@/types/especialidad.types';
 import type { HorarioMedico } from '@/types/horario.types';
 import type { Paciente } from '@/types/paciente.types';
@@ -21,8 +19,6 @@ const medicoIds = {
   roberto: '70f5a2b0-7e2d-4ad1-8b1b-000000000006',
   fernando: '70f5a2b0-7e2d-4ad1-8b1b-000000000007',
 } as const;
-
-const administradorId = '80f5a2b0-7e2d-4ad1-8b1b-000000000001';
 
 export const mockMedicos: Usuario[] = [
   {
@@ -92,31 +88,31 @@ export const mockMedicos: Usuario[] = [
  */
 export const mockHorariosMedicos: HorarioMedico[] = [
   // Dra. Elena Ramírez Alfaro — Ginecología
-  { id: 1, medico_id: medicoIds.elena, dia_semana: 'LUNES', hora_inicio: '15:00', hora_fin: '18:30' },
-  { id: 2, medico_id: medicoIds.elena, dia_semana: 'MIERCOLES', hora_inicio: '15:00', hora_fin: '18:30' },
-  { id: 3, medico_id: medicoIds.elena, dia_semana: 'VIERNES', hora_inicio: '15:00', hora_fin: '18:30' },
-  { id: 4, medico_id: medicoIds.elena, dia_semana: 'SABADO', hora_inicio: '08:00', hora_fin: '12:00' },
+  { id: '1', medico_id: medicoIds.elena, dia_semana: 'LUNES', hora_inicio: '15:00', hora_fin: '18:30' },
+  { id: '2', medico_id: medicoIds.elena, dia_semana: 'MIERCOLES', hora_inicio: '15:00', hora_fin: '18:30' },
+  { id: '3', medico_id: medicoIds.elena, dia_semana: 'VIERNES', hora_inicio: '15:00', hora_fin: '18:30' },
+  { id: '4', medico_id: medicoIds.elena, dia_semana: 'SABADO', hora_inicio: '08:00', hora_fin: '12:00' },
 
   // Dr. Miguel Ángel Torres — Medicina Interna
-  { id: 5, medico_id: medicoIds.miguel, dia_semana: 'MARTES', hora_inicio: '15:00', hora_fin: '18:30' },
-  { id: 6, medico_id: medicoIds.miguel, dia_semana: 'JUEVES', hora_inicio: '15:00', hora_fin: '18:30' },
+  { id: '5', medico_id: medicoIds.miguel, dia_semana: 'MARTES', hora_inicio: '15:00', hora_fin: '18:30' },
+  { id: '6', medico_id: medicoIds.miguel, dia_semana: 'JUEVES', hora_inicio: '15:00', hora_fin: '18:30' },
 
   // Dra. Carla Sofía Peña — Dermatología (horario propio, por la mañana)
-  { id: 7, medico_id: medicoIds.carla, dia_semana: 'LUNES', hora_inicio: '08:00', hora_fin: '12:00' },
-  { id: 8, medico_id: medicoIds.carla, dia_semana: 'MARTES', hora_inicio: '08:00', hora_fin: '12:00' },
+  { id: '7', medico_id: medicoIds.carla, dia_semana: 'LUNES', hora_inicio: '08:00', hora_fin: '12:00' },
+  { id: '8', medico_id: medicoIds.carla, dia_semana: 'MARTES', hora_inicio: '08:00', hora_fin: '12:00' },
 
   // Dr. Josué Hernández Cruz — Pediatría (sábado partido en dos bloques)
-  { id: 9, medico_id: medicoIds.josue, dia_semana: 'LUNES', hora_inicio: '15:00', hora_fin: '18:30' },
-  { id: 10, medico_id: medicoIds.josue, dia_semana: 'MIERCOLES', hora_inicio: '15:00', hora_fin: '18:30' },
-  { id: 11, medico_id: medicoIds.josue, dia_semana: 'SABADO', hora_inicio: '08:00', hora_fin: '10:00' },
-  { id: 12, medico_id: medicoIds.josue, dia_semana: 'SABADO', hora_inicio: '10:30', hora_fin: '12:00' },
+  { id: '9', medico_id: medicoIds.josue, dia_semana: 'LUNES', hora_inicio: '15:00', hora_fin: '18:30' },
+  { id: '10', medico_id: medicoIds.josue, dia_semana: 'MIERCOLES', hora_inicio: '15:00', hora_fin: '18:30' },
+  { id: '11', medico_id: medicoIds.josue, dia_semana: 'SABADO', hora_inicio: '08:00', hora_fin: '10:00' },
+  { id: '12', medico_id: medicoIds.josue, dia_semana: 'SABADO', hora_inicio: '10:30', hora_fin: '12:00' },
 
   // Dr. Roberto Cañas Portillo — Cirugía General
-  { id: 13, medico_id: medicoIds.roberto, dia_semana: 'JUEVES', hora_inicio: '15:00', hora_fin: '18:30' },
-  { id: 14, medico_id: medicoIds.roberto, dia_semana: 'VIERNES', hora_inicio: '15:00', hora_fin: '18:30' },
+  { id: '13', medico_id: medicoIds.roberto, dia_semana: 'JUEVES', hora_inicio: '15:00', hora_fin: '18:30' },
+  { id: '14', medico_id: medicoIds.roberto, dia_semana: 'VIERNES', hora_inicio: '15:00', hora_fin: '18:30' },
 
   // Dr. Fernando Alvarenga — Medicina Interna
-  { id: 15, medico_id: medicoIds.fernando, dia_semana: 'MARTES', hora_inicio: '15:00', hora_fin: '18:30' },
+  { id: '15', medico_id: medicoIds.fernando, dia_semana: 'MARTES', hora_inicio: '15:00', hora_fin: '18:30' },
 ];
 
 /** Días abreviados para mostrar horarios de médicos */
@@ -366,308 +362,6 @@ export const obtenerFechaRelativa = (offsetDias: number): string => {
   return `${anio}-${mes}-${dia}`;
 };
 
-/** Citas médicas iniciales dinámicas */
-export const mockCitas: Cita[] = [
-  // Citas de HOY
-  {
-    id: 1,
-    paciente_id: pacienteIds.carlos,
-    pacienteNombre: 'Carlos Eduardo Mendoza',
-    pacienteExpediente: 'CM01-2026',
-    medico_id: medicoIds.miguel,
-    medicoNombre: 'Dr. Miguel Ángel Torres',
-    especialidad_id: especialidadIds.medicinaInterna,
-    especialidadNombre: 'Medicina Interna',
-    fecha: obtenerFechaRelativa(0),
-    hora_inicio: '15:00',
-    hora_fin: '15:30',
-    tipo_cita: 'REGULAR',
-    estado: 'EN_ESPERA',
-    hora_llegada: '14:50',
-    orden_atencion: 1,
-    creado_por_id: administradorId,
-  },
-  {
-    id: 2,
-    paciente_id: pacienteIds.maria,
-    pacienteNombre: 'María Antonieta Alvarado',
-    pacienteExpediente: 'MA02-2026',
-    medico_id: medicoIds.miguel,
-    medicoNombre: 'Dr. Miguel Ángel Torres',
-    especialidad_id: especialidadIds.medicinaInterna,
-    especialidadNombre: 'Medicina Interna',
-    fecha: obtenerFechaRelativa(0),
-    hora_inicio: '15:30',
-    hora_fin: '16:00',
-    tipo_cita: 'REGULAR',
-    estado: 'AGENDADA',
-    orden_atencion: 2,
-    creado_por_id: administradorId,
-  },
-  {
-    id: 3,
-    paciente_id: pacienteIds.sofia,
-    pacienteNombre: 'Sofía Valentina Hernández',
-    pacienteExpediente: 'SH04-2026',
-    medico_id: medicoIds.josue,
-    medicoNombre: 'Dr. Josué Hernández Cruz',
-    especialidad_id: especialidadIds.pediatria,
-    especialidadNombre: 'Pediatría',
-    fecha: obtenerFechaRelativa(0),
-    hora_inicio: '16:00',
-    hora_fin: '16:30',
-    tipo_cita: 'EMERGENCIA',
-    estado: 'AGENDADA',
-    creado_por_id: administradorId,
-  },
-  {
-    id: 4,
-    paciente_id: pacienteIds.juan,
-    pacienteNombre: 'Juan Roberto Ramos',
-    pacienteExpediente: 'JR03-2026',
-    medico_id: medicoIds.roberto,
-    medicoNombre: 'Dr. Roberto Cañas Portillo',
-    especialidad_id: especialidadIds.cirugiaGeneral,
-    especialidadNombre: 'Cirugía General',
-    fecha: obtenerFechaRelativa(0),
-    hora_inicio: '16:30',
-    hora_fin: '17:00',
-    tipo_cita: 'REGULAR',
-    estado: 'ATENDIDA',
-    hora_llegada: '16:15',
-    orden_atencion: 1,
-    creado_por_id: administradorId,
-    signos_vitales: {
-      id: 1,
-      cita_id: 4,
-      presion_sistolica: 120,
-      presion_diastolica: 80,
-      frecuencia_cardiaca: 72,
-      frecuencia_respiratoria: 18,
-      temperatura_c: 36.6,
-      peso_kg: 70,
-      talla_cm: 172,
-      imc: 23.7,
-      saturacion_oxigeno: 98,
-      observaciones: 'Paciente normotenso y estable.',
-      registrado_por_id: administradorId,
-      fecha_registro: obtenerFechaRelativa(0),
-    },
-  },
-  {
-    id: 5,
-    paciente_id: pacienteIds.luis,
-    pacienteNombre: 'Luis Fernando Portillo',
-    pacienteExpediente: 'LP05-2026',
-    medico_id: medicoIds.elena,
-    medicoNombre: 'Dra. Elena Ramírez Alfaro',
-    especialidad_id: especialidadIds.ginecologia,
-    especialidadNombre: 'Ginecología',
-    fecha: obtenerFechaRelativa(0),
-    hora_inicio: '17:00',
-    hora_fin: '17:30',
-    tipo_cita: 'REGULAR',
-    estado: 'AGENDADA',
-    creado_por_id: administradorId,
-  },
 
-  // Citas de AYER
-  {
-    id: 6,
-    paciente_id: pacienteIds.ana,
-    pacienteNombre: 'Ana Gabriela Gómez',
-    pacienteExpediente: 'AG06-2026',
-    medico_id: medicoIds.carla,
-    medicoNombre: 'Dra. Carla Sofía Peña',
-    especialidad_id: especialidadIds.dermatologia,
-    especialidadNombre: 'Dermatología',
-    fecha: obtenerFechaRelativa(-1),
-    hora_inicio: '08:30',
-    hora_fin: '09:00',
-    tipo_cita: 'REGULAR',
-    estado: 'ATENDIDA',
-    hora_llegada: '08:20',
-    orden_atencion: 1,
-    creado_por_id: administradorId,
-  },
-  {
-    id: 7,
-    paciente_id: pacienteIds.mateo,
-    pacienteNombre: 'Mateo Alejandro Escobar',
-    pacienteExpediente: 'ME07-2026',
-    medico_id: medicoIds.fernando,
-    medicoNombre: 'Dr. Fernando Alvarenga',
-    especialidad_id: especialidadIds.medicinaInterna,
-    especialidadNombre: 'Medicina Interna',
-    fecha: obtenerFechaRelativa(-1),
-    hora_inicio: '15:00',
-    hora_fin: '15:30',
-    tipo_cita: 'REGULAR',
-    estado: 'ATENDIDA',
-    hora_llegada: '14:55',
-    orden_atencion: 1,
-    creado_por_id: administradorId,
-  },
-
-  // Citas de MAÑANA
-  {
-    id: 8,
-    paciente_id: pacienteIds.john,
-    pacienteNombre: 'John Michael Smith',
-    pacienteExpediente: 'JS08-2026',
-    medico_id: medicoIds.carla,
-    medicoNombre: 'Dra. Carla Sofía Peña',
-    especialidad_id: especialidadIds.dermatologia,
-    especialidadNombre: 'Dermatología',
-    fecha: obtenerFechaRelativa(1),
-    hora_inicio: '09:00',
-    hora_fin: '09:30',
-    tipo_cita: 'SOBRECUPO',
-    estado: 'AGENDADA',
-    creado_por_id: administradorId,
-  },
-  {
-    id: 9,
-    paciente_id: pacienteIds.carlos,
-    pacienteNombre: 'Carlos Eduardo Mendoza',
-    pacienteExpediente: 'CM01-2026',
-    medico_id: medicoIds.miguel,
-    medicoNombre: 'Dr. Miguel Ángel Torres',
-    especialidad_id: especialidadIds.medicinaInterna,
-    especialidadNombre: 'Medicina Interna',
-    fecha: obtenerFechaRelativa(1),
-    hora_inicio: '16:00',
-    hora_fin: '16:30',
-    tipo_cita: 'REGULAR',
-    estado: 'AGENDADA',
-    creado_por_id: administradorId,
-  },
-  {
-    id: 10,
-    paciente_id: pacienteIds.maria,
-    pacienteNombre: 'María Antonieta Alvarado',
-    pacienteExpediente: 'MA02-2026',
-    medico_id: medicoIds.elena,
-    medicoNombre: 'Dra. Elena Ramírez Alfaro',
-    especialidad_id: especialidadIds.ginecologia,
-    especialidadNombre: 'Ginecología',
-    fecha: obtenerFechaRelativa(1),
-    hora_inicio: '15:30',
-    hora_fin: '16:00',
-    tipo_cita: 'REGULAR',
-    estado: 'AGENDADA',
-    creado_por_id: administradorId,
-  },
-
-  // Citas próximas (+2, +3, +5 días)
-  {
-    id: 11,
-    paciente_id: pacienteIds.sofia,
-    pacienteNombre: 'Sofía Valentina Hernández',
-    pacienteExpediente: 'SH04-2026',
-    medico_id: medicoIds.josue,
-    medicoNombre: 'Dr. Josué Hernández Cruz',
-    especialidad_id: especialidadIds.pediatria,
-    especialidadNombre: 'Pediatría',
-    fecha: obtenerFechaRelativa(2),
-    hora_inicio: '08:30',
-    hora_fin: '09:00',
-    tipo_cita: 'REGULAR',
-    estado: 'AGENDADA',
-    creado_por_id: administradorId,
-  },
-  {
-    id: 12,
-    paciente_id: pacienteIds.juan,
-    pacienteNombre: 'Juan Roberto Ramos',
-    pacienteExpediente: 'JR03-2026',
-    medico_id: medicoIds.roberto,
-    medicoNombre: 'Dr. Roberto Cañas Portillo',
-    especialidad_id: especialidadIds.cirugiaGeneral,
-    especialidadNombre: 'Cirugía General',
-    fecha: obtenerFechaRelativa(2),
-    hora_inicio: '15:00',
-    hora_fin: '15:30',
-    tipo_cita: 'REGULAR',
-    estado: 'AGENDADA',
-    creado_por_id: administradorId,
-  },
-  {
-    id: 13,
-    paciente_id: pacienteIds.luis,
-    pacienteNombre: 'Luis Fernando Portillo',
-    pacienteExpediente: 'LP05-2026',
-    medico_id: medicoIds.fernando,
-    medicoNombre: 'Dr. Fernando Alvarenga',
-    especialidad_id: especialidadIds.medicinaInterna,
-    especialidadNombre: 'Medicina Interna',
-    fecha: obtenerFechaRelativa(3),
-    hora_inicio: '15:30',
-    hora_fin: '16:00',
-    tipo_cita: 'REGULAR',
-    estado: 'AGENDADA',
-    creado_por_id: administradorId,
-  },
-  {
-    id: 14,
-    paciente_id: pacienteIds.mateo,
-    pacienteNombre: 'Mateo Alejandro Escobar',
-    pacienteExpediente: 'ME07-2026',
-    medico_id: medicoIds.josue,
-    medicoNombre: 'Dr. Josué Hernández Cruz',
-    especialidad_id: especialidadIds.pediatria,
-    especialidadNombre: 'Pediatría',
-    fecha: obtenerFechaRelativa(5),
-    hora_inicio: '10:30',
-    hora_fin: '11:00',
-    tipo_cita: 'REGULAR',
-    estado: 'AGENDADA',
-    creado_por_id: administradorId,
-  },
-];
-
-/** Bloqueos de agenda iniciales dinámicos */
-export const mockBloqueosAgenda: BloqueoAgenda[] = [
-  {
-    id: 1,
-    medico_id: medicoIds.fernando,
-    medicoNombre: 'Dr. Fernando Alvarenga',
-    fecha: obtenerFechaRelativa(0),
-    tipo_bloqueo: 'PARCIAL',
-    hora_inicio: '17:00',
-    hora_fin: '18:30',
-    motivo: 'Reunión clínica departamental de medicina interna',
-    creado_por_id: administradorId,
-    fecha_creacion: obtenerFechaRelativa(-2),
-  },
-  {
-    id: 2,
-    medico_id: medicoIds.carla,
-    medicoNombre: 'Dra. Carla Sofía Peña',
-    fecha: obtenerFechaRelativa(2),
-    tipo_bloqueo: 'COMPLETO',
-    motivo: 'Participación en Congreso Nacional de Dermatología',
-    creado_por_id: administradorId,
-    fecha_creacion: obtenerFechaRelativa(-3),
-  },
-  {
-    id: 3,
-    medico_id: medicoIds.elena,
-    medicoNombre: 'Dra. Elena Ramírez Alfaro',
-    fecha: obtenerFechaRelativa(5),
-    tipo_bloqueo: 'COMPLETO',
-    motivo: 'Permiso médico personal justificado',
-    creado_por_id: administradorId,
-    fecha_creacion: obtenerFechaRelativa(-4),
-  },
-];
 
 /** Generadores de IDs en memoria */
-export const siguienteIdHorario = (): number =>
-  Math.max(0, ...mockHorariosMedicos.map((h) => h.id)) + 1;
-
-export const siguienteIdCita = (): number =>
-  Math.max(0, ...mockCitas.map((c) => c.id)) + 1;
-
-export const siguienteIdBloqueo = (): number =>
-  Math.max(0, ...mockBloqueosAgenda.map((b) => b.id)) + 1;

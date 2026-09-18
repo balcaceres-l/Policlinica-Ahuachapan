@@ -1,7 +1,7 @@
 export type TipoBloqueo = 'COMPLETO' | 'PARCIAL';
 
 export interface BloqueoAgenda {
-  id: number;
+  id: string;
   medico_id: string;
   medicoNombre: string;
   fecha: string; // YYYY-MM-DD

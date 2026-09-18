@@ -1,6 +1,7 @@
+import api from '@/services/api';
+import type { ApiResponse } from '@/types/api.types';
 import type { DiaSemana, HorarioMedico, NuevoHorario } from '@/types/horario.types';
-import { DIA_LABEL, DIAS_SEMANA, formatearHora } from '@/lib/constants/dias';
-import { mockHorariosMedicos, siguienteIdHorario } from '@/services/mockData';
+import { DIA_LABEL, formatearHora } from '@/lib/constants/dias';
 
 export interface BloqueHorarioSemanal {
   dia_semana: DiaSemana;
@@ -8,91 +9,47 @@ export interface BloqueHorarioSemanal {
   hora_fin: string;
 }
 
-/** Dos rangos se cruzan si cada uno empieza antes de que el otro termine. */
 const seSolapan = (inicioA: string, finA: string, inicioB: string, finB: string): boolean =>
   inicioA < finB && inicioB < finA;
 
-const ordenar = (horarios: HorarioMedico[]): HorarioMedico[] =>
-  [...horarios].sort(
-    (a, b) =>
-      DIAS_SEMANA.indexOf(a.dia_semana) - DIAS_SEMANA.indexOf(b.dia_semana) ||
-      a.hora_inicio.localeCompare(b.hora_inicio),
-  );
-
-/**
- * Regla de negocio (HU-34): un médico puede tener varios bloques el mismo día
- * —turno partido— pero no pueden traslaparse entre sí.
- */
-const validarSolapamiento = (payload: NuevoHorario, ignorarId?: number): void => {
-  const cruce = mockHorariosMedicos.find(
-    (horario) =>
-      horario.id !== ignorarId &&
-      horario.medico_id === payload.medico_id &&
-      horario.dia_semana === payload.dia_semana &&
-      seSolapan(payload.hora_inicio, payload.hora_fin, horario.hora_inicio, horario.hora_fin),
-  );
-
-  if (cruce) {
-    throw new Error(
-      `Ese rango se cruza con el bloque de ${DIA_LABEL[cruce.dia_semana]} ` +
-        `${formatearHora(cruce.hora_inicio)} – ${formatearHora(cruce.hora_fin)} ya registrado.`,
-    );
-  }
-};
-
-const buscarIndice = (id: number): number => {
-  const indice = mockHorariosMedicos.findIndex((horario) => horario.id === id);
-  if (indice < 0) {
-    throw new Error('El horario ya no existe.');
-  }
-  return indice;
-};
-
 export const getHorariosDeMedico = async (medicoId: string): Promise<HorarioMedico[]> => {
-  // TODO: api.get<ApiResponse<HorarioMedico[]>>(`/medicos/${medicoId}/horarios`)
-  return ordenar(mockHorariosMedicos.filter((horario) => horario.medico_id === medicoId));
+  const { data } = await api.get<ApiResponse<HorarioMedico[]>>(`/medicos/${medicoId}/horarios`);
+  return data.data;
 };
 
-/** HU-34 — alta de un bloque horario. */
 export const crearHorario = async (payload: NuevoHorario): Promise<HorarioMedico> => {
-  // TODO: api.post<ApiResponse<HorarioMedico>>('/horarios-medicos', payload)
-  validarSolapamiento(payload);
-
-  const nuevo: HorarioMedico = { id: siguienteIdHorario(), ...payload };
-  mockHorariosMedicos.push(nuevo);
-  return nuevo;
+  const { medico_id, ...tramo } = payload;
+  const { data } = await api.post<ApiResponse<HorarioMedico>>(
+    `/medicos/${medico_id}/horarios`,
+    tramo,
+  );
+  return data.data;
 };
 
 export const actualizarHorario = async (
-  id: number,
+  id: string,
   payload: NuevoHorario,
 ): Promise<HorarioMedico> => {
-  // TODO: api.put<ApiResponse<HorarioMedico>>(`/horarios-medicos/${id}`, payload)
-  const indice = buscarIndice(id);
-  validarSolapamiento(payload, id);
-
-  const actualizado: HorarioMedico = { ...mockHorariosMedicos[indice], ...payload };
-  mockHorariosMedicos[indice] = actualizado;
-  return actualizado;
+  const { data } = await api.put<ApiResponse<HorarioMedico>>(`/horarios/${id}`, {
+    dia_semana: payload.dia_semana,
+    hora_inicio: payload.hora_inicio,
+    hora_fin: payload.hora_fin,
+  });
+  return data.data;
 };
 
-export const eliminarHorario = async (id: number): Promise<void> => {
-  // TODO: api.delete(`/horarios-medicos/${id}`)
-  mockHorariosMedicos.splice(buscarIndice(id), 1);
+export const eliminarHorario = async (id: string): Promise<void> => {
+  await api.delete(`/horarios/${id}`);
 };
 
 /**
- * Guarda y sincroniza la semana laboral completa de un médico.
- * Valida formato, orden de inicio/fin y ausencia de solapamiento entre turnos del mismo día.
- * Reemplaza los bloques existentes del médico por los nuevos configurados.
+ * Reemplaza la semana completa. Se valida antes de enviar para dar respuesta
+ * inmediata al usuario; el backend vuelve a comprobarlo de todos modos.
  */
 export const guardarHorariosSemanales = async (
   medicoId: string,
   bloques: BloqueHorarioSemanal[],
 ): Promise<HorarioMedico[]> => {
-  // TODO: api.put<ApiResponse<HorarioMedico[]>>(`/medicos/${medicoId}/horarios-semanales`, { bloques })
-
-  // Validar formato y orden
   for (const b of bloques) {
     if (!b.hora_inicio || !b.hora_fin) {
       throw new Error(`En ${DIA_LABEL[b.dia_semana]}, debes ingresar hora de inicio y fin.`);
@@ -104,7 +61,6 @@ export const guardarHorariosSemanales = async (
     }
   }
 
-  // Validar solapamientos internos dentro del mismo día
   for (let i = 0; i < bloques.length; i++) {
     for (let j = i + 1; j < bloques.length; j++) {
       const b1 = bloques[i];
@@ -122,25 +78,9 @@ export const guardarHorariosSemanales = async (
     }
   }
 
-  // Remover bloques previos de este médico
-  const restantes = mockHorariosMedicos.filter((h) => h.medico_id !== medicoId);
-  mockHorariosMedicos.length = 0;
-  mockHorariosMedicos.push(...restantes);
-
-  // Asignar IDs incrementales
-  let maxId = Math.max(0, ...mockHorariosMedicos.map((h) => h.id));
-  const nuevos: HorarioMedico[] = bloques.map((b) => {
-    maxId += 1;
-    return {
-      id: maxId,
-      medico_id: medicoId,
-      dia_semana: b.dia_semana,
-      hora_inicio: b.hora_inicio,
-      hora_fin: b.hora_fin,
-    };
-  });
-
-  mockHorariosMedicos.push(...nuevos);
-  return ordenar(nuevos);
+  const { data } = await api.put<ApiResponse<HorarioMedico[]>>(
+    `/medicos/${medicoId}/horarios`,
+    { horarios: bloques },
+  );
+  return data.data;
 };
-

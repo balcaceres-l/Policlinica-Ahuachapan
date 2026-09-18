@@ -35,7 +35,7 @@ export const useAgendarCita = () => {
 export const useMarcarLlegada = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => marcarLlegadaCita(id),
+    mutationFn: (id: string) => marcarLlegadaCita(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: citasKeys.all });
     },
@@ -45,7 +45,7 @@ export const useMarcarLlegada = () => {
 export const useReprogramarCita = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: ReprogramarCitaPayload }) =>
+    mutationFn: ({ id, payload }: { id: string; payload: ReprogramarCitaPayload }) =>
       reprogramarCita(id, payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: citasKeys.all });
@@ -56,7 +56,7 @@ export const useReprogramarCita = () => {
 export const useCancelarCita = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, motivo }: { id: number; motivo: string }) => cancelarCita(id, motivo),
+    mutationFn: ({ id, motivo }: { id: string; motivo: string }) => cancelarCita(id, motivo),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: citasKeys.all });
     },
@@ -66,7 +66,7 @@ export const useCancelarCita = () => {
 export const useGuardarSignosVitales = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, datos }: { id: number; datos: SignosVitales }) =>
+    mutationFn: ({ id, datos }: { id: string; datos: SignosVitales }) =>
       guardarSignosVitales(id, datos),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: citasKeys.all });

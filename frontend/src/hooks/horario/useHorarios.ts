@@ -41,7 +41,7 @@ export const useCrearHorario = () => {
 export const useActualizarHorario = () => {
   const invalidar = useInvalidarHorarios();
   return useMutation({
-    mutationFn: (vars: { id: number; payload: NuevoHorario }) =>
+    mutationFn: (vars: { id: string; payload: NuevoHorario }) =>
       actualizarHorario(vars.id, vars.payload),
     onSuccess: invalidar,
   });
@@ -50,7 +50,7 @@ export const useActualizarHorario = () => {
 export const useEliminarHorario = () => {
   const invalidar = useInvalidarHorarios();
   return useMutation({
-    mutationFn: (id: number) => eliminarHorario(id),
+    mutationFn: (id: string) => eliminarHorario(id),
     onSuccess: invalidar,
   });
 };
