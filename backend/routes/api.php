@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\ConsultaController;
 use App\Http\Controllers\Api\EspecialidadController;
 use App\Http\Controllers\Api\HorarioMedicoController;
 use App\Http\Controllers\Api\MedicoEspecialidadController;
+use App\Http\Controllers\Api\SignosVitalesController;
 use App\Http\Controllers\Api\UsuarioController;
 use Illuminate\Support\Facades\Route;
 
@@ -80,5 +81,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/citas/{cita}/consulta', [ConsultaController::class, 'store']);
         Route::get('/consultas/{consulta}', [ConsultaController::class, 'show']);
         Route::patch('/consultas/{consulta}/finalizar', [ConsultaController::class, 'finalizar']);
+
+        // HU-18 — signos vitales de la consulta.
+        Route::get('/consultas/{consulta}/signos-vitales', [SignosVitalesController::class, 'show']);
+        Route::put('/consultas/{consulta}/signos-vitales', [SignosVitalesController::class, 'store']);
     });
 });

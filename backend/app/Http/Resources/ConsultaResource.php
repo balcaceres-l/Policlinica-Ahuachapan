@@ -25,6 +25,7 @@ class ConsultaResource extends JsonResource
             'notas_adicionales' => $this->notas_adicionales,
             'abierta' => $this->estaAbierta(),
             'minutos_transcurridos' => $this->minutosTranscurridos(),
+            'signos_vitales' => new SignosVitalesResource($this->whenLoaded('signosVitales')),
             'paciente' => $this->whenLoaded(
                 'cita',
                 fn () => [
