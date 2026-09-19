@@ -7,7 +7,6 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useBloqueos } from '@/hooks/bloqueo/useBloqueos';
 import { useCitas } from '@/hooks/cita/useCitas';
 import { useMedicos } from '@/hooks/usuario/useUsuarios';
-import { mockMedicos } from '@/services/mockData';
 import { ESTADO_CITA_LABEL, TIPO_CITA_LABEL, type EstadoCita } from '@/types/cita.types';
 import { getIniciales } from '@/lib/utils';
 
@@ -49,7 +48,7 @@ export function CalendarioGlobalPage() {
     undefined,
   );
 
-  const { data: medicos = mockMedicos, isLoading: cargandoMedicos } = useMedicos();
+  const { data: medicos = [], isLoading: cargandoMedicos } = useMedicos();
 
   // En modo 'dia' consultamos por fecha específica; en semana/mes consultamos todas para distribuirlas
   const { data: citas = [] } = useCitas(
@@ -58,7 +57,7 @@ export function CalendarioGlobalPage() {
   const { data: bloqueos = [] } = useBloqueos();
 
   const medicosFiltrados = useMemo(() => {
-    const lista = medicos.length > 0 ? medicos : mockMedicos;
+    const lista = medicos;
     if (medicoFiltro === 'TODOS') return lista;
     return lista.filter((m) => m.id === medicoFiltro);
   }, [medicos, medicoFiltro]);

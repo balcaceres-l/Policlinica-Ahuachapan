@@ -3,7 +3,6 @@ import Badge from '@/components/ui/Badge';
 import { useCatalogoEspecialidades } from '@/hooks/especialidad/useEspecialidades';
 import { useMedicos } from '@/hooks/usuario/useUsuarios';
 import { getIniciales, normalizar } from '@/lib/utils';
-import { mockCatalogoEspecialidades, mockMedicos } from '@/services/mockData';
 import type { Usuario } from '@/types/user.types';
 
 interface SelectorMedicoCascadaProps {
@@ -23,18 +22,8 @@ export function SelectorMedicoCascada({
   disabled = false,
   error,
 }: SelectorMedicoCascadaProps) {
-  const { data: rawMedicos = [] } = useMedicos();
-  const { data: rawCatalogo = [] } = useCatalogoEspecialidades();
-
-  const medicos: Usuario[] = useMemo(() => {
-    return Array.isArray(rawMedicos) && rawMedicos.length > 0 ? rawMedicos : mockMedicos;
-  }, [rawMedicos]);
-
-  const catalogo = useMemo(() => {
-    return Array.isArray(rawCatalogo) && rawCatalogo.length > 0
-      ? rawCatalogo
-      : mockCatalogoEspecialidades;
-  }, [rawCatalogo]);
+  const { data: medicos = [] } = useMedicos();
+  const { data: catalogo = [] } = useCatalogoEspecialidades();
 
   const [especialidadSeleccionada, setEspecialidadSeleccionada] = useState<string>('TODAS');
   const [busqueda, setBusqueda] = useState('');

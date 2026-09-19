@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\EspecialidadController;
 use App\Http\Controllers\Api\HorarioMedicoController;
 use App\Http\Controllers\Api\MedicoEspecialidadController;
 use App\Http\Controllers\Api\UsuarioController;
+use App\Http\Controllers\Api\PacienteController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:login');
@@ -35,7 +36,6 @@ Route::middleware('auth:sanctum')->group(function () {
         );
 
         // HU-34 — los horarios los configura el administrador.
-        Route::get('/medicos/{medico}/horarios', [HorarioMedicoController::class, 'index']);
         Route::post('/medicos/{medico}/horarios', [HorarioMedicoController::class, 'store']);
         Route::put('/medicos/{medico}/horarios', [HorarioMedicoController::class, 'sincronizar']);
         Route::put('/horarios/{horario}', [HorarioMedicoController::class, 'update']);
@@ -45,6 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:ADMINISTRADOR,RECEPCIONISTA')->group(function () {
         Route::get('/catalogo/especialidades', [CatalogoEspecialidadController::class, 'index']);
         Route::get('/medicos', [UsuarioController::class, 'medicos']);
+        Route::get('/medicos/{medico}/horarios', [HorarioMedicoController::class, 'index']);
 
         // HU-35 — bloqueo de agenda por ausencia del médico.
         Route::get('/bloqueos', [BloqueoAgendaController::class, 'index']);
@@ -66,6 +67,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // HU-10, HU-11, HU-12, HU-15, HU-16 — el médico consulta y agenda en su
     // propia agenda; el filtrado por rol ocurre en el controlador.
+    Route::apiResource('pacientes', PacienteController::class)->parameters(['pacientes' => 'paciente']);
     Route::get('/citas', [CitaController::class, 'index']);
     Route::post('/citas', [CitaController::class, 'store']);
     Route::get('/agenda/disponibilidad', [CitaController::class, 'disponibilidad']);

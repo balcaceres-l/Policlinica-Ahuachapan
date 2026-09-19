@@ -58,6 +58,6 @@ class User extends Authenticatable
 
     public function especialidades(): BelongsToMany
     {
-        return $this->belongsToMany(Especialidad::class)->withTimestamps();
+        return $this->belongsToMany(especialidad::class)->withTimestamps();
     }
 }

@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Concerns\RespondsWithJson;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\EspecialidadResource;
-use App\Models\Especialidad;
+use App\Models\especialidad;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -42,7 +42,7 @@ class MedicoEspecialidadController extends Controller
             'especialidadId' => ['required', 'uuid', 'exists:especialidades,id'],
         ]);
 
-        $especialidad = Especialidad::findOrFail($validated['especialidadId']);
+        $especialidad = especialidad::findOrFail($validated['especialidadId']);
         if ($especialidad->estado !== 'ACTIVA') {
             return $this->failure('No se puede asignar una especialidad inactiva.', 422);
         }
@@ -55,7 +55,7 @@ class MedicoEspecialidadController extends Controller
         return $this->success(null, 'Especialidad asignada correctamente.', 201);
     }
 
-    public function destroy(User $medico, Especialidad $especialidad): JsonResponse
+    public function destroy(User $medico, especialidad $especialidad): JsonResponse
     {
         if ($medico->rol !== 'MEDICO') {
             return $this->failure('El usuario indicado no es médico.', 422);

@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Concerns\RespondsWithJson;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CatalogoEspecialidadResource;
-use App\Models\Especialidad;
+use App\Models\especialidad;
 use Illuminate\Http\JsonResponse;
 
 class CatalogoEspecialidadController extends Controller
@@ -19,7 +19,7 @@ class CatalogoEspecialidadController extends Controller
         // los inactivos, porque ahí interesa la asignación completa.
         $soloActivos = fn ($query) => $query->where('estado', 'ACTIVO');
 
-        $especialidades = Especialidad::query()
+        $especialidades = especialidad::query()
             ->where('estado', 'ACTIVA')
             ->withCount(['medicos' => $soloActivos])
             ->with(['medicos' => fn ($query) => $soloActivos($query)->orderBy('nombre_completo')])

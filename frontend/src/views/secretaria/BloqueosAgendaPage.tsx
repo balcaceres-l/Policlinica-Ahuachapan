@@ -6,7 +6,6 @@ import Button from '@/components/ui/Button';
 import DataTable, { type Column } from '@/components/ui/DataTable';
 import { useBloqueos, useEliminarBloqueo } from '@/hooks/bloqueo/useBloqueos';
 import { useMedicos } from '@/hooks/usuario/useUsuarios';
-import { mockMedicos } from '@/services/mockData';
 import type { BloqueoAgenda, TipoBloqueo } from '@/types/bloqueo.types';
 
 export function BloqueosAgendaPage() {
@@ -15,7 +14,7 @@ export function BloqueosAgendaPage() {
   const [tipoBloqueoFiltro, setTipoBloqueoFiltro] = useState<TipoBloqueo | 'TODOS'>('TODOS');
   const [modalNuevo, setModalNuevo] = useState(false);
 
-  const { data: medicos = mockMedicos } = useMedicos();
+  const { data: medicos = [] } = useMedicos();
   const { data: bloqueos = [], isLoading } = useBloqueos({
     medicoId: medicoFiltro === 'TODOS' ? undefined : medicoFiltro,
     desde: fechaFiltro || undefined,

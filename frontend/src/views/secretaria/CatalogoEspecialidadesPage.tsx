@@ -6,21 +6,30 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import SearchBar from '@/components/ui/SearchBar';
 import { useCatalogoEspecialidades } from '@/hooks/especialidad/useEspecialidades';
 import { cn, getIniciales, normalizar } from '@/lib/utils';
-import { getHorarioResumidoMedico, mockCatalogoEspecialidades } from '@/services/mockData';
+import { useQuery } from '@tanstack/react-query';
+import { getHorariosDeMedico } from '@/services/horario/horario.service';
+import { DIA_LABEL } from '@/lib/constants/dias';
+import type { HorarioMedico } from '@/types/horario.types';
 import type { EspecialidadConMedicos } from '@/types/especialidad.types';
 import type { Usuario } from '@/types/user.types';
 
 type ModoVista = 'ESPECIALIDADES' | 'MEDICOS';
 
 export function CatalogoEspecialidadesPage() {
-  const { data: rawCatalogo = [], isLoading } = useCatalogoEspecialidades();
-
-  // Asegurar siempre datos de mockData si el backend no responde o devuelve lista vacía
-  const catalogo: EspecialidadConMedicos[] = useMemo(() => {
-    return Array.isArray(rawCatalogo) && rawCatalogo.length > 0
-      ? rawCatalogo
-      : mockCatalogoEspecialidades;
-  }, [rawCatalogo]);
+  const { data: catalogo = [], isLoading } = useCatalogoEspecialidades();
+  const { data: horarios = {} } = useQuery({
+    queryKey: ['catalogo', 'horarios', catalogo.map((e) => e.id)],
+    queryFn: async () => {
+      const ids = [...new Set(catalogo.flatMap((e) => e.medicos.map((m) => m.id)))];
+      const pares = await Promise.all(ids.map(async (id) => [id, await getHorariosDeMedico(id)] as const));
+      return Object.fromEntries(pares) as Record<string, HorarioMedico[]>;
+    },
+    enabled: catalogo.length > 0,
+  });
+  const getHorarioResumidoMedico = (id: string) => {
+    const tramos = horarios[id] ?? [];
+    return tramos.length ? tramos.map((h) => `${DIA_LABEL[h.dia_semana]} ${h.hora_inicio} - ${h.hora_fin}`).join(' · ') : 'Horario por coordinar';
+  };
 
   const [busqueda, setBusqueda] = useState('');
   const [filtroEspecialidad, setFiltroEspecialidad] = useState<string>('TODAS');

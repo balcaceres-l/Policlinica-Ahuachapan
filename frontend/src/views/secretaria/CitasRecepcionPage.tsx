@@ -11,7 +11,6 @@ import DataTable, { type Column } from '@/components/ui/DataTable';
 import SearchBar from '@/components/ui/SearchBar';
 import { useCitas, useMarcarLlegada } from '@/hooks/cita/useCitas';
 import { useMedicos } from '@/hooks/usuario/useUsuarios';
-import { mockMedicos } from '@/services/mockData';
 import { cn, normalizar } from '@/lib/utils';
 import {
   ESTADO_CITA_LABEL,
@@ -44,7 +43,7 @@ export function CitasRecepcionPage() {
   const [citaACancelar, setCitaACancelar] = useState<Cita | null>(null);
   const [citaSignosVitales, setCitaSignosVitales] = useState<Cita | null>(null);
 
-  const { data: medicos = mockMedicos } = useMedicos();
+  const { data: medicos = [] } = useMedicos();
   const { data: citas = [], isLoading } = useCitas({
     fecha: fechaFiltro || undefined,
     estado: estadoFiltro,

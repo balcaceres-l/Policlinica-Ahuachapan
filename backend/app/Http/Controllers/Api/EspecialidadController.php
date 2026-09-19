@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Concerns\RespondsWithJson;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\EspecialidadResource;
-use App\Models\Especialidad;
+use App\Models\especialidad;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,7 +21,7 @@ class EspecialidadController extends Controller
             'estado' => ['nullable', Rule::in(['ACTIVA', 'INACTIVA'])],
         ]);
 
-        $especialidades = Especialidad::query()
+        $especialidades = especialidad::query()
             ->withCount('medicos')
             ->when(
                 $validated['estado'] ?? null,
@@ -36,7 +36,7 @@ class EspecialidadController extends Controller
     public function store(Request $request): JsonResponse
     {
         // `estado` viene del default de la tabla: sin refresh se devuelve null.
-        $especialidad = Especialidad::create($this->validatePayload($request))->refresh();
+        $especialidad = especialidad::create($this->validatePayload($request))->refresh();
         $especialidad->setAttribute('medicos_count', 0);
 
         return $this->success(
@@ -46,14 +46,14 @@ class EspecialidadController extends Controller
         );
     }
 
-    public function show(Especialidad $especialidad): JsonResponse
+    public function show(especialidad $especialidad): JsonResponse
     {
         $especialidad->loadCount('medicos');
 
         return $this->success((new EspecialidadResource($especialidad))->resolve());
     }
 
-    public function update(Request $request, Especialidad $especialidad): JsonResponse
+    public function update(Request $request, especialidad $especialidad): JsonResponse
     {
         $especialidad->update($this->validatePayload($request, $especialidad));
         $especialidad->loadCount('medicos');
@@ -64,7 +64,7 @@ class EspecialidadController extends Controller
         );
     }
 
-    private function validatePayload(Request $request, ?Especialidad $especialidad = null): array
+    private function validatePayload(Request $request, ?especialidad $especialidad = null): array
     {
         return $request->validate([
             'nombre' => [

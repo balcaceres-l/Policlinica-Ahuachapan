@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\Especialidad;
+use App\Models\especialidad;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -57,7 +57,7 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($especialidades as [$nombre, $descripcion, $estado]) {
-            Especialidad::updateOrCreate(['nombre' => $nombre], compact('descripcion', 'estado'));
+            especialidad::updateOrCreate(['nombre' => $nombre], compact('descripcion', 'estado'));
         }
 
         $asignaciones = [
@@ -72,8 +72,15 @@ class DatabaseSeeder extends Seeder
 
         foreach ($asignaciones as $usuario => $nombresEspecialidades) {
             $medico = User::where('usuario', $usuario)->firstOrFail();
-            $ids = Especialidad::whereIn('nombre', $nombresEspecialidades)->pluck('id');
+            $ids = especialidad::whereIn('nombre', $nombresEspecialidades)->pluck('id');
             $medico->especialidades()->sync($ids);
         }
+
+        // Datos de demostración del resto del dominio clínico.
+        $this->call([
+            PacienteSeeder::class,
+            HorarioMedicoSeeder::class,
+            AgendaSeeder::class,
+        ]);
     }
 }
