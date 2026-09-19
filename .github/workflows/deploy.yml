@@ -9,7 +9,7 @@ jobs:
 
     steps:
       # ============================================================
-      # 1. REPOSITORIO
+      # 1. CHECKOUT
       # ============================================================
 
       - name: Checkout repository
@@ -17,7 +17,76 @@ jobs:
 
 
       # ============================================================
-      # 2. CONEXIÓN A HEADSCALE
+      # 2. FRONTEND - BUILD
+      # ============================================================
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+        run: npm run build
+
+      # Comprueba que Vite realmente haya insertado la URL de producción.
+      # Si todavía aparece localhost, detenemos el deploy.
+      - name: Verify frontend API URL
+        working-directory: frontend
+        run: |
+          echo "Verificando URL de API dentro del build..."
+
+          if grep -R "localhost:8000" dist/; then
+            echo "ERROR: El build contiene localhost:8000"
+            exit 1
+          fi
+
+          if grep -R "api-policlinica.marioalabi.com" dist/; then
+            echo "OK: El frontend contiene la API de producción"
+          else
+            echo "ERROR: No se encontró la API de producción en dist/"
+            exit 1
+          fi
+
+
+      # ============================================================
+      # 3. PREPARAR BACKEND
+      # ============================================================
+
+      # No copiamos archivos/directorios persistentes.
+      #
+      # .env             -> configuración del servidor
+      # storage          -> logs/uploads/cache del servidor
+      # bootstrap/cache  -> permisos especiales para Apache
+      # vendor           -> dependencias PHP ya instaladas
+      #
+      # Tampoco necesitamos tests ni archivos de Git.
+
+      - name: Prepare backend deployment
+        run: |
+          mkdir -p deploy/backend
+
+          rsync -a \
+            --exclude='.env' \
+            --exclude='storage/' \
+            --exclude='bootstrap/cache/' \
+            --exclude='vendor/' \
+            --exclude='tests/' \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            backend/ deploy/backend/
+
+
+      # ============================================================
+      # 4. CONECTAR A HEADSCALE
       # ============================================================
 
       - name: Install Tailscale
@@ -39,48 +108,7 @@ jobs:
 
 
       # ============================================================
-      # 3. FRONTEND
-      # ============================================================
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install frontend dependencies
-        working-directory: frontend
-        run: npm ci
-
-      - name: Build frontend
-        working-directory: frontend
-        env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
-        run: npm run build
-
-
-      # ============================================================
-      # 4. PREPARAR BACKEND
-      # ============================================================
-
-      - name: Prepare backend deployment
-        run: |
-          mkdir -p deploy/backend
-
-          rsync -a \
-            --exclude='.env' \
-            --exclude='storage/' \
-            --exclude='bootstrap/cache/' \
-            --exclude='vendor/' \
-            --exclude='tests/' \
-            --exclude='.git/' \
-            --exclude='.github/' \
-            backend/ deploy/backend/
-
-
-      # ============================================================
-      # 5. SFTP
+      # 5. INSTALAR LFTP
       # ============================================================
 
       - name: Install lftp
@@ -143,6 +171,8 @@ jobs:
             --exclude-glob=bootstrap/cache/** \
             --exclude-glob=vendor \
             --exclude-glob=vendor/** \
+            --exclude-glob=public/storage \
+            --exclude-glob=public/storage/** \
             deploy/backend/ \
             backend/
 
