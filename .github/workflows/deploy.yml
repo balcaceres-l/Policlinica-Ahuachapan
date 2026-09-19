@@ -8,16 +8,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # ==============================
-      # REPOSITORIO
-      # ==============================
+      # ============================================================
+      # 1. REPOSITORIO
+      # ============================================================
 
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ==============================
-      # HEADSCALE
-      # ==============================
+
+      # ============================================================
+      # 2. CONEXIÓN A HEADSCALE
+      # ============================================================
 
       - name: Install Tailscale
         run: |
@@ -32,11 +33,14 @@ jobs:
 
       - name: Test deployment server
         run: |
-          nc -vz "${{ secrets.SFTP_HOST }}" "${{ secrets.SFTP_PORT }}"
+          nc -vz \
+            "${{ secrets.SFTP_HOST }}" \
+            "${{ secrets.SFTP_PORT }}"
 
-      # ==============================
-      # FRONTEND - REACT/VITE
-      # ==============================
+
+      # ============================================================
+      # 3. FRONTEND
+      # ============================================================
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -51,79 +55,96 @@ jobs:
 
       - name: Build frontend
         working-directory: frontend
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
         run: npm run build
 
-      # ==============================
-      # BACKEND - LARAVEL
-      # ==============================
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-          tools: composer:v2
+      # ============================================================
+      # 4. PREPARAR BACKEND
+      # ============================================================
 
-      - name: Install backend dependencies
-        working-directory: backend
+      - name: Prepare backend deployment
         run: |
-          composer install \
-            --no-dev \
-            --prefer-dist \
-            --no-interaction \
-            --optimize-autoloader
-
-      # ==============================
-      # PREPARAR ARTEFACTOS
-      # ==============================
-
-      - name: Prepare deployment files
-        run: |
-          mkdir -p deploy/frontend
           mkdir -p deploy/backend
-
-          cp -a frontend/dist/. deploy/frontend/
 
           rsync -a \
             --exclude='.env' \
-            --exclude='tests' \
-            --exclude='.git' \
+            --exclude='storage/' \
+            --exclude='bootstrap/cache/' \
+            --exclude='vendor/' \
+            --exclude='tests/' \
+            --exclude='.git/' \
+            --exclude='.github/' \
             backend/ deploy/backend/
 
-      # ==============================
-      # SFTP
-      # ==============================
 
-      - name: Install sshpass
+      # ============================================================
+      # 5. SFTP
+      # ============================================================
+
+      - name: Install lftp
         run: |
           sudo apt-get update
-          sudo apt-get install -y sshpass
+          sudo apt-get install -y lftp
 
-      - name: Upload frontend via SFTP
+
+      # ============================================================
+      # 6. DEPLOY FRONTEND
+      # ============================================================
+
+      - name: Deploy frontend
         env:
           SFTP_HOST: ${{ secrets.SFTP_HOST }}
           SFTP_PORT: ${{ secrets.SFTP_PORT }}
           SFTP_USER: ${{ secrets.SFTP_USER }}
           SFTP_PASSWORD: ${{ secrets.SFTP_PASSWORD }}
         run: |
-          sshpass -p "$SFTP_PASSWORD" sftp \
-            -o StrictHostKeyChecking=no \
-            -P "$SFTP_PORT" \
-            "$SFTP_USER@$SFTP_HOST" <<EOF
-          put -r deploy/frontend/* public_html/
+          lftp -u "$SFTP_USER","$SFTP_PASSWORD" \
+            "sftp://$SFTP_HOST:$SFTP_PORT" <<EOF
+
+          set sftp:auto-confirm yes
+
+          mirror \
+            --reverse \
+            --delete \
+            --verbose \
+            frontend/dist/ \
+            public_html/
+
           bye
           EOF
 
-      - name: Upload backend via SFTP
+
+      # ============================================================
+      # 7. DEPLOY BACKEND
+      # ============================================================
+
+      - name: Deploy backend
         env:
           SFTP_HOST: ${{ secrets.SFTP_HOST }}
           SFTP_PORT: ${{ secrets.SFTP_PORT }}
           SFTP_USER: ${{ secrets.SFTP_USER }}
           SFTP_PASSWORD: ${{ secrets.SFTP_PASSWORD }}
         run: |
-          sshpass -p "$SFTP_PASSWORD" sftp \
-            -o StrictHostKeyChecking=no \
-            -P "$SFTP_PORT" \
-            "$SFTP_USER@$SFTP_HOST" <<EOF
-          put -r deploy/backend/* backend/
+          lftp -u "$SFTP_USER","$SFTP_PASSWORD" \
+            "sftp://$SFTP_HOST:$SFTP_PORT" <<EOF
+
+          set sftp:auto-confirm yes
+
+          mirror \
+            --reverse \
+            --delete \
+            --verbose \
+            --exclude-glob=.env \
+            --exclude-glob=storage \
+            --exclude-glob=storage/** \
+            --exclude-glob=bootstrap/cache \
+            --exclude-glob=bootstrap/cache/** \
+            --exclude-glob=vendor \
+            --exclude-glob=vendor/** \
+            deploy/backend/ \
+            backend/
+
           bye
           EOF
