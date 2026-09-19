@@ -25,5 +25,5 @@ jobs:
 
       - name: Test connection to deployment server
         run: |
-          tailscale ping "${{ secrets.SFTP_HOST }}"
+          tailscale ping --until-direct=false "${{ secrets.SFTP_HOST }}"    
 
