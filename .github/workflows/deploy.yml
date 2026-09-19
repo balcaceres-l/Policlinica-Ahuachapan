@@ -1,0 +1,129 @@
+name: Deploy Policlinica
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ==============================
+      # REPOSITORIO
+      # ==============================
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ==============================
+      # HEADSCALE
+      # ==============================
+
+      - name: Install Tailscale
+        run: |
+          curl -fsSL https://tailscale.com/install.sh | sh
+
+      - name: Connect to Headscale
+        run: |
+          sudo tailscale up \
+            --login-server="${{ secrets.HEADSCALE_URL }}" \
+            --auth-key="${{ secrets.HEADSCALE_AUTH_KEY }}" \
+            --hostname="github-deploy-${{ github.run_id }}"
+
+      - name: Test deployment server
+        run: |
+          nc -vz "${{ secrets.SFTP_HOST }}" "${{ secrets.SFTP_PORT }}"
+
+      # ==============================
+      # FRONTEND - REACT/VITE
+      # ==============================
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      # ==============================
+      # BACKEND - LARAVEL
+      # ==============================
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer:v2
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          composer install \
+            --no-dev \
+            --prefer-dist \
+            --no-interaction \
+            --optimize-autoloader
+
+      # ==============================
+      # PREPARAR ARTEFACTOS
+      # ==============================
+
+      - name: Prepare deployment files
+        run: |
+          mkdir -p deploy/frontend
+          mkdir -p deploy/backend
+
+          cp -a frontend/dist/. deploy/frontend/
+
+          rsync -a \
+            --exclude='.env' \
+            --exclude='tests' \
+            --exclude='.git' \
+            backend/ deploy/backend/
+
+      # ==============================
+      # SFTP
+      # ==============================
+
+      - name: Install sshpass
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sshpass
+
+      - name: Upload frontend via SFTP
+        env:
+          SFTP_HOST: ${{ secrets.SFTP_HOST }}
+          SFTP_PORT: ${{ secrets.SFTP_PORT }}
+          SFTP_USER: ${{ secrets.SFTP_USER }}
+          SFTP_PASSWORD: ${{ secrets.SFTP_PASSWORD }}
+        run: |
+          sshpass -p "$SFTP_PASSWORD" sftp \
+            -o StrictHostKeyChecking=no \
+            -P "$SFTP_PORT" \
+            "$SFTP_USER@$SFTP_HOST" <<EOF
+          put -r deploy/frontend/* public_html/
+          bye
+          EOF
+
+      - name: Upload backend via SFTP
+        env:
+          SFTP_HOST: ${{ secrets.SFTP_HOST }}
+          SFTP_PORT: ${{ secrets.SFTP_PORT }}
+          SFTP_USER: ${{ secrets.SFTP_USER }}
+          SFTP_PASSWORD: ${{ secrets.SFTP_PASSWORD }}
+        run: |
+          sshpass -p "$SFTP_PASSWORD" sftp \
+            -o StrictHostKeyChecking=no \
+            -P "$SFTP_PORT" \
+            "$SFTP_USER@$SFTP_HOST" <<EOF
+          put -r deploy/backend/* backend/
+          bye
+          EOF
