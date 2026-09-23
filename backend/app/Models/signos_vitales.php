@@ -21,7 +21,7 @@ class signos_vitales extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'id_consulta',
+        'id_cita',
         'presion_sistolica',
         'presion_diastolica',
         'frecuencia_cardiaca',
@@ -48,9 +48,9 @@ class signos_vitales extends Model
         'fecha_registro' => 'datetime',
     ];
 
-    public function consulta(): BelongsTo
+    public function cita(): BelongsTo
     {
-        return $this->belongsTo(consulta::class, 'id_consulta', 'id_consulta');
+        return $this->belongsTo(cita::class, 'id_cita', 'id_cita');
     }
 
     public function registradoPor(): BelongsTo

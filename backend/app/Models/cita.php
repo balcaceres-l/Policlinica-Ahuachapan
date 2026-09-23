@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class cita extends Model
 {
@@ -57,6 +58,11 @@ class cita extends Model
     public function medico(): BelongsTo
     {
         return $this->belongsTo(User::class, 'id_medico');
+    }
+
+    public function signosVitales(): HasOne
+    {
+        return $this->hasOne(signos_vitales::class, 'id_cita', 'id_cita');
     }
 
     public function especialidad(): BelongsTo

@@ -72,6 +72,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/citas', [CitaController::class, 'store']);
     Route::get('/agenda/disponibilidad', [CitaController::class, 'disponibilidad']);
 
+    // HU-18 — recepción los toma en el triaje y el médico los corrige al atender.
+    Route::get('/citas/{cita}/signos-vitales', [SignosVitalesController::class, 'show']);
+    Route::put('/citas/{cita}/signos-vitales', [SignosVitalesController::class, 'store']);
+
     // HU-39 — el médico abre la consulta eligiendo con qué especialidad atiende.
     Route::middleware('role:MEDICO')->group(function () {
         Route::get(
@@ -82,8 +86,5 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/consultas/{consulta}', [ConsultaController::class, 'show']);
         Route::patch('/consultas/{consulta}/finalizar', [ConsultaController::class, 'finalizar']);
 
-        // HU-18 — signos vitales de la consulta.
-        Route::get('/consultas/{consulta}/signos-vitales', [SignosVitalesController::class, 'show']);
-        Route::put('/consultas/{consulta}/signos-vitales', [SignosVitalesController::class, 'store']);
     });
 });

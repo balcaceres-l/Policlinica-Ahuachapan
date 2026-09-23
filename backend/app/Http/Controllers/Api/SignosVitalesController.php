@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Concerns\RespondsWithJson;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\SignosVitalesResource;
-use App\Models\consulta;
+use App\Models\cita;
 use App\Models\signos_vitales;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,35 +33,36 @@ class SignosVitalesController extends Controller
         'observaciones' => ['nullable', 'string', 'max:1000'],
     ];
 
-    public function show(Request $request, consulta $consulta): JsonResponse
+    public function show(Request $request, cita $cita): JsonResponse
     {
-        if ($consulta->id_medico !== $request->user()->id) {
-            return $this->failure('Esa consulta no es tuya.', 403);
+        if (! $this->puedeVer($request, $cita)) {
+            return $this->failure('No tienes acceso a esa cita.', 403);
         }
 
         $signos = signos_vitales::with('registradoPor')
-            ->where('id_consulta', $consulta->id_consulta)
+            ->where('id_cita', $cita->id_cita)
             ->first();
 
         if (! $signos) {
-            return $this->success(null, 'La consulta aún no tiene signos vitales.');
+            return $this->success(null, 'La cita aún no tiene signos vitales.');
         }
 
         return $this->success((new SignosVitalesResource($signos))->resolve());
     }
 
     /**
-     * Guarda o corrige los signos de la consulta. Es una sola toma por
-     * consulta: reenviar el formulario actualiza, no duplica.
+     * Guarda o corrige los signos de la cita. Recepción los toma en el triaje
+     * y el médico puede completarlos o corregirlos al atender, por eso ambos
+     * roles escriben sobre el mismo registro.
      */
-    public function store(Request $request, consulta $consulta): JsonResponse
+    public function store(Request $request, cita $cita): JsonResponse
     {
-        if ($consulta->id_medico !== $request->user()->id) {
-            return $this->failure('Esa consulta no es tuya.', 403);
+        if (! $this->puedeVer($request, $cita)) {
+            return $this->failure('No tienes acceso a esa cita.', 403);
         }
 
-        if (! $consulta->estaAbierta()) {
-            return $this->failure('La consulta ya fue cerrada.', 422);
+        if (in_array($cita->estado, ['CANCELADA', 'NO_ASISTIO'], true)) {
+            return $this->failure('La cita no está en condiciones de registrar signos.', 422);
         }
 
         $validado = $request->validate(self::REGLAS);
@@ -84,7 +85,7 @@ class SignosVitalesController extends Controller
         $validado['id_registrado_por'] = $request->user()->id;
 
         $signos = signos_vitales::updateOrCreate(
-            ['id_consulta' => $consulta->id_consulta],
+            ['id_cita' => $cita->id_cita],
             $validado,
         );
 
@@ -93,5 +94,13 @@ class SignosVitalesController extends Controller
             'Signos vitales guardados correctamente.',
             $signos->wasRecentlyCreated ? 201 : 200,
         );
+    }
+
+    /** El médico solo toca su propia agenda; recepción y administración, cualquiera. */
+    private function puedeVer(Request $request, cita $cita): bool
+    {
+        $usuario = $request->user();
+
+        return $usuario->rol !== 'MEDICO' || $usuario->id === $cita->id_medico;
     }
 }

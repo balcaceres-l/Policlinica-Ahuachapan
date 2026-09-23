@@ -11,7 +11,7 @@ class SignosVitalesResource extends JsonResource
     {
         return [
             'id' => $this->id_signos,
-            'consulta_id' => $this->id_consulta,
+            'cita_id' => $this->id_cita,
             'presion_sistolica' => $this->presion_sistolica,
             'presion_diastolica' => $this->presion_diastolica,
             'frecuencia_cardiaca' => $this->frecuencia_cardiaca,
