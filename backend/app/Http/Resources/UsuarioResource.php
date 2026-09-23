@@ -18,6 +18,7 @@ class UsuarioResource extends JsonResource
             'estado' => $this->estado,
             'telefono' => $this->telefono,
             'fechaRegistro' => $this->created_at?->toDateString(),
+            'horarios' => HorarioMedicoResource::collection($this->whenLoaded('horarios')),
         ];
     }
 }

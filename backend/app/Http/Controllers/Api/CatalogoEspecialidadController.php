@@ -22,7 +22,7 @@ class CatalogoEspecialidadController extends Controller
         $especialidades = Especialidad::query()
             ->where('estado', 'ACTIVA')
             ->withCount(['medicos' => $soloActivos])
-            ->with(['medicos' => fn ($query) => $soloActivos($query)->orderBy('nombre_completo')])
+            ->with(['medicos' => fn ($query) => $soloActivos($query)->with('horarios')->orderBy('nombre_completo')])
             ->orderBy('nombre')
             ->get();
 

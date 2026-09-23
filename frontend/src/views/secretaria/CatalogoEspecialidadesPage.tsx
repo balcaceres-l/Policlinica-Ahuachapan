@@ -5,22 +5,18 @@ import EmptyState from '@/components/ui/EmptyState';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import SearchBar from '@/components/ui/SearchBar';
 import { useCatalogoEspecialidades } from '@/hooks/especialidad/useEspecialidades';
+import { resumirHorarios } from '@/lib/constants/dias';
 import { cn, getIniciales, normalizar } from '@/lib/utils';
-import { getHorarioResumidoMedico, mockCatalogoEspecialidades } from '@/services/mockData';
 import type { EspecialidadConMedicos } from '@/types/especialidad.types';
 import type { Usuario } from '@/types/user.types';
 
 type ModoVista = 'ESPECIALIDADES' | 'MEDICOS';
 
-export function CatalogoEspecialidadesPage() {
-  const { data: rawCatalogo = [], isLoading } = useCatalogoEspecialidades();
+/** Referencia estable: un `[]` inline cambiaría en cada render. */
+const SIN_DATOS: EspecialidadConMedicos[] = [];
 
-  // Asegurar siempre datos de mockData si el backend no responde o devuelve lista vacía
-  const catalogo: EspecialidadConMedicos[] = useMemo(() => {
-    return Array.isArray(rawCatalogo) && rawCatalogo.length > 0
-      ? rawCatalogo
-      : mockCatalogoEspecialidades;
-  }, [rawCatalogo]);
+export function CatalogoEspecialidadesPage() {
+  const { data: catalogo = SIN_DATOS, isLoading } = useCatalogoEspecialidades();
 
   const [busqueda, setBusqueda] = useState('');
   const [filtroEspecialidad, setFiltroEspecialidad] = useState<string>('TODAS');
@@ -417,7 +413,7 @@ export function CatalogoEspecialidadesPage() {
                         ) : (
                           <ul className="grid gap-3 sm:grid-cols-2">
                             {esp.medicosVisibles.map((medico) => {
-                              const horarioResumido = getHorarioResumidoMedico(medico.id);
+                              const horarioResumido = resumirHorarios(medico.horarios);
 
                               return (
                                 <li
@@ -488,7 +484,7 @@ export function CatalogoEspecialidadesPage() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {medicosDirectorioFiltrados.map(({ medico, especialidades }) => {
-                const horario = getHorarioResumidoMedico(medico.id);
+                const horario = resumirHorarios(medico.horarios);
 
                 return (
                   <div
