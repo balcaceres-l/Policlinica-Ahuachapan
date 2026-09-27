@@ -11,8 +11,10 @@
 
 ## HU-07 — Registro de especialidades médicas (EP-03)
 
-**Estado: ⚠️ parcial.** Se documentó antes como "funcional con mock", pero
-al revisar el código contra los criterios reales de la HU-07, falta trabajo.
+**Estado: Resuelto (2026-09-26).** Verificado en el código: existen
+`actualizarEspecialidad` y `cambiarEstadoEspecialidad` en
+`especialidad.service.ts` y los botones de editar y activar/desactivar en
+`EspecialidadesPage.tsx`. El texto de abajo se conserva como historial.
 
 **Lo que sí cumple:**
 - Formulario de registro (nombre + descripción opcional). ✅
@@ -73,3 +75,30 @@ Agrega hallazgos nuevos debajo de esta línea, con el mismo formato:
 Estado, qué cumple, qué no cumple, por qué no se arregla ahora (si aplica),
 y los pasos concretos para cuando se retome.
 -->
+
+## HU-19 — Examen físico (EP-06, Sprint 2)
+
+**Estado: 🟠 completa en frontend con mock; pendiente de backend.**
+
+- ✅ Criterio 51: `ConsultaPage.tsx` tiene un campo de texto libre para el examen
+  físico, sin estructura por región o sistema.
+- ✅ Criterio 52 (a nivel frontend): al finalizar la consulta, el examen físico
+  queda asociado al paciente y aparece en su expediente
+  (`/medico/expediente/:pacienteId`).
+- Falta en backend: columna `consulta.examen_fisico`, endpoint para guardarla y
+  conectar `ConsultaPage` a la consulta real. Detalle en
+  `docs/avance-historial-clinico-hu-19-22.md`.
+
+## HU-22 — Historial de diagnósticos y tratamientos (EP-07, Sprint 2)
+
+**Estado: 🟠 completa en frontend con mock; pendiente de backend.** Depende de
+HU-20 (diagnóstico), HU-44 (catálogo CIE-10) y HU-21 (plan de manejo), asignadas
+a otras personas, y de sus tablas. `ExpedientePage.tsx` también es el punto de
+entrada de HU-26 y HU-27 (Dennis): coordinar para no pisarse.
+
+## Documentación de contexto desactualizada (2026-09-26)
+
+`00-contexto-proyecto.md` afirmaba que existían migraciones de catálogos CIE-10,
+diagnósticos, recetas y documentos. No es así: solo existen las tablas listadas
+allí ahora. Ya corregido. `03-plan-agendamiento.md` sigue describiendo el
+backend de EP-04 como "solo migraciones"; hoy ya tiene controladores y rutas.
