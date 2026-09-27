@@ -53,6 +53,11 @@ function App() {
             <Route path="/medico/consulta/:id" element={<ConsultaPage />} />
             <Route path="/medico/calendario" element={<CalendarioPage />} />
             <Route path="/medico/expediente" element={<ExpedientePage />} />
+            {/* HU-22 — expediente de un paciente concreto */}
+            <Route
+              path="/medico/expediente/:pacienteId"
+              element={<ExpedientePage />}
+            />
             <Route
               path="/medico/laboratorio"
               element={<LaboratorioClinicoPage />}

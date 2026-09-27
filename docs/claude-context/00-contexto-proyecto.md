@@ -50,11 +50,15 @@ equipo de backend trabaja esto por separado. Lo que hoy existe:
 - **Controladores con lógica completa:** `AuthController`, `UsuarioController`,
   `EspecialidadController`, `MedicoEspecialidadController`,
   `CatalogoEspecialidadController`.
-- **Migraciones ya escritas pero sin controlador/ruta todavía** (solo
-  esquema de base de datos, útil para que el mock use los mismos nombres de
-  campo — ver `03-plan-agendamiento.md`): `pacientes`, `horarios_medicos`,
-  `bloqueos_agenda`, `citas`, catálogos clínicos (CIE-10, medicamentos),
-  consultas, diagnósticos, recetas, documentos clínicos.
+- **Actualizado (verificado contra el repo el 2026-09-26):** el backend ya
+  tiene controladores y rutas reales para horarios, bloqueos, citas, signos
+  vitales y consultas (abrir, ver, finalizar). Las tablas existentes son
+  `paciente`, `responsable`, `historial_clinico`, `horario_medico`,
+  `bloqueo_agenda`, `cita`, `consulta` y `signos_vitales` (nombres en singular).
+- **Todavía NO existen** (ni tabla ni endpoint): pacientes (rutas), catálogo
+  CIE-10, diagnósticos, plan de manejo, examen físico, medicamentos, recetas y
+  documentos clínicos. La propuesta para historial clínico está en
+  `docs/avance-historial-clinico-hu-19-22.md`.
 
 ## Estructura de carpetas del frontend
 

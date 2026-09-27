@@ -1,4 +1,5 @@
 import type { Especialidad, EspecialidadConMedicos } from '@/types/especialidad.types';
+import type { ConsultaHistorial, DiagnosticoConsulta } from '@/types/historial.types';
 import type { HorarioMedico } from '@/types/horario.types';
 import type { Paciente } from '@/types/paciente.types';
 import type { Usuario } from '@/types/user.types';
@@ -362,6 +363,195 @@ export const obtenerFechaRelativa = (offsetDias: number): string => {
   return `${anio}-${mes}-${dia}`;
 };
 
+/* ------------------------------------------------------------------
+   Historial clínico simulado (HU-19, HU-20, HU-21, HU-22).
+   Consultas ya atendidas, con datos ficticios de prueba. Los pacientes
+   luis, ana, mateo y john no tienen consultas previas a propósito, para
+   probar el estado vacío del historial.
+   ------------------------------------------------------------------ */
 
+const idHistorial = (bloque: string, n: number): string =>
+  `${bloque}f5a2b0-7e2d-4ad1-8b1b-${String(n).padStart(12, '0')}`;
+
+/** Diagnóstico de catálogo (CIE-10) o de texto libre. */
+const diagnostico = (
+  consultaId: string,
+  n: number,
+  descripcion: string,
+  codigoCie10: string | null = null,
+): DiagnosticoConsulta => ({
+  id: idHistorial('b0', n),
+  consulta_id: consultaId,
+  codigo_cie10: codigoCie10,
+  descripcion,
+  es_texto_libre: codigoCie10 === null,
+});
+
+const consultaIds = {
+  carlos1: idHistorial('a0', 1),
+  carlos2: idHistorial('a0', 2),
+  carlos3: idHistorial('a0', 3),
+  maria1: idHistorial('a0', 4),
+  maria2: idHistorial('a0', 5),
+  juan1: idHistorial('a0', 6),
+  sofia1: idHistorial('a0', 7),
+} as const;
+
+export const mockConsultasHistorial: ConsultaHistorial[] = [
+  {
+    id: consultaIds.carlos1,
+    paciente_id: pacienteIds.carlos,
+    cita_id: idHistorial('c0', 1),
+    fecha_hora_inicio: '2026-03-10 15:20:00',
+    fecha_hora_fin: '2026-03-10 15:45:00',
+    medico_id: medicoIds.miguel,
+    medicoNombre: 'Dr. Miguel Ángel Torres',
+    especialidad_atencion_id: especialidadIds.medicinaInterna,
+    especialidadNombre: 'Medicina Interna',
+    motivo_consulta: 'Cefalea persistente y mareos de una semana de evolución.',
+    examen_fisico:
+      'Paciente alerta, orientado, en buen estado general. Tórax simétrico, sin ruidos agregados a la auscultación. ' +
+      'Ruidos cardíacos rítmicos, sin soplos. Abdomen blando, depresible, no doloroso. Extremidades sin edema.',
+    diagnosticos: [diagnostico(consultaIds.carlos1, 1, 'Hipertensión esencial (primaria)', 'I10')],
+    plan_manejo: {
+      id: idHistorial('d0', 1),
+      consulta_id: consultaIds.carlos1,
+      indicaciones:
+        'Iniciar tratamiento antihipertensivo indicado en receta. Dieta baja en sodio, actividad física ligera ' +
+        'diaria y control de presión arterial en casa. Cita de control en 4 semanas.',
+    },
+  },
+  {
+    id: consultaIds.carlos2,
+    paciente_id: pacienteIds.carlos,
+    cita_id: idHistorial('c0', 2),
+    fecha_hora_inicio: '2026-04-14 15:50:00',
+    fecha_hora_fin: '2026-04-14 16:10:00',
+    medico_id: medicoIds.miguel,
+    medicoNombre: 'Dr. Miguel Ángel Torres',
+    especialidad_atencion_id: especialidadIds.medicinaInterna,
+    especialidadNombre: 'Medicina Interna',
+    motivo_consulta: 'Control de presión arterial.',
+    examen_fisico:
+      'Sin cefalea ni mareos. Tórax sin alteraciones. Abdomen blando, depresible, no doloroso. Sin edema en extremidades.',
+    diagnosticos: [diagnostico(consultaIds.carlos2, 2, 'Hipertensión esencial (primaria)', 'I10')],
+    plan_manejo: {
+      id: idHistorial('d0', 2),
+      consulta_id: consultaIds.carlos2,
+      indicaciones:
+        'Continuar el mismo esquema de tratamiento. Mantener dieta baja en sodio. Control mensual con toma de presión.',
+    },
+  },
+  {
+    id: consultaIds.carlos3,
+    paciente_id: pacienteIds.carlos,
+    cita_id: idHistorial('c0', 3),
+    fecha_hora_inicio: '2026-08-25 15:40:00',
+    fecha_hora_fin: '2026-08-25 16:05:00',
+    medico_id: medicoIds.fernando,
+    medicoNombre: 'Dr. Fernando Alvarenga',
+    especialidad_atencion_id: especialidadIds.medicinaInterna,
+    especialidadNombre: 'Medicina Interna',
+    motivo_consulta: 'Tos con congestión nasal y malestar general desde hace tres días.',
+    examen_fisico:
+      'Orofaringe hiperémica sin exudado. Mucosa nasal pálida y edematosa. Tórax simétrico, murmullo vesicular ' +
+      'conservado, sin ruidos agregados.',
+    diagnosticos: [
+      diagnostico(
+        consultaIds.carlos3,
+        3,
+        'Infección aguda de las vías respiratorias superiores, no especificada',
+        'J06.9',
+      ),
+      diagnostico(consultaIds.carlos3, 4, 'Probable rinitis alérgica asociada'),
+    ],
+    plan_manejo: {
+      id: idHistorial('d0', 3),
+      consulta_id: consultaIds.carlos3,
+      indicaciones:
+        'Reposo relativo e hidratación abundante. Tratamiento sintomático indicado en receta. ' +
+        'Regresar si hay fiebre mayor a 38.5 °C o dificultad para respirar.',
+    },
+  },
+  {
+    id: consultaIds.maria1,
+    paciente_id: pacienteIds.maria,
+    cita_id: idHistorial('c0', 4),
+    fecha_hora_inicio: '2026-05-06 15:30:00',
+    fecha_hora_fin: '2026-05-06 15:55:00',
+    medico_id: medicoIds.elena,
+    medicoNombre: 'Dra. Elena Ramírez Alfaro',
+    especialidad_atencion_id: especialidadIds.ginecologia,
+    especialidadNombre: 'Ginecología',
+    motivo_consulta: 'Flujo vaginal con prurito de cinco días.',
+    examen_fisico: 'Abdomen blando, depresible, sin dolor a la palpación. Especuloscopía con secreción aumentada.',
+    diagnosticos: [diagnostico(consultaIds.maria1, 5, 'Vaginitis aguda', 'N76.0')],
+    plan_manejo: {
+      id: idHistorial('d0', 4),
+      consulta_id: consultaIds.maria1,
+      indicaciones: 'Tratamiento local y por vía oral indicado en receta. Abstinencia durante el tratamiento.',
+    },
+  },
+  {
+    id: consultaIds.maria2,
+    paciente_id: pacienteIds.maria,
+    cita_id: idHistorial('c0', 5),
+    fecha_hora_inicio: '2026-07-15 16:00:00',
+    fecha_hora_fin: '2026-07-15 16:25:00',
+    medico_id: medicoIds.elena,
+    medicoNombre: 'Dra. Elena Ramírez Alfaro',
+    especialidad_atencion_id: especialidadIds.ginecologia,
+    especialidadNombre: 'Ginecología',
+    motivo_consulta: 'Retraso menstrual y prueba de embarazo positiva.',
+    examen_fisico: 'Abdomen blando, depresible, útero no palpable por encima del pubis. Sin edema en extremidades.',
+    diagnosticos: [diagnostico(consultaIds.maria2, 6, 'Supervisión de primer embarazo normal', 'Z34.0')],
+    plan_manejo: {
+      id: idHistorial('d0', 5),
+      consulta_id: consultaIds.maria2,
+      indicaciones:
+        'Inicio de control prenatal. Suplemento vitamínico indicado en receta. Ultrasonido obstétrico y exámenes de ' +
+        'laboratorio de rutina. Próximo control en 4 semanas.',
+    },
+  },
+  {
+    id: consultaIds.juan1,
+    paciente_id: pacienteIds.juan,
+    cita_id: idHistorial('c0', 6),
+    fecha_hora_inicio: '2026-06-04 16:00:00',
+    fecha_hora_fin: '2026-06-04 16:20:00',
+    medico_id: medicoIds.roberto,
+    medicoNombre: 'Dr. Roberto Cañas Portillo',
+    especialidad_atencion_id: especialidadIds.cirugiaGeneral,
+    especialidadNombre: 'Cirugía General',
+    motivo_consulta: 'Dolor en la parte alta del abdomen después de comer.',
+    examen_fisico: 'Abdomen blando, doloroso a la palpación en epigastrio, sin signos de irritación peritoneal.',
+    diagnosticos: [diagnostico(consultaIds.juan1, 7, 'Gastritis, no especificada', 'K29.7')],
+    // Sin plan de manejo registrado: sirve para probar ese estado en la vista.
+    plan_manejo: null,
+  },
+  {
+    id: consultaIds.sofia1,
+    paciente_id: pacienteIds.sofia,
+    cita_id: idHistorial('c0', 7),
+    fecha_hora_inicio: '2026-06-20 09:00:00',
+    fecha_hora_fin: '2026-06-20 09:25:00',
+    medico_id: medicoIds.josue,
+    medicoNombre: 'Dr. Josué Hernández Cruz',
+    especialidad_atencion_id: especialidadIds.pediatria,
+    especialidadNombre: 'Pediatría',
+    motivo_consulta: 'Fiebre y dolor de garganta desde ayer.',
+    examen_fisico:
+      'Niña activa, reactiva, hidratada. Orofaringe hiperémica con amígdalas aumentadas de tamaño. ' +
+      'Tórax sin ruidos agregados.',
+    diagnosticos: [diagnostico(consultaIds.sofia1, 8, 'Faringitis aguda, no especificada', 'J02.9')],
+    plan_manejo: {
+      id: idHistorial('d0', 6),
+      consulta_id: consultaIds.sofia1,
+      indicaciones:
+        'Antipirético y tratamiento indicados en receta según peso. Líquidos abundantes y reposo. ' +
+        'Control en 3 días o antes si persiste la fiebre.',
+    },
+  },
+];
 
 /** Generadores de IDs en memoria */

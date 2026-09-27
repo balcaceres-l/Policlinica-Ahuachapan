@@ -20,6 +20,8 @@ export interface SignosVitales {
 
 export interface PacienteConsulta {
   id: string;
+  /** Paciente del sistema (expediente). Une la consulta con su historial. */
+  pacienteId: string;
   nombre: string;
   expediente: string;
   edad: number;
@@ -39,4 +41,9 @@ export interface PacienteConsulta {
   diagnostico: string;
   plan: string;
   observaciones: string;
+
+  // Se completan al finalizar, para registrar la consulta en el historial.
+  medicoId?: string;
+  medicoNombre?: string;
+  especialidadNombre?: string;
 }

@@ -2,14 +2,15 @@
 import type { PacienteConsulta } from '@/types/consulta';
 import type { ConsultaService } from './consulta.service';
 
-const STORAGE_KEY = 'policlinica-demo-consulta-v1';
+const STORAGE_KEY = 'policlinica-demo-consulta-v2';
 
 const inicial: PacienteConsulta[] = [
   {
     id: 'demo-1',
-    nombre: 'María Patricia Ramírez Romero',
-    expediente: 'EXP-2024-1007',
-    edad: 50,
+    pacienteId: '0f8fad5b-d9cb-469f-a165-708677289501',
+    nombre: 'Carlos Eduardo Mendoza',
+    expediente: 'CM01-2026',
+    edad: 38,
     tipo: 'Sin cita',
     horaLlegada: '08:10',
     motivo: 'Malestar general desde ayer',
@@ -31,9 +32,10 @@ const inicial: PacienteConsulta[] = [
   },
   {
     id: 'demo-2',
-    nombre: 'José Daniel Martínez',
-    expediente: 'EXP-2025-0231',
-    edad: 42,
+    pacienteId: '4f8fad5b-d9cb-469f-a165-708677289505',
+    nombre: 'Luis Fernando Portillo',
+    expediente: 'LP05-2026',
+    edad: 44,
     tipo: 'Con cita',
     horaLlegada: '08:35',
     motivo: 'Control de seguimiento',
@@ -55,9 +57,10 @@ const inicial: PacienteConsulta[] = [
   },
   {
     id: 'demo-3',
-    nombre: 'Ana Lucía Pérez',
-    expediente: 'EXP-2023-0845',
-    edad: 31,
+    pacienteId: '5f8fad5b-d9cb-469f-a165-708677289506',
+    nombre: 'Ana Gabriela Gómez',
+    expediente: 'AG06-2026',
+    edad: 25,
     tipo: 'Con cita',
     horaLlegada: '09:05',
     motivo: 'Consulta general',

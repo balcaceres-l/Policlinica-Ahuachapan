@@ -26,15 +26,13 @@ probado por el equipo de backend. No lo regreses a mock por ningún motivo.
 
 | Jira | HU | Estado |
 |---|---|---|
-| SCRUM-93 | HU-07 Registro de especialidades | ⚠️ **parcial** — ver `04-hallazgos-pendientes.md` |
+| SCRUM-93 | HU-07 Registro de especialidades | 🟠 completo (editar y activar/desactivar verificados el 2026-09-26) |
 | SCRUM-94 | HU-08 Asociación médicos–especialidades | 🟠 completo |
 | SCRUM-95 | HU-09 Catálogo de especialidades | 🟠 completo |
 
 **No es tu tarea trabajar este bloque ahora** (la prioridad activa es
-EP-04, abajo), pero si tocas algo aquí por error o de pasada, ten presente
-que HU-07 no está realmente completa aunque el mock "funcione" — le faltan
-edición y activar/desactivar. Detalle completo en
-`04-hallazgos-pendientes.md`.
+EP-04). HU-07 tenía un hallazgo por falta de edición y activar/desactivar,
+ya resuelto (ver `04-hallazgos-pendientes.md`).
 
 ## EP-04 · Agendamiento de Citas Médicas — 🔲 ES LO QUE FALTA (12 HU) — PRIORIDAD ACTUAL
 
@@ -70,6 +68,16 @@ detallado está en `03-plan-agendamiento.md`.
   médico configura el suyo y dermatología atiende por la mañana.
 - Los horarios se pueden eliminar, con modal de confirmación. La tabla
   `horarios_medicos` no tiene columna de estado, así que no se desactivan.
+
+## Sprint 2 — Expediente clínico y consulta (HU de Katherinne)
+
+| Jira | HU | Estado |
+|---|---|---|
+| SCRUM-112 | HU-19 Examen físico | 🟠 completa en frontend con mock: campo de texto libre en `ConsultaPage.tsx`; al finalizar, la consulta pasa al historial del paciente. Falta backend. |
+| SCRUM-116 | HU-22 Historial de diagnósticos y tratamientos | 🟠 completa en frontend con mock: `components/expediente/HistorialDiagnosticos.tsx`, ruta `/medico/expediente/:pacienteId`. Falta backend y depende de HU-20, 21 y 44. |
+
+Contrato de datos: `types/historial.types.ts`. Qué deben saber los demás y qué
+falta en backend: `docs/avance-historial-clinico-hu-19-22.md`.
 
 ## Cómo actualizar este archivo
 

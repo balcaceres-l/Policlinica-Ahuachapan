@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 
 import Button from "@/components/ui/Button";
+import { useAuth } from "@/hooks/auth/useAuth";
+import { historialKeys } from "@/hooks/historial/useHistorial";
 import { useConsultas } from "@/hooks/medico/useConsultas";
 import type { PacienteConsulta } from "@/types/consulta";
 import CronometroConsulta from "@/components/medico/CronometroConsulta";
@@ -25,7 +28,8 @@ const camposConsulta = [
   {
     clave: "examen",
     etiqueta: "Examen físico",
-    placeholder: "Hallazgos del examen",
+    placeholder:
+      "Texto libre. Ej.: tórax simétrico, sin ruidos agregados a la auscultación; abdomen blando, depresible, no doloroso",
   },
   {
     clave: "diagnostico",
@@ -59,6 +63,8 @@ export default function ConsultaPage() {
   const navigate = useNavigate();
 
   const { pacientes, modificar, finalizar } = useConsultas();
+  const { usuario } = useAuth();
+  const queryClient = useQueryClient();
 
   const paciente = pacientes.find((item) => item.id === id);
 
@@ -120,7 +126,18 @@ export default function ConsultaPage() {
     setError(null);
 
     try {
+      // HU-19 — la consulta finalizada pasa al historial del paciente con el
+      // médico que la atendió.
+      if (usuario) {
+        await modificar(id, {
+          medicoId: usuario.id,
+          medicoNombre: usuario.nombreCompleto,
+          especialidadNombre: usuario.cargo,
+        });
+      }
+
       await finalizar(id);
+      await queryClient.invalidateQueries({ queryKey: historialKeys.all });
       navigate("/medico/sala-espera");
     } catch {
       setError("No se pudo finalizar la consulta.");
@@ -182,6 +199,21 @@ export default function ConsultaPage() {
         {/* Columna izquierda */}
 
         <aside className="space-y-5">
+          {/* HU-22 — historial del paciente durante la consulta */}
+
+          <Link
+            to={`/medico/expediente/${paciente.pacienteId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-between rounded-card border border-line bg-surface px-5 py-3 text-sm font-semibold text-brand-700 shadow-card transition-colors hover:bg-brand-50"
+          >
+            <span className="inline-flex items-center gap-2">
+              <i className="ri-history-line" />
+              Ver historial del paciente
+            </span>
+            <i className="ri-external-link-line" />
+          </Link>
+
           {/* Motivo */}
 
           <section className="rounded-card border border-line bg-surface p-5 shadow-card">
