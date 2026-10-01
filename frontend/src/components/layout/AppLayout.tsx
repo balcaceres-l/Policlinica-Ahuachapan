@@ -18,13 +18,6 @@ export function AppLayout() {
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              title="Notificaciones (pendiente)"
-              className="flex size-9 cursor-not-allowed items-center justify-center rounded-field text-muted opacity-60"
-            >
-              <i className="ri-notification-3-line text-lg" />
-            </button>
             <span className="rounded-full bg-royal-soft px-3 py-1 text-xs font-semibold text-royal">
               {usuario ? `Rol: ${ROL_LABEL[usuario.rol]}` : ''}
             </span>

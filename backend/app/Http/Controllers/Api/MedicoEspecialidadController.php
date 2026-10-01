@@ -39,7 +39,7 @@ class MedicoEspecialidadController extends Controller
         }
 
         $validated = $request->validate([
-            'especialidadId' => ['required', 'integer', 'exists:especialidades,id'],
+            'especialidadId' => ['required', 'uuid', 'exists:especialidades,id'],
         ]);
 
         $especialidad = Especialidad::findOrFail($validated['especialidadId']);

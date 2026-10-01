@@ -6,6 +6,7 @@ import Modal from '@/components/ui/Modal';
 import { useCrearUsuario } from '@/hooks/usuario/useUsuarios';
 import { extraerMensajeError } from '@/lib/apiError';
 import { ROL_LABEL } from '@/lib/constants/roles';
+import { formatearTelefono } from '@/lib/utils';
 import {
   usuarioFormDefaults,
   usuarioSchema,
@@ -33,6 +34,7 @@ export function NuevoUsuarioModal({ isOpen, onClose }: NuevoUsuarioModalProps) {
     handleSubmit,
     reset,
     setError,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<UsuarioFormValues>({
     resolver: zodResolver(usuarioSchema),
@@ -169,8 +171,14 @@ export function NuevoUsuarioModal({ isOpen, onClose }: NuevoUsuarioModalProps) {
               disabled={isSubmitting}
               aria-invalid={Boolean(errors.telefono)}
               className={CLASE_CAMPO}
-              placeholder="2443-1020"
-              {...register('telefono')}
+              placeholder="1111-1111"
+              maxLength={9}
+              {...register('telefono', {
+                onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                  const formateado = formatearTelefono(e.target.value);
+                  setValue('telefono', formateado, { shouldValidate: true });
+                },
+              })}
             />
             {errors.telefono && (
               <p className="mt-1.5 text-xs text-danger">{errors.telefono.message}</p>

@@ -24,8 +24,13 @@ export function CancelarCitaModal({ cita, isOpen, onClose }: CancelarCitaModalPr
 
   const handleConfirmar = async () => {
     if (!cita) return;
-    if (!motivo.trim()) {
+    const motivoLimpio = motivo.trim();
+    if (!motivoLimpio) {
       setError('Debes ingresar el motivo de cancelación.');
+      return;
+    }
+    if (motivoLimpio.length < 5) {
+      setError('El motivo de cancelación debe tener al menos 5 caracteres explicativos.');
       return;
     }
 

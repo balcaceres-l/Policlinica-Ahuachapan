@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import SelectorMedicoCascada from '@/components/cita/SelectorMedicoCascada';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { useCrearBloqueo } from '@/hooks/bloqueo/useBloqueos';
-import { useMedicos } from '@/hooks/usuario/useUsuarios';
-import { mockMedicos } from '@/services/mockData';
 import type { TipoBloqueo } from '@/types/bloqueo.types';
 
 interface BloqueoAgendaModalProps {
@@ -18,7 +17,7 @@ const CLASE_INPUT =
   'focus:ring-brand-600/15 disabled:opacity-60';
 
 export function BloqueoAgendaModal({ isOpen, onClose }: BloqueoAgendaModalProps) {
-  const [medicoId, setMedicoId] = useState<number | ''>('');
+  const [medicoId, setMedicoId] = useState<string | ''>('');
   const [fecha, setFecha] = useState('');
   const [tipoBloqueo, setTipoBloqueo] = useState<TipoBloqueo>('COMPLETO');
   const [horaInicio, setHoraInicio] = useState('08:00');
@@ -26,7 +25,6 @@ export function BloqueoAgendaModal({ isOpen, onClose }: BloqueoAgendaModalProps)
   const [motivo, setMotivo] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const { data: medicos = mockMedicos } = useMedicos();
   const crearBloqueoMutation = useCrearBloqueo();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -41,6 +39,11 @@ export function BloqueoAgendaModal({ isOpen, onClose }: BloqueoAgendaModalProps)
       setError('Debes seleccionar la fecha a bloquear.');
       return;
     }
+    const hoyStr = new Date().toISOString().split('T')[0];
+    if (fecha < hoyStr) {
+      setError('No se puede registrar un bloqueo de agenda para una fecha en el pasado.');
+      return;
+    }
     if (tipoBloqueo === 'PARCIAL') {
       if (!horaInicio || !horaFin) {
         setError('Debes indicar la hora de inicio y fin para el bloqueo parcial.');
@@ -51,25 +54,24 @@ export function BloqueoAgendaModal({ isOpen, onClose }: BloqueoAgendaModalProps)
         return;
       }
     }
-    if (!motivo.trim()) {
+    const motivoLimpio = motivo.trim();
+    if (!motivoLimpio) {
       setError('Debes especificar el motivo del bloqueo o ausencia.');
       return;
     }
-
-    const medicoSeleccionado = medicos.find((m) => m.id === Number(medicoId));
-    const medicoNombre = medicoSeleccionado?.nombreCompleto ?? 'Médico';
+    if (motivoLimpio.length < 5) {
+      setError('El motivo del bloqueo debe tener al menos 5 caracteres explicativos.');
+      return;
+    }
 
     try {
       await crearBloqueoMutation.mutateAsync({
-        payload: {
-          medico_id: Number(medicoId),
-          fecha,
-          tipo_bloqueo: tipoBloqueo,
-          hora_inicio: tipoBloqueo === 'PARCIAL' ? horaInicio : undefined,
-          hora_fin: tipoBloqueo === 'PARCIAL' ? horaFin : undefined,
-          motivo: motivo.trim(),
-        },
-        medicoNombre,
+        medico_id: medicoId,
+        fecha,
+        tipo_bloqueo: tipoBloqueo,
+        hora_inicio: tipoBloqueo === 'PARCIAL' ? horaInicio : undefined,
+        hora_fin: tipoBloqueo === 'PARCIAL' ? horaFin : undefined,
+        motivo: motivo.trim(),
       });
 
       toast.success('Bloqueo de agenda programado exitosamente.');
@@ -116,23 +118,12 @@ export function BloqueoAgendaModal({ isOpen, onClose }: BloqueoAgendaModalProps)
           </div>
         )}
 
-        <div>
-          <label className="mb-1 block text-xs font-semibold text-ink">
-            Médico <span className="text-danger">*</span>
-          </label>
-          <select
-            value={medicoId}
-            onChange={(e) => setMedicoId(e.target.value ? Number(e.target.value) : '')}
-            className={CLASE_INPUT}
-          >
-            <option value="">Selecciona un médico...</option>
-            {medicos.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.nombreCompleto} — {m.cargo}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Selector de Médico con Filtro en Cascada y Autocompletado */}
+        <SelectorMedicoCascada
+          medicoId={medicoId}
+          onSelectMedico={(mId) => setMedicoId(mId)}
+          label="Médico para Bloqueo de Agenda"
+        />
 
         <div>
           <label className="mb-1 block text-xs font-semibold text-ink">

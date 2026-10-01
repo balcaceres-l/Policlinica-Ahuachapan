@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('especialidades', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
             $table->string('nombre')->unique();
             $table->text('descripcion')->nullable();
             $table->string('estado', 10)->default('ACTIVA')->index();
@@ -18,10 +18,12 @@ return new class extends Migration
 
         Schema::create('especialidad_user', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('especialidad_id')->constrained('especialidades')->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->uuid('especialidad_id');
+            $table->uuid('user_id');
             $table->timestamps();
             $table->unique(['especialidad_id', 'user_id']);
+            $table->foreign('especialidad_id')->references('id')->on('especialidades')->cascadeOnDelete();
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
         });
     }
 

@@ -26,7 +26,7 @@ const duracionEnHoras = (inicio: string, fin: string): number => {
 /** HU-34 — el administrador configura los horarios de atención de cada médico. */
 export function HorariosPage() {
   const [busqueda, setBusqueda] = useState('');
-  const [medicoId, setMedicoId] = useState<number | null>(null);
+  const [medicoId, setMedicoId] = useState<string | null>(null);
   const [modalAbierto, setModalAbierto] = useState(false);
   const [horarioEnEdicion, setHorarioEnEdicion] = useState<HorarioMedico | null>(null);
   const [horarioAEliminar, setHorarioAEliminar] = useState<HorarioMedico | null>(null);
@@ -204,8 +204,8 @@ export function HorariosPage() {
                   </p>
                   <p className="truncate text-sm text-muted">{medicoSeleccionado.cargo}</p>
                 </div>
-                <Button icon="ri-add-line" onClick={abrirAlta}>
-                  Agregar horario
+                <Button icon="ri-calendar-schedule-line" onClick={abrirAlta}>
+                  Configurar Horario Semanal
                 </Button>
               </header>
 
@@ -231,7 +231,7 @@ export function HorariosPage() {
                 isLoading={cargandoHorarios}
                 emptyIcon="ri-calendar-close-line"
                 emptyTitle="Sin horarios configurados"
-                emptyMessage="Este médico todavía no tiene bloques de atención. Agrega el primero para que aparezca disponible al agendar citas."
+                emptyMessage="Este médico todavía no tiene bloques de atención. Haz clic en 'Configurar Horario Semanal' para asignar sus días y turnos laborales."
               />
             </>
           )}
@@ -242,7 +242,10 @@ export function HorariosPage() {
         <HorarioModal
           isOpen={modalAbierto}
           medicoId={medicoSeleccionado.id}
-          horario={horarioEnEdicion}
+          medicoNombre={medicoSeleccionado.nombreCompleto}
+          medicoCargo={medicoSeleccionado.cargo}
+          horarios={horarios}
+          diaInicialEnfocado={horarioEnEdicion?.dia_semana}
           onClose={() => setModalAbierto(false)}
         />
       )}

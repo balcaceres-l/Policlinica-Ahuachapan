@@ -6,20 +6,19 @@ import Button from '@/components/ui/Button';
 import DataTable, { type Column } from '@/components/ui/DataTable';
 import { useBloqueos, useEliminarBloqueo } from '@/hooks/bloqueo/useBloqueos';
 import { useMedicos } from '@/hooks/usuario/useUsuarios';
-import { mockMedicos } from '@/services/mockData';
 import type { BloqueoAgenda, TipoBloqueo } from '@/types/bloqueo.types';
 
 export function BloqueosAgendaPage() {
-  const [medicoFiltro, setMedicoFiltro] = useState<number | 'TODOS'>('TODOS');
+  const [medicoFiltro, setMedicoFiltro] = useState<string | 'TODOS'>('TODOS');
   const [fechaFiltro, setFechaFiltro] = useState('');
   const [tipoBloqueoFiltro, setTipoBloqueoFiltro] = useState<TipoBloqueo | 'TODOS'>('TODOS');
   const [modalNuevo, setModalNuevo] = useState(false);
 
-  const { data: medicos = mockMedicos } = useMedicos();
+  const { data: medicos = [] } = useMedicos();
   const { data: bloqueos = [], isLoading } = useBloqueos({
     medicoId: medicoFiltro === 'TODOS' ? undefined : medicoFiltro,
-    fecha: fechaFiltro || undefined,
-    tipoBloqueo: tipoBloqueoFiltro,
+    desde: fechaFiltro || undefined,
+    hasta: fechaFiltro || undefined,
   });
   const eliminarMutation = useEliminarBloqueo();
 
@@ -133,9 +132,7 @@ export function BloqueosAgendaPage() {
           <label className="mb-1 block text-xs font-semibold text-muted">Médico:</label>
           <select
             value={medicoFiltro}
-            onChange={(e) =>
-              setMedicoFiltro(e.target.value === 'TODOS' ? 'TODOS' : Number(e.target.value))
-            }
+              onChange={(e) => setMedicoFiltro(e.target.value)}
             className="h-10 rounded-field border border-line bg-surface px-3 text-xs font-medium text-ink outline-none focus:border-brand-600"
           >
             <option value="TODOS">Todos los Médicos ({medicos.length})</option>

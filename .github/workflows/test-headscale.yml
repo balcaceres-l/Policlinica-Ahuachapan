@@ -1,0 +1,29 @@
+name: Test Headscale Connection
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-headscale:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install Tailscale
+        run: |
+          curl -fsSL https://tailscale.com/install.sh | sh
+
+      - name: Connect to Headscale
+        run: |
+          sudo tailscale up \
+            --login-server="${{ secrets.HEADSCALE_URL }}" \
+            --auth-key="${{ secrets.HEADSCALE_AUTH_KEY }}" \
+            --hostname="github-actions-${{ github.run_id }}"
+
+      - name: Show Tailscale status
+        run: |
+          tailscale status
+
+      - name: Test connection to deployment server
+        run: |
+          tailscale ping --until-direct=false "${{ secrets.SFTP_HOST }}"    
+

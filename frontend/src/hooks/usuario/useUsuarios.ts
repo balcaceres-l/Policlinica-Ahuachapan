@@ -48,7 +48,7 @@ export const useActualizarUsuario = () => {
   const invalidar = useInvalidarUsuarios();
 
   return useMutation({
-    mutationFn: (vars: { id: number; payload: EditarUsuario }) =>
+    mutationFn: (vars: { id: string; payload: EditarUsuario }) =>
       actualizarUsuario(vars.id, vars.payload),
     onSuccess: invalidar,
   });
@@ -58,7 +58,7 @@ export const useCambiarEstadoUsuario = () => {
   const invalidar = useInvalidarUsuarios();
 
   return useMutation({
-    mutationFn: (vars: { id: number; estado: EstadoUsuario }) =>
+    mutationFn: (vars: { id: string; estado: EstadoUsuario }) =>
       cambiarEstadoUsuario(vars.id, vars.estado),
     onSuccess: invalidar,
   });

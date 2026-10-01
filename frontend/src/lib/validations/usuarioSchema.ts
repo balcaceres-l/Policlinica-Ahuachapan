@@ -25,7 +25,9 @@ export const editarUsuarioSchema = z.object({
   telefono: z
     .string()
     .trim()
-    .max(25, 'No puede superar los 25 caracteres.')
+    .refine((val) => !val || /^\d{4}-\d{4}$/.test(val), {
+      message: 'El teléfono debe tener el formato 1111-1111 (8 dígitos).',
+    })
     .optional(),
 });
 

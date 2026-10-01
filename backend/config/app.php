@@ -65,7 +65,7 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP_TIMEZONE', 'UTC'),
 
     /*
     |--------------------------------------------------------------------------
@@ -117,7 +117,6 @@ return [
     | Supported drivers: "file", "cache"
     |
     */
-    'timezone' => env('APP_TIMEZONE', 'UTC'),
 
     'maintenance' => [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),

@@ -5,11 +5,13 @@ import {
   crearHorario,
   eliminarHorario,
   getHorariosDeMedico,
+  guardarHorariosSemanales,
+  type BloqueHorarioSemanal,
 } from '@/services/horario/horario.service';
 
 export const horariosKeys = {
   all: ['horarios'] as const,
-  deMedico: (medicoId: number) => ['horarios', 'medico', medicoId] as const,
+  deMedico: (medicoId: string) => ['horarios', 'medico', medicoId] as const,
 };
 
 /** Invalida los horarios de todos los médicos tras una mutación. */
@@ -20,10 +22,10 @@ const useInvalidarHorarios = () => {
   };
 };
 
-export const useHorariosDeMedico = (medicoId: number | null) =>
+export const useHorariosDeMedico = (medicoId: string | null) =>
   useQuery({
-    queryKey: horariosKeys.deMedico(medicoId ?? 0),
-    queryFn: () => getHorariosDeMedico(medicoId as number),
+    queryKey: horariosKeys.deMedico(medicoId ?? ''),
+    queryFn: () => getHorariosDeMedico(medicoId as string),
     enabled: medicoId !== null,
   });
 
@@ -39,7 +41,7 @@ export const useCrearHorario = () => {
 export const useActualizarHorario = () => {
   const invalidar = useInvalidarHorarios();
   return useMutation({
-    mutationFn: (vars: { id: number; payload: NuevoHorario }) =>
+    mutationFn: (vars: { id: string; payload: NuevoHorario }) =>
       actualizarHorario(vars.id, vars.payload),
     onSuccess: invalidar,
   });
@@ -48,7 +50,17 @@ export const useActualizarHorario = () => {
 export const useEliminarHorario = () => {
   const invalidar = useInvalidarHorarios();
   return useMutation({
-    mutationFn: (id: number) => eliminarHorario(id),
+    mutationFn: (id: string) => eliminarHorario(id),
     onSuccess: invalidar,
   });
 };
+
+export const useGuardarHorariosSemanales = () => {
+  const invalidar = useInvalidarHorarios();
+  return useMutation({
+    mutationFn: (vars: { medicoId: string; bloques: BloqueHorarioSemanal[] }) =>
+      guardarHorariosSemanales(vars.medicoId, vars.bloques),
+    onSuccess: invalidar,
+  });
+};
+

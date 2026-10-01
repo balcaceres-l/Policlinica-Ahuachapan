@@ -1,0 +1,49 @@
+name: Test SFTP Connection
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-sftp:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install Tailscale
+        run: |
+          curl -fsSL https://tailscale.com/install.sh | sh
+
+      - name: Connect to Headscale
+        run: |
+          sudo tailscale up \
+            --login-server="${{ secrets.HEADSCALE_URL }}" \
+            --auth-key="${{ secrets.HEADSCALE_AUTH_KEY }}" \
+            --hostname="github-sftp-${{ github.run_id }}"
+
+      - name: Test connection to deployment server
+        run: |
+          nc -vz "${{ secrets.SFTP_HOST }}" "${{ secrets.SFTP_PORT }}"
+
+      - name: Install sshpass
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sshpass
+
+      - name: Create test file
+        run: |
+          echo "GitHub Actions SFTP test - Run ${{ github.run_id }}" > deploy-test.txt
+
+      - name: Upload file via SFTP
+        env:
+          SFTP_HOST: ${{ secrets.SFTP_HOST }}
+          SFTP_PORT: ${{ secrets.SFTP_PORT }}
+          SFTP_USER: ${{ secrets.SFTP_USER }}
+          SFTP_PASSWORD: ${{ secrets.SFTP_PASSWORD }}
+        run: |
+          sshpass -p "$SFTP_PASSWORD" sftp \
+            -o StrictHostKeyChecking=no \
+            -P "$SFTP_PORT" \
+            "$SFTP_USER@$SFTP_HOST" <<EOF
+          put deploy-test.txt
+          ls -la
+          bye
+          EOF
