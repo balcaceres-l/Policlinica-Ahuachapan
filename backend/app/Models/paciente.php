@@ -2,8 +2,11 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class paciente extends Model
 {
@@ -28,14 +31,42 @@ class paciente extends Model
         'telefono',
         'direccion',
         'es_menor_edad',
+        'estado',
         'id_responsable',
         'id_registrado_por',
         'fecha_registro',
     ];
 
     protected $casts = [
+        'nombre_completo' => 'encrypted',
+        'dui' => 'encrypted',
+        'telefono' => 'encrypted',
+        'direccion' => 'encrypted',
         'es_menor_edad' => 'boolean',
         'fecha_nacimiento' => 'date',
         'fecha_registro' => 'datetime',
     ];
+
+    /**
+     * Filtra solo los pacientes activos (excluyendo fallecidos).
+     */
+    public function scopeActivos(Builder $query): Builder
+    {
+        return $query->where('estado', 'ACTIVO');
+    }
+
+    public function responsable(): BelongsTo
+    {
+        return $this->belongsTo(responsable::class, 'id_responsable', 'id_responsable');
+    }
+
+    public function citas(): HasMany
+    {
+        return $this->hasMany(cita::class, 'id_paciente', 'id_paciente');
+    }
+
+    public function registradoPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'id_registrado_por', 'id');
+    }
 }

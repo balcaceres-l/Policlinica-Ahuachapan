@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class responsable extends Model
 {
@@ -26,4 +27,15 @@ class responsable extends Model
         'telefono',
         'parentesco',
     ];
+
+    protected $casts = [
+        'nombre_completo' => 'encrypted',
+        'dui' => 'encrypted',
+        'telefono' => 'encrypted',
+    ];
+
+    public function pacientes(): HasMany
+    {
+        return $this->hasMany(paciente::class, 'id_responsable', 'id_responsable');
+    }
 }
