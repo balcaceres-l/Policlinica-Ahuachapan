@@ -1,48 +1,33 @@
-import type { NuevoPaciente, Paciente } from '@/types/paciente.types';
-import { normalizar } from '@/lib/utils';
-import { mockPacientes, nuevoUuid } from '@/services/mockData';
+import api from '@/services/api';
+import type { ApiResponse } from '@/types/api.types';
+import type { FiltrosPacienteQuery, NuevoPaciente, Paciente } from '@/types/paciente.types';
 
-const generarNumeroExpediente = (nombreCompleto: string): string => {
-  const palabras = nombreCompleto.trim().split(/\s+/);
-  const ini1 = palabras[0]?.[0]?.toUpperCase() ?? 'X';
-  const ini2 = palabras[1]?.[0]?.toUpperCase() ?? 'X';
-  const count = mockPacientes.length + 1;
-  const num = String(count).padStart(2, '0');
-  const anio = new Date().getFullYear();
-  return `${ini1}${ini2}${num}-${anio}`;
+export const getPacientes = async (filtros?: FiltrosPacienteQuery | string): Promise<Paciente[]> => {
+  const params: Record<string, string | undefined> = {};
+
+  if (typeof filtros === 'string') {
+    if (filtros.trim()) params.buscar = filtros.trim();
+  } else if (filtros) {
+    if (filtros.buscar?.trim()) params.buscar = filtros.buscar.trim();
+    if (filtros.estado) params.estado = filtros.estado;
+    if (filtros.categoria && filtros.categoria !== 'TODOS') params.categoria = filtros.categoria;
+  }
+
+  const { data } = await api.get<ApiResponse<Paciente[]>>('/pacientes', { params });
+  return data.data;
 };
 
-export const getPacientes = async (busqueda = ''): Promise<Paciente[]> => {
-  const termino = normalizar(busqueda);
-  if (!termino) return [...mockPacientes];
-
-  return mockPacientes.filter(
-    (p) =>
-      normalizar(p.nombre_completo).includes(termino) ||
-      normalizar(p.numero_expediente).includes(termino) ||
-      normalizar(p.dui).includes(termino),
-  );
+export const getPacienteById = async (id: string): Promise<Paciente> => {
+  const { data } = await api.get<ApiResponse<Paciente>>(`/pacientes/${id}`);
+  return data.data;
 };
 
 export const crearPaciente = async (payload: NuevoPaciente): Promise<Paciente> => {
-  const expediente = generarNumeroExpediente(payload.nombre_completo);
-  const nuevo: Paciente = {
-    id: nuevoUuid(),
-    numero_expediente: expediente,
-    nombre_completo: payload.nombre_completo,
-    fecha_nacimiento: payload.fecha_nacimiento,
-    tipo_documento: payload.tipo_documento ?? 'DUI',
-    dui: payload.dui,
-    telefono: payload.telefono,
-    es_menor_edad: payload.es_menor_edad,
-    responsable_nombre: payload.responsable_nombre,
-    responsable_tipo_documento: payload.responsable_tipo_documento ?? 'DUI',
-    responsable_telefono: payload.responsable_telefono,
-    responsable_parentesco: payload.responsable_parentesco,
-    responsable_documento: payload.responsable_documento,
-    fecha_registro: new Date().toISOString().split('T')[0],
-  };
+  const { data } = await api.post<ApiResponse<Paciente>>('/pacientes', payload);
+  return data.data;
+};
 
-  mockPacientes.unshift(nuevo);
-  return nuevo;
+export const eliminarPaciente = async (id: string): Promise<Paciente> => {
+  const { data } = await api.delete<ApiResponse<Paciente>>(`/pacientes/${id}`);
+  return data.data;
 };

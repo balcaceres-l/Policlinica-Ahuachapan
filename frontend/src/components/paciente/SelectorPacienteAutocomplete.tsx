@@ -60,7 +60,7 @@ export function SelectorPacienteAutocomplete({
         (p) =>
           normalizar(p.nombre_completo).includes(termino) ||
           normalizar(p.numero_expediente).includes(termino) ||
-          normalizar(p.dui).includes(termino) ||
+          (p.dui ? normalizar(p.dui).includes(termino) : false) ||
           (p.telefono && normalizar(p.telefono).includes(termino)),
       )
       .slice(0, 10);
@@ -179,8 +179,12 @@ export function SelectorPacienteAutocomplete({
                       <div className="min-w-0">
                         <p className="truncate text-xs font-bold text-ink">{p.nombre_completo}</p>
                         <p className="truncate text-[11px] text-muted">
-                          {p.tipo_documento === 'PASAPORTE' ? 'Pasaporte' : 'DUI'}: {p.dui}{' '}
-                          {p.telefono ? `· Tel: ${p.telefono}` : ''}
+                          {p.dui
+                            ? `${p.tipo_documento === 'PASAPORTE' ? 'Pasaporte' : 'DUI'}: ${p.dui}`
+                            : p.es_menor_edad
+                              ? 'Menor de edad (Sin doc.)'
+                              : 'Sin documento'}
+                          {p.telefono ? ` · Tel: ${p.telefono}` : ''}
                         </p>
                       </div>
                     </div>
