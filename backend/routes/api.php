@@ -83,6 +83,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/pacientes/{paciente}', [PacienteController::class, 'show']);
     Route::middleware('role:RECEPCIONISTA,MEDICO')->group(function () {
         Route::post('/pacientes', [PacienteController::class, 'store']);
+        Route::put('/pacientes/{paciente}', [PacienteController::class, 'update']);
         Route::delete('/pacientes/{paciente}', [PacienteController::class, 'destroy']);
     });
 

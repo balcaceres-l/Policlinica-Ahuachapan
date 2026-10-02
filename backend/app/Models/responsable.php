@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\SafeEncrypted;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -29,9 +30,9 @@ class responsable extends Model
     ];
 
     protected $casts = [
-        'nombre_completo' => 'encrypted',
-        'dui' => 'encrypted',
-        'telefono' => 'encrypted',
+        'nombre_completo' => SafeEncrypted::class,
+        'dui' => SafeEncrypted::class,
+        'telefono' => SafeEncrypted::class,
     ];
 
     public function pacientes(): HasMany

@@ -199,6 +199,64 @@ class PacienteController extends Controller
     }
 
     /**
+     * Actualiza la información del paciente. Exclusivo para RECEPCIONISTA y MEDICO.
+     * DUI/Pasaporte y Fecha de Nacimiento son estrictamente NO editables.
+     */
+    public function update(Request $request, paciente $paciente): JsonResponse
+    {
+        $request->validate([
+            'nombre_completo' => ['required', 'string', 'min:3', 'max:150'],
+            'direccion' => ['nullable', 'string', 'max:250'],
+        ]);
+
+        return DB::transaction(function () use ($request, $paciente) {
+            $nombreLimpio = trim((string) $request->nombre_completo);
+            $direccionLimpia = $request->filled('direccion') ? trim((string) $request->direccion) : null;
+
+            if ($paciente->es_menor_edad) {
+                // Para menores, validar y actualizar responsable si aplica
+                if ($paciente->id_responsable && $paciente->responsable) {
+                    $request->validate([
+                        'responsable_nombre' => ['required', 'string', 'min:3', 'max:150'],
+                        'responsable_telefono' => ['required', 'string', 'max:15'],
+                        'responsable_parentesco' => ['required', 'string', 'max:50'],
+                    ]);
+
+                    $paciente->responsable->update([
+                        'nombre_completo' => trim((string) $request->responsable_nombre),
+                        'telefono' => trim((string) $request->responsable_telefono),
+                        'parentesco' => trim((string) $request->responsable_parentesco),
+                    ]);
+                }
+
+                // En menores, DUI y teléfono del paciente siguen siendo null
+                $paciente->update([
+                    'nombre_completo' => $nombreLimpio,
+                    'direccion' => $direccionLimpia,
+                ]);
+            } else {
+                // Para adultos: teléfono editable, DUI y fecha_nacimiento inmutables
+                $request->validate([
+                    'telefono' => ['nullable', 'string', 'max:15'],
+                ]);
+
+                $telPaciente = $request->filled('telefono') ? trim((string) $request->telefono) : null;
+
+                $paciente->update([
+                    'nombre_completo' => $nombreLimpio,
+                    'telefono' => $telPaciente,
+                    'direccion' => $direccionLimpia,
+                ]);
+            }
+
+            return $this->success(
+                (new PacienteResource($paciente->fresh()->load('responsable')))->resolve(),
+                'Paciente actualizado correctamente.'
+            );
+        });
+    }
+
+    /**
      * Soft delete: marca al paciente como FALLECIDO en lugar de borrar la fila.
      * Exclusivo para RECEPCIONISTA y MEDICO.
      */

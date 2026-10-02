@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ConfirmarFallecidoModal from '@/components/paciente/ConfirmarFallecidoModal';
+import EditarPacienteModal from '@/components/paciente/EditarPacienteModal';
 import NuevoPacienteModal from '@/components/paciente/NuevoPacienteModal';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
@@ -22,6 +23,7 @@ export function DirectorioPacientes() {
   const [fechaRegistroFiltro, setFechaRegistroFiltro] = useState('');
 
   const [modalNuevo, setModalNuevo] = useState(false);
+  const [pacienteParaEditar, setPacienteParaEditar] = useState<Paciente | null>(null);
   const [pacienteParaFallecido, setPacienteParaFallecido] = useState<Paciente | null>(null);
 
   // Llamada al hook con el filtro de estado y búsqueda
@@ -141,7 +143,7 @@ export function DirectorioPacientes() {
     {
       key: 'acciones',
       header: 'Acciones',
-      className: 'w-28 text-right',
+      className: 'w-32 text-right',
       render: (p) => (
         <div className="flex items-center justify-end gap-1.5">
           {esMedico && (
@@ -156,14 +158,24 @@ export function DirectorioPacientes() {
           )}
 
           {p.estado !== 'FALLECIDO' ? (
-            <button
-              type="button"
-              onClick={() => setPacienteParaFallecido(p)}
-              title="Marcar como fallecido"
-              className="flex size-8 cursor-pointer items-center justify-center rounded-field border border-line text-muted transition-colors hover:border-danger/30 hover:bg-danger-soft hover:text-danger"
-            >
-              <i className="ri-user-unfollow-line text-base" />
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => setPacienteParaEditar(p)}
+                title="Editar información del paciente"
+                className="flex size-8 cursor-pointer items-center justify-center rounded-field border border-line text-brand-600 transition-colors hover:bg-brand-50 hover:text-brand-700"
+              >
+                <i className="ri-pencil-line text-base" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setPacienteParaFallecido(p)}
+                title="Marcar como fallecido"
+                className="flex size-8 cursor-pointer items-center justify-center rounded-field border border-line text-muted transition-colors hover:border-danger/30 hover:bg-danger-soft hover:text-danger"
+              >
+                <i className="ri-user-unfollow-line text-base" />
+              </button>
+            </>
           ) : (
             <span
               title="Paciente fallecido"
@@ -269,6 +281,12 @@ export function DirectorioPacientes() {
         paciente={pacienteParaFallecido}
         isOpen={pacienteParaFallecido !== null}
         onClose={() => setPacienteParaFallecido(null)}
+      />
+
+      <EditarPacienteModal
+        paciente={pacienteParaEditar}
+        isOpen={pacienteParaEditar !== null}
+        onClose={() => setPacienteParaEditar(null)}
       />
     </div>
   );

@@ -1,6 +1,6 @@
 import api from '@/services/api';
 import type { ApiResponse } from '@/types/api.types';
-import type { FiltrosPacienteQuery, NuevoPaciente, Paciente } from '@/types/paciente.types';
+import type { EditarPaciente, FiltrosPacienteQuery, NuevoPaciente, Paciente } from '@/types/paciente.types';
 
 export const getPacientes = async (filtros?: FiltrosPacienteQuery | string): Promise<Paciente[]> => {
   const params: Record<string, string | undefined> = {};
@@ -24,6 +24,11 @@ export const getPacienteById = async (id: string): Promise<Paciente> => {
 
 export const crearPaciente = async (payload: NuevoPaciente): Promise<Paciente> => {
   const { data } = await api.post<ApiResponse<Paciente>>('/pacientes', payload);
+  return data.data;
+};
+
+export const actualizarPaciente = async (id: string, payload: EditarPaciente): Promise<Paciente> => {
+  const { data } = await api.put<ApiResponse<Paciente>>(`/pacientes/${id}`, payload);
   return data.data;
 };
 

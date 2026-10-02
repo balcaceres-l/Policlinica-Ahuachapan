@@ -296,4 +296,107 @@ class PacienteTest extends TestCase
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.nombreCompleto', 'Roberto Alexander Ramos');
     }
+
+    public function test_recepcionista_puede_editar_paciente_adulto_sin_modificar_dui_ni_fecha_nacimiento(): void
+    {
+        $paciente = paciente::create([
+            'numero_expediente' => 'CR01-2026',
+            'nombre_completo' => 'Carlos Ramos',
+            'fecha_nacimiento' => '1990-05-15',
+            'dui' => '01234567-8',
+            'telefono' => '7000-0000',
+            'direccion' => 'Direccion Vieja',
+            'es_menor_edad' => false,
+            'estado' => 'ACTIVO',
+            'id_registrado_por' => $this->recepcion->id,
+        ]);
+
+        $payload = [
+            'nombre_completo' => 'Carlos Alberto Ramos Corregido',
+            'telefono' => '7999-8888',
+            'direccion' => 'Nueva Direccion Ahuachapan',
+            // Intentar alterar DUI y fecha de nacimiento (deben ignorarse)
+            'dui' => '99999999-9',
+            'fecha_nacimiento' => '2000-01-01',
+        ];
+
+        $this->actingAs($this->recepcion)
+            ->putJson("/api/pacientes/{$paciente->id_paciente}", $payload)
+            ->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.nombreCompleto', 'Carlos Alberto Ramos Corregido')
+            ->assertJsonPath('data.telefono', '7999-8888')
+            ->assertJsonPath('data.direccion', 'Nueva Direccion Ahuachapan')
+            ->assertJsonPath('data.dui', '01234567-8') // El DUI original NO cambia
+            ->assertJsonPath('data.fechaNacimiento', '1990-05-15'); // La fecha original NO cambia
+
+        $paciente->refresh();
+        $this->assertEquals('Carlos Alberto Ramos Corregido', $paciente->nombre_completo);
+        $this->assertEquals('01234567-8', $paciente->dui);
+        $this->assertEquals('1990-05-15', $paciente->fecha_nacimiento->toDateString());
+    }
+
+    public function test_medico_puede_editar_paciente_menor_y_datos_de_su_responsable(): void
+    {
+        $resp = responsable::create([
+            'nombre_completo' => 'Maria Lopez',
+            'dui' => '07654321-0',
+            'telefono' => '7111-2222',
+            'parentesco' => 'Madre',
+        ]);
+
+        $paciente = paciente::create([
+            'numero_expediente' => 'JL01-2026',
+            'nombre_completo' => 'Juanito Lopez',
+            'fecha_nacimiento' => '2018-03-20',
+            'dui' => null,
+            'telefono' => null,
+            'direccion' => 'Colonia San Antonio',
+            'es_menor_edad' => true,
+            'estado' => 'ACTIVO',
+            'id_responsable' => $resp->id_responsable,
+            'id_registrado_por' => $this->medico->id,
+        ]);
+
+        $payload = [
+            'nombre_completo' => 'Juan Alberto Lopez Martinez',
+            'direccion' => 'Colonia San Antonio Pasaje 2',
+            'responsable_nombre' => 'Maria Elena Lopez de Martinez',
+            'responsable_telefono' => '7333-5555',
+            'responsable_parentesco' => 'Madre',
+        ];
+
+        $this->actingAs($this->medico)
+            ->putJson("/api/pacientes/{$paciente->id_paciente}", $payload)
+            ->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.nombreCompleto', 'Juan Alberto Lopez Martinez')
+            ->assertJsonPath('data.direccion', 'Colonia San Antonio Pasaje 2')
+            ->assertJsonPath('data.responsableNombre', 'Maria Elena Lopez de Martinez')
+            ->assertJsonPath('data.responsableTelefono', '7333-5555')
+            ->assertJsonPath('data.responsableParentesco', 'Madre')
+            ->assertJsonPath('data.responsableDocumento', '07654321-0');
+
+        $resp->refresh();
+        $this->assertEquals('Maria Elena Lopez de Martinez', $resp->nombre_completo);
+        $this->assertEquals('7333-5555', $resp->telefono);
+    }
+
+    public function test_administrador_no_puede_editar_pacientes(): void
+    {
+        $paciente = paciente::create([
+            'numero_expediente' => 'PA02-2026',
+            'nombre_completo' => 'Paciente Para Bloqueo',
+            'fecha_nacimiento' => '1985-01-01',
+            'dui' => '01112223-4',
+            'estado' => 'ACTIVO',
+            'id_registrado_por' => $this->recepcion->id,
+        ]);
+
+        $this->actingAs($this->admin)
+            ->putJson("/api/pacientes/{$paciente->id_paciente}", [
+                'nombre_completo' => 'Intento Por Admin',
+            ])
+            ->assertStatus(403);
+    }
 }

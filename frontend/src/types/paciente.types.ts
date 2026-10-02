@@ -42,3 +42,13 @@ export interface FiltrosPacienteQuery {
   estado?: EstadoPaciente;
   categoria?: 'TODOS' | 'ADULTO' | 'MENOR';
 }
+
+export interface EditarPaciente {
+  nombre_completo: string;
+  telefono?: string | null;
+  direccion?: string | null;
+  responsable_nombre?: string | null;
+  responsable_telefono?: string | null;
+  responsable_parentesco?: string | null;
+}
+

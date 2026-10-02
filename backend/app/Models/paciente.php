@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\SafeEncrypted;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -38,10 +39,10 @@ class paciente extends Model
     ];
 
     protected $casts = [
-        'nombre_completo' => 'encrypted',
-        'dui' => 'encrypted',
-        'telefono' => 'encrypted',
-        'direccion' => 'encrypted',
+        'nombre_completo' => SafeEncrypted::class,
+        'dui' => SafeEncrypted::class,
+        'telefono' => SafeEncrypted::class,
+        'direccion' => SafeEncrypted::class,
         'es_menor_edad' => 'boolean',
         'fecha_nacimiento' => 'date',
         'fecha_registro' => 'datetime',
