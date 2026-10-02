@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\ConsultaController;
 use App\Http\Controllers\Api\EspecialidadController;
 use App\Http\Controllers\Api\HorarioMedicoController;
 use App\Http\Controllers\Api\MedicoEspecialidadController;
+use App\Http\Controllers\Api\PacienteController;
 use App\Http\Controllers\Api\SignosVitalesController;
 use App\Http\Controllers\Api\UsuarioController;
 use Illuminate\Support\Facades\Route;
@@ -75,6 +76,15 @@ Route::middleware('auth:sanctum')->group(function () {
     // HU-18 — recepción los toma en el triaje y el médico los corrige al atender.
     Route::get('/citas/{cita}/signos-vitales', [SignosVitalesController::class, 'show']);
     Route::put('/citas/{cita}/signos-vitales', [SignosVitalesController::class, 'store']);
+
+    // Pacientes — consulta para personal clínico y recepción.
+    // Agregar pacientes y marcar fallecido (soft delete) es exclusivo de RECEPCIONISTA y MEDICO (no administrador).
+    Route::get('/pacientes', [PacienteController::class, 'index']);
+    Route::get('/pacientes/{paciente}', [PacienteController::class, 'show']);
+    Route::middleware('role:RECEPCIONISTA,MEDICO')->group(function () {
+        Route::post('/pacientes', [PacienteController::class, 'store']);
+        Route::delete('/pacientes/{paciente}', [PacienteController::class, 'destroy']);
+    });
 
     // HU-39 — el médico abre la consulta eligiendo con qué especialidad atiende.
     Route::middleware('role:MEDICO')->group(function () {
