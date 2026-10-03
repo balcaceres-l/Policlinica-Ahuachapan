@@ -162,6 +162,8 @@ class ConsultaController extends Controller
             'notas_adicionales' => ['nullable', 'string', 'max:2000'],
             'precio' => ['nullable', 'numeric', 'min:0'],
             'total' => ['nullable', 'numeric', 'min:0'],
+            'segundos_transcurridos' => ['nullable', 'numeric', 'min:0'],
+            'en_pausa' => ['nullable', 'boolean'],
             'examenes_fisicos' => ['nullable', 'array'],
             'examenes_fisicos.*.region_anatomica' => ['nullable', 'string', 'max:100'],
             'examenes_fisicos.*.hallazgos' => ['nullable', 'string'],
@@ -179,9 +181,13 @@ class ConsultaController extends Controller
             'receta.detalles.*.indicaciones' => ['nullable', 'string'],
         ]);
 
+        if (array_key_exists('segundos_transcurridos', $validado) && $validado['segundos_transcurridos'] !== null) {
+            $validado['segundos_transcurridos'] = (int) round((float) $validado['segundos_transcurridos']);
+        }
+
         DB::transaction(function () use ($consulta, $validado) {
             $camposConsulta = [];
-            foreach (['motivo_consulta', 'notas_adicionales', 'precio', 'total'] as $campo) {
+            foreach (['motivo_consulta', 'notas_adicionales', 'precio', 'total', 'segundos_transcurridos', 'en_pausa'] as $campo) {
                 if (array_key_exists($campo, $validado)) {
                     $camposConsulta[$campo] = $validado[$campo];
                 }
@@ -282,10 +288,18 @@ class ConsultaController extends Controller
             'notas_adicionales' => ['nullable', 'string', 'max:2000'],
             'precio' => ['nullable', 'numeric', 'min:0'],
             'total' => ['nullable', 'numeric', 'min:0'],
+            'segundos_transcurridos' => ['nullable', 'numeric', 'min:0'],
         ]);
 
+        if (array_key_exists('segundos_transcurridos', $validado) && $validado['segundos_transcurridos'] !== null) {
+            $validado['segundos_transcurridos'] = (int) round((float) $validado['segundos_transcurridos']);
+        }
+
         DB::transaction(function () use ($consulta, $validado) {
-            $datos = ['fecha_hora_fin' => now()];
+            $datos = [
+                'fecha_hora_fin' => now(),
+                'en_pausa' => false,
+            ];
 
             if (array_key_exists('notas_adicionales', $validado)) {
                 $datos['notas_adicionales'] = $validado['notas_adicionales'];
@@ -295,6 +309,9 @@ class ConsultaController extends Controller
             }
             if (array_key_exists('total', $validado)) {
                 $datos['total'] = $validado['total'];
+            }
+            if (array_key_exists('segundos_transcurridos', $validado)) {
+                $datos['segundos_transcurridos'] = $validado['segundos_transcurridos'];
             }
 
             $consulta->update($datos);

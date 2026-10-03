@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Concerns\RespondsWithJson;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PacienteResource;
+use App\Http\Resources\SignosVitalesResource;
 use App\Models\paciente;
 use App\Models\responsable;
 use Carbon\Carbon;
@@ -268,5 +269,101 @@ class PacienteController extends Controller
             (new PacienteResource($paciente->refresh()->load('responsable')))->resolve(),
             'Paciente marcado como fallecido correctamente.'
         );
+    }
+
+    /**
+     * Historial de citas y atenciones del paciente.
+     * Incluye todas las citas del paciente ordenadas cronológicamente,
+     * con signos vitales, consulta médica, examen físico, plan y receta.
+     */
+    public function historial(paciente $paciente): JsonResponse
+    {
+        $citas = $paciente->citas()
+            ->with([
+                'medico',
+                'especialidad',
+                'signosVitales.registradoPor',
+                'consulta.especialidad',
+                'consulta.examenesFisicos',
+                'consulta.planManejo',
+                'consulta.receta.detalles',
+            ])
+            ->orderByDesc('fecha')
+            ->orderByDesc('hora_inicio')
+            ->get();
+
+        $resultado = $citas->map(function ($cita) use ($paciente) {
+            $consulta = $cita->consulta;
+
+            $examenesFormateados = $consulta?->examenesFisicos?->map(function ($ef) {
+                return [
+                    'id' => $ef->id_examen,
+                    'region_anatomica' => $ef->region_anatomica,
+                    'hallazgos' => $ef->hallazgos,
+                ];
+            })->values()->all() ?? [];
+
+            $examenTexto = ! empty($examenesFormateados)
+                ? collect($examenesFormateados)
+                    ->map(fn ($e) => ($e['region_anatomica'] ? $e['region_anatomica'].': ' : '').$e['hallazgos'])
+                    ->filter()
+                    ->implode("\n")
+                : null;
+
+            $recetaFormateada = null;
+            if ($consulta?->receta) {
+                $recetaFormateada = [
+                    'id' => $consulta->receta->id_receta,
+                    'observaciones_generales' => $consulta->receta->observaciones_generales,
+                    'detalles' => $consulta->receta->detalles->map(function ($d) {
+                        return [
+                            'id' => $d->id_detalle,
+                            'nombre_medicamento' => $d->nombre_medicamento,
+                            'dosis' => $d->dosis,
+                            'via_administracion' => $d->via_administracion,
+                            'frecuencia' => $d->frecuencia,
+                            'duracion' => $d->duracion,
+                            'indicaciones' => $d->indicaciones,
+                        ];
+                    })->values()->all(),
+                ];
+            }
+
+            $signosFormateados = null;
+            if ($cita->signosVitales) {
+                $signosFormateados = (new SignosVitalesResource($cita->signosVitales))->resolve();
+            }
+
+            return [
+                'id' => $consulta?->id_consulta ?? $cita->id_cita,
+                'paciente_id' => $paciente->id_paciente,
+                'cita_id' => $cita->id_cita,
+                'fecha_hora_inicio' => $consulta?->fecha_hora_inicio?->toDateTimeString() ?? ($cita->fecha?->toDateString().' '.substr((string) $cita->hora_inicio, 0, 5)),
+                'fecha_hora_fin' => $consulta?->fecha_hora_fin?->toDateTimeString(),
+                'medico_id' => $cita->id_medico,
+                'medicoNombre' => $cita->medico?->nombre_completo ?? 'Dr. Médico',
+                'especialidad_atencion_id' => $consulta?->id_especialidad_atencion ?? $cita->id_especialidad,
+                'especialidadNombre' => $consulta?->especialidad?->nombre ?? $cita->especialidad?->nombre,
+                'motivo_consulta' => $consulta?->motivo_consulta,
+                'notas_adicionales' => $consulta?->notas_adicionales,
+                'examen_fisico' => $examenTexto,
+                'examenes_fisicos' => $examenesFormateados,
+                'diagnosticos' => [],
+                'plan_manejo' => $consulta?->planManejo ? [
+                    'id' => $consulta->planManejo->id_plan,
+                    'consulta_id' => $consulta->id_consulta,
+                    'descripcion' => $consulta->planManejo->descripcion,
+                    'indicaciones' => $consulta->planManejo->indicaciones ?? $consulta->planManejo->descripcion,
+                ] : null,
+                'receta' => $recetaFormateada,
+                'signos_vitales' => $signosFormateados,
+                'cita_estado' => $cita->estado,
+                'tipo_cita' => $cita->tipo_cita,
+                'precio' => $consulta?->precio,
+                'total' => $consulta?->total,
+            ];
+        });
+
+        return $this->success($resultado);
     }
 }

@@ -55,7 +55,7 @@ class PacienteTest extends TestCase
         $this->assertNotEquals('02345678-9', $p->getAttributes()['dui']);
     }
 
-    public function test_medico_puede_registrar_paciente_adulto_con_pasaporte(): void
+    public function test_recepcionista_puede_registrar_paciente_adulto_con_pasaporte(): void
     {
         $payload = [
             'nombre_completo' => 'John David Smith',
@@ -64,7 +64,7 @@ class PacienteTest extends TestCase
             'telefono' => '7888-9999',
         ];
 
-        $this->actingAs($this->medico)
+        $this->actingAs($this->recepcion)
             ->postJson('/api/pacientes', $payload)
             ->assertStatus(201)
             ->assertJsonPath('success', true)
@@ -72,6 +72,19 @@ class PacienteTest extends TestCase
             ->assertJsonPath('data.dui', 'A12345678')
             ->assertJsonPath('data.tipoDocumento', 'PASAPORTE')
             ->assertJsonPath('data.esMenorEdad', false);
+    }
+
+    public function test_medico_no_puede_registrar_pacientes(): void
+    {
+        $payload = [
+            'nombre_completo' => 'Intento Medico Paciente',
+            'fecha_nacimiento' => '1990-01-01',
+            'dui' => '01234567-8',
+        ];
+
+        $this->actingAs($this->medico)
+            ->postJson('/api/pacientes', $payload)
+            ->assertStatus(403);
     }
 
     public function test_administrador_no_puede_registrar_pacientes(): void
@@ -398,5 +411,80 @@ class PacienteTest extends TestCase
                 'nombre_completo' => 'Intento Por Admin',
             ])
             ->assertStatus(403);
+    }
+
+    public function test_historial_paciente_retorna_citas_y_consultas(): void
+    {
+        $paciente = paciente::create([
+            'numero_expediente' => 'PA03-2026',
+            'nombre_completo' => 'Paciente Con Historial',
+            'fecha_nacimiento' => '1990-05-15',
+            'dui' => '05556667-8',
+            'estado' => 'ACTIVO',
+            'id_registrado_por' => $this->recepcion->id,
+        ]);
+
+        $cita = \App\Models\cita::create([
+            'id_paciente' => $paciente->id_paciente,
+            'id_medico' => $this->medico->id,
+            'fecha' => now()->toDateString(),
+            'hora_inicio' => '10:00:00',
+            'hora_fin' => '10:30:00',
+            'tipo_cita' => 'REGULAR',
+            'estado' => 'ATENDIDA',
+            'id_creado_por' => $this->recepcion->id,
+        ]);
+
+        $consulta = \App\Models\consulta::create([
+            'id_cita' => $cita->id_cita,
+            'id_medico' => $this->medico->id,
+            'fecha_hora_inicio' => now()->subMinutes(30),
+            'fecha_hora_fin' => now(),
+            'motivo_consulta' => 'Cefalea intensa',
+            'notas_adicionales' => 'Evolución favorable',
+            'precio' => 25.00,
+            'total' => 25.00,
+        ]);
+
+        $consulta->examenesFisicos()->create([
+            'region_anatomica' => 'Cabeza y Cuello',
+            'hallazgos' => 'Sin alteraciones palpables',
+        ]);
+
+        $consulta->planManejo()->create([
+            'descripcion' => 'Tratamiento ambulatorio',
+            'indicaciones' => 'Tomar analgésicos',
+        ]);
+
+        $receta = $consulta->receta()->create([
+            'observaciones_generales' => 'Con abundantes líquidos',
+        ]);
+
+        $receta->detalles()->create([
+            'nombre_medicamento' => 'Ibuprofeno',
+            'dosis' => '400mg',
+            'frecuencia' => 'Cada 8 horas',
+        ]);
+
+        $this->actingAs($this->medico)
+            ->getJson("/api/pacientes/{$paciente->id_paciente}/historial")
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.motivo_consulta', 'Cefalea intensa')
+            ->assertJsonPath('data.0.plan_manejo.descripcion', 'Tratamiento ambulatorio')
+            ->assertJsonPath('data.0.receta.detalles.0.nombre_medicamento', 'Ibuprofeno')
+            ->assertJsonPath('data.0.cita_estado', 'ATENDIDA')
+            ->assertJsonPath('data.0.precio', 25)
+            ->assertJsonPath('data.0.total', 25);
+
+        // La recepcionista también consulta el historial para ver diagnósticos, consultas y tarifas para cobro
+        $this->actingAs($this->recepcion)
+            ->getJson("/api/pacientes/{$paciente->id_paciente}/historial")
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.precio', 25)
+            ->assertJsonPath('data.0.total', 25);
     }
 }

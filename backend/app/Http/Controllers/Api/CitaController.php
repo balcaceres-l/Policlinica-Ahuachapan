@@ -32,7 +32,7 @@ class CitaController extends Controller
 
         $usuario = $request->user();
 
-        $citas = cita::with(['paciente', 'medico', 'especialidad', 'signosVitales'])
+        $citas = cita::with(['paciente', 'medico', 'especialidad', 'signosVitales', 'consulta'])
             // Un médico solo ve su propia agenda.
             ->when($usuario->rol === 'MEDICO', fn ($q) => $q->where('id_medico', $usuario->id))
             ->when($validado['medico_id'] ?? null, fn ($q, $id) => $q->where('id_medico', $id))
@@ -86,6 +86,16 @@ class CitaController extends Controller
         // Un médico solo agenda en su propia agenda.
         if ($usuario->rol === 'MEDICO' && $usuario->id !== $validado['medico_id']) {
             return $this->failure('Solo puedes agendar citas en tu propia agenda.', 403);
+        }
+
+        // Un médico solo puede agendar citas para sus propias especialidades asignadas.
+        if ($usuario->rol === 'MEDICO' && ! empty($validado['especialidad_id'])) {
+            $tieneEspecialidad = $usuario->especialidades()
+                ->where('especialidades.id', $validado['especialidad_id'])
+                ->exists();
+            if (! $tieneEspecialidad) {
+                return $this->failure('Solo puedes agendar citas para tus propias especialidades asignadas.', 422);
+            }
         }
 
         try {

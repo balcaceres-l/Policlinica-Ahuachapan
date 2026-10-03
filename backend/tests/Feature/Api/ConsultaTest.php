@@ -323,4 +323,33 @@ class ConsultaTest extends TestCase
             ->assertJsonPath('data.0.id', $citaHoy->id_cita)
             ->assertJsonPath('data.0.estado', 'EN_ESPERA');
     }
+
+    public function test_medico_actualiza_segundos_transcurridos_y_pausa_de_consulta(): void
+    {
+        $this->medico->especialidades()->sync([$this->ginecologia->id]);
+        Sanctum::actingAs($this->medico);
+        $cita = $this->crearCita();
+
+        $resp = $this->postJson("/api/citas/{$cita->id_cita}/consulta")->assertCreated();
+        $id = $resp->json('data.id');
+
+        // Guarda progreso con tiempo acumulado y en pausa
+        $this->putJson("/api/consultas/{$id}", [
+            'segundos_transcurridos' => 450,
+            'en_pausa' => true,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.segundos_transcurridos', 450)
+            ->assertJsonPath('data.en_pausa', true)
+            ->assertJsonPath('data.minutos_transcurridos', 7);
+
+        // Finalizar guarda los segundos finales y quita pausa
+        $this->patchJson("/api/consultas/{$id}/finalizar", [
+            'segundos_transcurridos' => 600,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.segundos_transcurridos', 600)
+            ->assertJsonPath('data.en_pausa', false)
+            ->assertJsonPath('data.abierta', false);
+    }
 }

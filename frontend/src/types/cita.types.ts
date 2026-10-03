@@ -45,6 +45,8 @@ export interface Cita {
   creado_por_id: string;
   signos_vitales?: SignosVitales;
   consulta_id?: string;
+  consulta_precio?: number | null;
+  consulta_total?: number | null;
   /** Minutos desde la hora agendada mientras el paciente no llega (RF-44). */
   minutos_retraso: number;
   retrasada: boolean;

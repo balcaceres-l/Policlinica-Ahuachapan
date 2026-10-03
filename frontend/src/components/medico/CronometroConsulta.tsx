@@ -1,30 +1,57 @@
 import { useEffect, useState } from "react";
 
 interface CronometroConsultaProps {
-  inicio: number;
+  inicio?: number;
   fin?: number;
   activo: boolean;
+  segundosIniciales?: number;
+  enPausa?: boolean;
+  onPausaToggle?: () => void;
+  onTick?: (segundos: number) => void;
 }
 
 export default function CronometroConsulta({
   inicio,
   fin,
   activo,
+  segundosIniciales,
+  enPausa = false,
+  onPausaToggle,
+  onTick,
 }: CronometroConsultaProps) {
-  const [ahora, setAhora] = useState(() => Date.now());
+  // Si nos pasan segundosIniciales (desde el backend), contamos a partir de ahí
+  const [segundosAcumulados, setSegundosAcumulados] = useState<number>(() => {
+    if (segundosIniciales !== undefined && segundosIniciales > 0) {
+      return segundosIniciales;
+    }
+    if (inicio !== undefined) {
+      return Math.max(0, Math.floor(((fin ?? Date.now()) - inicio) / 1000));
+    }
+    return 0;
+  });
 
   useEffect(() => {
-    if (!activo || fin !== undefined) return;
+    if (segundosIniciales !== undefined) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSegundosAcumulados(segundosIniciales);
+    }
+  }, [segundosIniciales]);
+
+  useEffect(() => {
+    if (!activo || enPausa || fin !== undefined) return;
 
     const intervalo = window.setInterval(() => {
-      setAhora(Date.now());
+      setSegundosAcumulados((prev) => prev + 1);
     }, 1000);
 
     return () => window.clearInterval(intervalo);
-  }, [activo, fin, inicio]);
+  }, [activo, enPausa, fin]);
 
-  const segundos = Math.max(0, Math.floor(((fin ?? ahora) - inicio) / 1000));
+  useEffect(() => {
+    onTick?.(segundosAcumulados);
+  }, [segundosAcumulados, onTick]);
 
+  const segundos = segundosAcumulados;
   const horas = Math.floor(segundos / 3600);
   const minutos = Math.floor((segundos % 3600) / 60);
   const resto = segundos % 60;
@@ -87,20 +114,55 @@ export default function CronometroConsulta({
           {tiempo}
         </p>
 
-        <i className="ri-timer-line text-2xl" />
+        {activo && onPausaToggle ? (
+          <button
+            type="button"
+            onClick={onPausaToggle}
+            className="flex size-9 cursor-pointer items-center justify-center rounded-full border border-current/30 bg-surface/60 text-lg transition-transform hover:scale-105 active:scale-95"
+            title={enPausa ? "Reanudar cronómetro" : "Pausar cronómetro"}
+            aria-label={enPausa ? "Reanudar cronómetro" : "Pausar cronómetro"}
+          >
+            <i className={enPausa ? "ri-play-fill" : "ri-pause-fill"} />
+          </button>
+        ) : (
+          <i className="ri-timer-line text-2xl opacity-80" />
+        )}
       </div>
 
-      <p className="mt-2 text-right text-xs font-medium">
-        {activo ? "En curso" : "Finalizada"}
-      </p>
+      <div className="mt-2 flex items-center justify-between text-xs font-medium">
+        <span className="text-muted">
+          {segundosIniciales !== undefined && segundosIniciales > 0 && (
+            <span>Acumulado: {Math.floor(segundos / 60)} min</span>
+          )}
+        </span>
 
-      {segundos >= 1800 && activo && (
+        <span>
+          {!activo ? (
+            <span className="inline-flex items-center gap-1 font-semibold text-emerald-800">
+              <i className="ri-checkbox-circle-line" />
+              Finalizada
+            </span>
+          ) : enPausa ? (
+            <span className="inline-flex items-center gap-1 font-bold text-amber-800">
+              <i className="ri-pause-circle-line" />
+              En pausa
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 font-bold text-emerald-800">
+              <span className="size-2 rounded-full bg-emerald-600 animate-pulse" />
+              En curso
+            </span>
+          )}
+        </span>
+      </div>
+
+      {segundos >= 1800 && activo && !enPausa && (
         <p
           role="alert"
           className="mt-3 border-t border-current/20 pt-2 text-xs font-semibold"
         >
           <i className="ri-alert-line mr-1" />
-          Tiempo de consulta excedido.
+          Tiempo de consulta excedido (30+ min).
         </p>
       )}
     </section>

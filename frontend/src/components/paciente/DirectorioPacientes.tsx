@@ -16,6 +16,7 @@ export function DirectorioPacientes() {
   const navigate = useNavigate();
   const { usuario } = useAuth();
   const esMedico = usuario?.rol === 'MEDICO';
+  const esRecepcionista = usuario?.rol === 'RECEPCIONISTA';
 
   const [busqueda, setBusqueda] = useState('');
   const [categoriaFiltro, setCategoriaFiltro] = useState<'TODOS' | 'ADULTO' | 'MENOR'>('TODOS');
@@ -146,11 +147,16 @@ export function DirectorioPacientes() {
       className: 'w-32 text-right',
       render: (p) => (
         <div className="flex items-center justify-end gap-1.5">
-          {esMedico && (
+          {(esMedico || esRecepcionista) && (
             <button
               type="button"
-              onClick={() => navigate(`/medico/expediente/${p.id}`)}
-              title="Ver expediente clínico"
+              onClick={() => {
+                const ruta = esRecepcionista
+                  ? `/secretaria/expediente/${p.id}`
+                  : `/medico/expediente/${p.id}`;
+                navigate(ruta);
+              }}
+              title="Ver expediente clínico y consultas"
               className="flex size-8 cursor-pointer items-center justify-center rounded-field border border-line text-brand-600 transition-colors hover:bg-brand-50 hover:text-brand-700"
             >
               <i className="ri-folder-open-line text-base" />
@@ -199,9 +205,11 @@ export function DirectorioPacientes() {
             Consulta expedientes clínicos, datos de contacto y registra nuevos pacientes.
           </p>
         </div>
-        <Button icon="ri-user-add-line" onClick={() => setModalNuevo(true)}>
-          Nuevo Paciente
-        </Button>
+        {esRecepcionista && (
+          <Button icon="ri-user-add-line" onClick={() => setModalNuevo(true)}>
+            Nuevo Paciente
+          </Button>
+        )}
       </div>
 
       {/* Barra de Filtros */}

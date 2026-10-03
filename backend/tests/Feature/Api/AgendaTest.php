@@ -97,6 +97,25 @@ class AgendaTest extends TestCase
         ])->assertForbidden();
     }
 
+    public function test_el_medico_puede_consultar_su_propio_horario(): void
+    {
+        Sanctum::actingAs($this->medico);
+
+        $this->getJson("/api/medicos/{$this->medico->id}/horarios")
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonCount(1, 'data');
+    }
+
+    public function test_el_medico_no_puede_consultar_el_horario_de_otro_medico(): void
+    {
+        Sanctum::actingAs($this->medico);
+        $otro = User::factory()->create(['rol' => 'MEDICO', 'estado' => 'ACTIVO']);
+
+        $this->getJson("/api/medicos/{$otro->id}/horarios")
+            ->assertForbidden();
+    }
+
     // ---- HU-12 disponibilidad ----
 
     public function test_la_disponibilidad_respeta_el_horario_configurado(): void
@@ -398,6 +417,29 @@ class AgendaTest extends TestCase
         Sanctum::actingAs($this->medico);
 
         $this->postJson('/api/citas', $this->datosCita())->assertCreated();
+    }
+
+    public function test_el_medico_no_puede_agendar_con_especialidad_no_asignada(): void
+    {
+        Sanctum::actingAs($this->medico);
+        $otraEsp = \App\Models\Especialidad::create(['nombre' => 'Oftalmología', 'estado' => 'ACTIVA']);
+
+        $this->postJson('/api/citas', $this->datosCita([
+            'especialidad_id' => $otraEsp->id,
+        ]))->assertStatus(422)
+            ->assertJsonPath('message', 'Solo puedes agendar citas para tus propias especialidades asignadas.');
+    }
+
+    public function test_el_medico_puede_agendar_con_su_propia_especialidad(): void
+    {
+        Sanctum::actingAs($this->medico);
+        $miEsp = \App\Models\Especialidad::create(['nombre' => 'Medicina Interna', 'estado' => 'ACTIVA']);
+        $this->medico->especialidades()->attach($miEsp->id);
+
+        $this->postJson('/api/citas', $this->datosCita([
+            'especialidad_id' => $miEsp->id,
+        ]))->assertCreated()
+            ->assertJsonPath('data.especialidad_id', $miEsp->id);
     }
 
     public function test_no_agenda_con_un_medico_inactivo(): void

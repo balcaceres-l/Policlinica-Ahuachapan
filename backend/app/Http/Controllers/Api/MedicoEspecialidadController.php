@@ -14,10 +14,14 @@ class MedicoEspecialidadController extends Controller
 {
     use RespondsWithJson;
 
-    public function index(User $medico): JsonResponse
+    public function index(Request $request, User $medico): JsonResponse
     {
         if ($medico->rol !== 'MEDICO') {
             return $this->failure('El usuario indicado no es médico.', 422);
+        }
+
+        if ($request->user()->rol === 'MEDICO' && $request->user()->id !== $medico->id) {
+            return $this->failure('Solo puedes consultar tus propias especialidades.', 403);
         }
 
         $especialidades = $medico->especialidades()

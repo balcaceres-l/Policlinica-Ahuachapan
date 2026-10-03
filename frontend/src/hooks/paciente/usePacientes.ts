@@ -1,16 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { actualizarPaciente, crearPaciente, eliminarPaciente, getPacientes } from '@/services/paciente/paciente.service';
+import { actualizarPaciente, crearPaciente, eliminarPaciente, getPacienteById, getPacientes } from '@/services/paciente/paciente.service';
 import type { EditarPaciente, FiltrosPacienteQuery, NuevoPaciente } from '@/types/paciente.types';
 
 export const pacientesKeys = {
   all: ['pacientes'] as const,
   lista: (filtros?: FiltrosPacienteQuery | string) => ['pacientes', { filtros }] as const,
+  detalle: (id?: string) => ['pacientes', 'detalle', id] as const,
 };
 
 export const usePacientes = (filtros?: FiltrosPacienteQuery | string) => {
   return useQuery({
     queryKey: pacientesKeys.lista(filtros),
     queryFn: () => getPacientes(filtros),
+  });
+};
+
+export const usePaciente = (id?: string) => {
+  return useQuery({
+    queryKey: pacientesKeys.detalle(id),
+    queryFn: () => getPacienteById(id!),
+    enabled: Boolean(id),
   });
 };
 

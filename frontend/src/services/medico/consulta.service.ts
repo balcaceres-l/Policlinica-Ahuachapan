@@ -9,6 +9,8 @@ export interface GuardarConsultaPayload {
   notas_adicionales?: string | null;
   precio?: number | null;
   total?: number | null;
+  segundos_transcurridos?: number | null;
+  en_pausa?: boolean | null;
   examenes_fisicos?: Array<{
     id_examen?: string;
     region_anatomica?: string | null;
@@ -35,6 +37,7 @@ export interface FinalizarConsultaPayload {
   notas_adicionales?: string | null;
   precio?: number | null;
   total?: number | null;
+  segundos_transcurridos?: number | null;
 }
 
 export interface EspecialidadDisponible {

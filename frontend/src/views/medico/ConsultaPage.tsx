@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -8,6 +8,7 @@ import Modal from '@/components/ui/Modal';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import CronometroConsulta from '@/components/medico/CronometroConsulta';
 import HistorialClinicoCompleto from '@/components/expediente/HistorialClinicoCompleto';
+import RecetaPreviewModal from '@/components/medico/RecetaPreviewModal';
 import { useGuardarSignosVitales } from '@/hooks/cita/useCitas';
 import {
   consultaKeys,
@@ -15,6 +16,8 @@ import {
   useConsulta,
   useFinalizarConsulta,
 } from '@/hooks/medico/useConsultas';
+import { generarHtmlReceta } from '@/lib/recetaPdf';
+import { calcularEdad } from '@/lib/utils';
 import type { GuardarConsultaPayload } from '@/services/medico/consulta.service';
 
 
@@ -76,6 +79,9 @@ export default function ConsultaPage() {
   const [notasAdicionales, setNotasAdicionales] = useState('');
   const [precio, setPrecio] = useState<number | ''>('');
   const [total, setTotal] = useState<number | ''>('');
+  const [segundosTranscurridos, setSegundosTranscurridos] = useState<number>(0);
+  const segundosRef = useRef<number>(0);
+  const [enPausa, setEnPausa] = useState<boolean>(false);
 
   // Exámenes físicos
   const [examenesFisicos, setExamenesFisicos] = useState<ExamenFisicoLocal[]>([]);
@@ -87,6 +93,8 @@ export default function ConsultaPage() {
   // Receta médica
   const [recetaObservaciones, setRecetaObservaciones] = useState('');
   const [recetaDetalles, setRecetaDetalles] = useState<DetalleRecetaLocal[]>([]);
+  const [previewRecetaOpen, setPreviewRecetaOpen] = useState(false);
+  const [previewRecetaHtml, setPreviewRecetaHtml] = useState('');
 
   // Signos vitales (Triaje clínico)
   const [signosForm, setSignosForm] = useState({
@@ -103,16 +111,22 @@ export default function ConsultaPage() {
 
   // Modales y confirmación
   const [modalFinalizarAbierto, setModalFinalizarAbierto] = useState(false);
+  const [guardandoFinalizar, setGuardandoFinalizar] = useState(false);
   const [guardandoSignos, setGuardandoSignos] = useState(false);
 
   // Inicializar o sincronizar el estado cuando cargue la consulta
   useEffect(() => {
     if (!consulta) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMotivoConsulta(consulta.motivo_consulta ?? '');
     setNotasAdicionales(consulta.notas_adicionales ?? '');
     setPrecio(consulta.precio !== null && consulta.precio !== undefined ? consulta.precio : '');
     setTotal(consulta.total !== null && consulta.total !== undefined ? consulta.total : '');
+    const segs = consulta.segundos_transcurridos ?? 0;
+    segundosRef.current = segs;
+    setSegundosTranscurridos(segs);
+    setEnPausa(consulta.en_pausa ?? false);
 
     if (consulta.examenes_fisicos && consulta.examenes_fisicos.length > 0) {
       setExamenesFisicos(
@@ -221,7 +235,7 @@ export default function ConsultaPage() {
   const activa = consulta.abierta;
   const inicioMs = consulta.fecha_hora_inicio
     ? Date.parse(consulta.fecha_hora_inicio)
-    : Date.now();
+    : 0;
   const finMs = consulta.fecha_hora_fin ? Date.parse(consulta.fecha_hora_fin) : undefined;
 
   // Cálculo dinámico de IMC
@@ -289,6 +303,51 @@ export default function ConsultaPage() {
     setRecetaDetalles((prev) => prev.filter((_, i) => i !== index));
   };
 
+  // Previsualización y exportación de receta a PDF
+  const handlePrevisualizarReceta = () => {
+    const medicamentosValidos = recetaDetalles.filter(
+      (m) => m.nombre_medicamento && m.nombre_medicamento.trim() !== '',
+    );
+
+    if (medicamentosValidos.length === 0 && !recetaObservaciones.trim()) {
+      toast.error('Agrega al menos un medicamento o indicación a la receta para exportar.');
+      return;
+    }
+
+    const edadCalculada = consulta.paciente?.fecha_nacimiento
+      ? calcularEdad(consulta.paciente.fecha_nacimiento)
+      : null;
+
+    const html = generarHtmlReceta({
+      medico: {
+        nombre: consulta.medicoNombre,
+        especialidad: consulta.especialidadNombre ?? undefined,
+        telefono: consulta.medicoTelefono ?? undefined,
+        cargo: consulta.medicoCargo ?? undefined,
+      },
+      paciente: {
+        nombre: consulta.paciente?.nombre,
+        expediente: consulta.paciente?.expediente,
+        edad: edadCalculada,
+        dui: consulta.paciente?.dui,
+        telefono: consulta.paciente?.telefono,
+      },
+      fecha: consulta.fecha_hora_inicio || new Date(),
+      medicamentos: recetaDetalles.map((m) => ({
+        nombre_medicamento: m.nombre_medicamento,
+        dosis: m.dosis,
+        via_administracion: m.via_administracion,
+        frecuencia: m.frecuencia,
+        duracion: m.duracion,
+        indicaciones: m.indicaciones,
+      })),
+      observaciones_generales: recetaObservaciones,
+    });
+
+    setPreviewRecetaHtml(html);
+    setPreviewRecetaOpen(true);
+  };
+
   // Guardar signos vitales desde la consulta
   const handleGuardarSignos = async () => {
     setGuardandoSignos(true);
@@ -331,7 +390,10 @@ export default function ConsultaPage() {
   };
 
   // Construir payload limpio para guardar/actualizar
-  const construirPayload = (): GuardarConsultaPayload => {
+  const construirPayload = (opciones?: {
+    en_pausa?: boolean;
+    segundos_transcurridos?: number;
+  }): GuardarConsultaPayload => {
     const efLimpios = examenesFisicos.filter(
       (ef) => ef.region_anatomica.trim() !== '' || ef.hallazgos.trim() !== '',
     );
@@ -350,11 +412,18 @@ export default function ConsultaPage() {
     const tienePlan = planDescripcion.trim() !== '' || planIndicaciones.trim() !== '';
     const tieneReceta = recetaLimpia.length > 0 || recetaObservaciones.trim() !== '';
 
+    const segs =
+      opciones?.segundos_transcurridos !== undefined
+        ? Math.round(opciones.segundos_transcurridos)
+        : Math.round(segundosRef.current);
+
     return {
       motivo_consulta: motivoConsulta.trim() || null,
       notas_adicionales: notasAdicionales.trim() || null,
       precio: precio !== '' ? Number(precio) : null,
       total: total !== '' ? Number(total) : (precio !== '' ? Number(precio) : null),
+      segundos_transcurridos: segs,
+      en_pausa: opciones?.en_pausa !== undefined ? opciones.en_pausa : enPausa,
       examenes_fisicos: efLimpios.length > 0 ? efLimpios : undefined,
       plan_manejo: tienePlan
         ? {
@@ -371,24 +440,80 @@ export default function ConsultaPage() {
     };
   };
 
-  // Guardar borrador / progreso
+  // Guardar borrador / progreso sin salir
   const handleGuardarProgreso = async () => {
     try {
       const payload = construirPayload();
       await actualizarMutation.mutateAsync({ id, payload });
       toast.success('Progreso de la consulta guardado');
     } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
       toast.error(
-        err instanceof Error ? err.message : 'Error al guardar el progreso',
+        axiosErr?.response?.data?.message ||
+          (err instanceof Error ? err.message : 'Error al guardar el progreso'),
       );
+    }
+  };
+
+  // Pausar y Salir a la lista de espera
+  const handleGuardarYSalir = async () => {
+    try {
+      const segsActuales = Math.round(segundosRef.current);
+      setSegundosTranscurridos(segsActuales);
+      setEnPausa(true);
+      const payload = construirPayload({
+        en_pausa: true,
+        segundos_transcurridos: segsActuales,
+      });
+      await actualizarMutation.mutateAsync({ id, payload });
+      toast.success(
+        'Consulta guardada y pausada. Puedes retomarla en cualquier momento desde la sala de espera.',
+      );
+      navigate('/medico/sala-espera');
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      toast.error(
+        axiosErr?.response?.data?.message ||
+          (err instanceof Error ? err.message : 'Error al guardar la consulta'),
+      );
+    }
+  };
+
+  // Alternar pausa del cronómetro
+  const handleTogglePausa = async () => {
+    const nuevaPausa = !enPausa;
+    const segsActuales = Math.round(segundosRef.current);
+    setSegundosTranscurridos(segsActuales);
+    setEnPausa(nuevaPausa);
+    try {
+      const payload = construirPayload({
+        en_pausa: nuevaPausa,
+        segundos_transcurridos: segsActuales,
+      });
+      await actualizarMutation.mutateAsync({ id, payload });
+      if (nuevaPausa) {
+        toast('Consulta pausada. El cronómetro se ha detenido.', { icon: '⏸️' });
+      } else {
+        toast('Consulta reanudada. El cronómetro sigue avanzando.', { icon: '▶️' });
+      }
+    } catch {
+      setEnPausa(!nuevaPausa);
     }
   };
 
   // Confirmar y finalizar la consulta
   const handleConfirmarFinalizar = async () => {
+    if (guardandoFinalizar) return;
+    setGuardandoFinalizar(true);
+
     try {
+      const segsActuales = Math.round(segundosRef.current);
+
       // 1. Guardar todos los datos clínicos actuales
-      const payload = construirPayload();
+      const payload = construirPayload({
+        en_pausa: false,
+        segundos_transcurridos: segsActuales,
+      });
       await actualizarMutation.mutateAsync({ id, payload });
 
       // 2. Finalizar la consulta y cambiar la cita a ATENDIDA
@@ -398,6 +523,7 @@ export default function ConsultaPage() {
           notas_adicionales: notasAdicionales.trim() || null,
           precio: precio !== '' ? Number(precio) : null,
           total: total !== '' ? Number(total) : (precio !== '' ? Number(precio) : null),
+          segundos_transcurridos: segsActuales,
         },
       });
 
@@ -405,9 +531,24 @@ export default function ConsultaPage() {
       setModalFinalizarAbierto(false);
       navigate('/medico/sala-espera');
     } catch (err: unknown) {
+      const axiosErr = err as { response?: { status?: number; data?: { message?: string } } };
+      // Si el backend responde 422 indicando que ya fue cerrada, es un caso de éxito
+      if (
+        axiosErr?.response?.status === 422 &&
+        axiosErr?.response?.data?.message?.includes('cerrada')
+      ) {
+        toast.success('Consulta finalizada con éxito.');
+        setModalFinalizarAbierto(false);
+        navigate('/medico/sala-espera');
+        return;
+      }
+
       toast.error(
-        err instanceof Error ? err.message : 'Error al finalizar la consulta',
+        axiosErr?.response?.data?.message ||
+          (err instanceof Error ? err.message : 'Error al finalizar la consulta'),
       );
+    } finally {
+      setGuardandoFinalizar(false);
     }
   };
 
@@ -425,10 +566,17 @@ export default function ConsultaPage() {
 
         <div className="flex items-center gap-2">
           {activa ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 animate-pulse">
-              <span className="size-2 rounded-full bg-blue-600" />
-              Consulta Activa
-            </span>
+            enPausa ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800">
+                <i className="ri-pause-circle-line" />
+                Consulta en Pausa
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 animate-pulse">
+                <span className="size-2 rounded-full bg-blue-600" />
+                Consulta Activa
+              </span>
+            )
           ) : (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800">
               <i className="ri-checkbox-circle-line" />
@@ -469,18 +617,59 @@ export default function ConsultaPage() {
           )}
 
           {activa && (
-            <Button
-              variant="secondary"
-              icon="ri-save-line"
-              size="sm"
-              loading={actualizarMutation.isPending}
-              onClick={handleGuardarProgreso}
-            >
-              Guardar Progreso
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                icon="ri-pause-circle-line"
+                size="sm"
+                loading={actualizarMutation.isPending}
+                onClick={handleGuardarYSalir}
+                title="Guarda los datos, detiene el cronómetro y regresa a la sala de espera"
+              >
+                Pausar y Salir
+              </Button>
+
+              <Button
+                variant="secondary"
+                icon="ri-save-line"
+                size="sm"
+                loading={actualizarMutation.isPending}
+                onClick={handleGuardarProgreso}
+              >
+                Guardar Progreso
+              </Button>
+            </div>
           )}
         </div>
       </header>
+
+      {/* Aviso si la consulta está en pausa */}
+      {activa && enPausa && (
+        <div
+          role="status"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 shadow-sm"
+        >
+          <div className="flex items-center gap-3">
+            <span className="flex size-9 items-center justify-center rounded-full bg-amber-200 text-amber-900 text-lg">
+              <i className="ri-pause-fill" />
+            </span>
+            <div>
+              <p className="font-bold">Esta consulta se encuentra pausada.</p>
+              <p className="text-xs text-amber-800 mt-0.5">
+                El cronómetro está detenido en {Math.floor(segundosTranscurridos / 60)} min {segundosTranscurridos % 60} seg. Los datos ingresados están guardados.
+              </p>
+            </div>
+          </div>
+
+          <Button
+            size="sm"
+            icon="ri-play-fill"
+            onClick={handleTogglePausa}
+          >
+            Reanudar Tiempo
+          </Button>
+        </div>
+      )}
 
       {/* Alerta si la consulta ya está finalizada */}
       {!activa && (
@@ -507,6 +696,12 @@ export default function ConsultaPage() {
             inicio={inicioMs}
             fin={finMs}
             activo={activa}
+            segundosIniciales={segundosTranscurridos}
+            enPausa={enPausa}
+            onPausaToggle={activa ? handleTogglePausa : undefined}
+            onTick={(segs) => {
+              segundosRef.current = segs;
+            }}
           />
 
           {/* Triaje y Signos Vitales */}
@@ -952,15 +1147,26 @@ export default function ConsultaPage() {
                 </div>
               </div>
 
-              {activa && (
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   size="sm"
-                  icon="ri-medicine-bottle-line"
-                  onClick={agregarMedicamento}
+                  variant="secondary"
+                  icon="ri-printer-line"
+                  onClick={handlePrevisualizarReceta}
+                  title="Previsualizar e imprimir o exportar receta a PDF"
                 >
-                  Agregar Medicamento
+                  Exportar / Imprimir PDF
                 </Button>
-              )}
+                {activa && (
+                  <Button
+                    size="sm"
+                    icon="ri-medicine-bottle-line"
+                    onClick={agregarMedicamento}
+                  >
+                    Agregar Medicamento
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Observaciones generales de la receta */}
@@ -1148,6 +1354,16 @@ export default function ConsultaPage() {
               <div className="flex flex-wrap items-center gap-3">
                 <Button
                   variant="secondary"
+                  icon="ri-pause-circle-line"
+                  loading={actualizarMutation.isPending}
+                  onClick={handleGuardarYSalir}
+                  title="Guarda los datos actuales, detiene el cronómetro y regresa a la sala de espera"
+                >
+                  Pausar y Salir
+                </Button>
+
+                <Button
+                  variant="secondary"
                   icon="ri-save-line"
                   loading={actualizarMutation.isPending}
                   onClick={handleGuardarProgreso}
@@ -1179,14 +1395,15 @@ export default function ConsultaPage() {
           <>
             <Button
               variant="secondary"
-              disabled={finalizarMutation.isPending}
+              disabled={guardandoFinalizar || finalizarMutation.isPending || actualizarMutation.isPending}
               onClick={() => setModalFinalizarAbierto(false)}
             >
               Continuar Editando
             </Button>
             <Button
               icon="ri-check-line"
-              loading={finalizarMutation.isPending}
+              loading={guardandoFinalizar || finalizarMutation.isPending || actualizarMutation.isPending}
+              disabled={guardandoFinalizar || finalizarMutation.isPending || actualizarMutation.isPending}
               onClick={handleConfirmarFinalizar}
             >
               Confirmar y Finalizar
@@ -1219,6 +1436,15 @@ export default function ConsultaPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Modal de exportación / impresión de receta médica a PDF */}
+      <RecetaPreviewModal
+        isOpen={previewRecetaOpen}
+        onClose={() => setPreviewRecetaOpen(false)}
+        html={previewRecetaHtml}
+        pacienteNombre={consulta.paciente?.nombre}
+        numeroExpediente={consulta.paciente?.expediente}
+      />
     </div>
   );
 }

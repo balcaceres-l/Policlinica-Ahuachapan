@@ -3,6 +3,7 @@ import ConsultaHistorialCard from '@/components/expediente/ConsultaHistorialCard
 import EmptyState from '@/components/ui/EmptyState';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useHistorialPaciente } from '@/hooks/historial/useHistorial';
+import { usePaciente } from '@/hooks/paciente/usePacientes';
 import { extraerMensajeError } from '@/lib/apiError';
 
 interface HistorialDiagnosticosProps {
@@ -19,6 +20,7 @@ type Orden = 'reciente' | 'antiguo';
 export function HistorialDiagnosticos({ pacienteId }: HistorialDiagnosticosProps) {
   const [orden, setOrden] = useState<Orden>('reciente');
   const { data: consultas = [], isLoading, isError, error } = useHistorialPaciente(pacienteId);
+  const { data: paciente } = usePaciente(pacienteId);
 
   // El servicio entrega lo más reciente primero; aquí solo se invierte si hace falta.
   const visibles = orden === 'reciente' ? consultas : [...consultas].reverse();
@@ -72,7 +74,20 @@ export function HistorialDiagnosticos({ pacienteId }: HistorialDiagnosticosProps
           {visibles.map((consulta) => (
             <li key={consulta.id} className="relative">
               <span className="absolute -left-[27px] top-6 size-3 rounded-full border-2 border-surface bg-brand-600" />
-              <ConsultaHistorialCard consulta={consulta} />
+              <ConsultaHistorialCard
+                consulta={consulta}
+                pacienteInfo={
+                  paciente
+                    ? {
+                        nombre: paciente.nombre_completo,
+                        numero_expediente: paciente.numero_expediente,
+                        fecha_nacimiento: paciente.fecha_nacimiento,
+                        dui: paciente.dui,
+                        telefono: paciente.telefono,
+                      }
+                    : undefined
+                }
+              />
             </li>
           ))}
         </ol>
