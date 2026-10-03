@@ -7,6 +7,7 @@ import DirectorioPacientes from '@/components/paciente/DirectorioPacientes';
 import SelectorPacienteAutocomplete from '@/components/paciente/SelectorPacienteAutocomplete';
 import Badge from '@/components/ui/Badge';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { useAuth } from '@/hooks/auth/useAuth';
 import { usePaciente } from '@/hooks/paciente/usePacientes';
 import { cn, getIniciales } from '@/lib/utils';
 
@@ -33,6 +34,11 @@ const calcularEdad = (fechaNac?: string | null): string => {
 
 export function ExpedientePage() {
   const navigate = useNavigate();
+  const { usuario } = useAuth();
+  const esRecepcionista = usuario?.rol === 'RECEPCIONISTA';
+  const baseRuta = esRecepcionista ? '/secretaria/expediente' : '/medico/expediente';
+  const volverRuta = esRecepcionista ? '/secretaria/pacientes' : '/medico/expediente';
+
   // El paciente vive en la URL para poder enlazar su expediente desde otras pantallas.
   const { pacienteId = '' } = useParams();
   const [tabActiva, setTabActiva] = useState<TabExpediente>('consultas');
@@ -40,11 +46,11 @@ export function ExpedientePage() {
   const { data: paciente, isLoading: cargandoPaciente } = usePaciente(pacienteId);
 
   const seleccionarPaciente = (id: string) => {
-    navigate(id ? `/medico/expediente/${id}` : '/medico/expediente');
+    navigate(id ? `${baseRuta}/${id}` : baseRuta);
   };
 
   // Si no hay paciente seleccionado en la URL, mostramos la vista global de pacientes
-  // compartida con recepción para que el médico busque cualquier paciente por nombre, expediente o DUI.
+  // compartida con recepción para que el médico o secretaria busque cualquier paciente por nombre, expediente o DUI.
   if (!pacienteId) {
     return (
       <div className="space-y-6">
@@ -59,7 +65,7 @@ export function ExpedientePage() {
       <div>
         <button
           type="button"
-          onClick={() => navigate('/medico/expediente')}
+          onClick={() => navigate(volverRuta)}
           className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-brand-700 hover:text-brand-900 transition-colors"
         >
           <i className="ri-arrow-left-line" />

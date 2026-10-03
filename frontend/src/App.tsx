@@ -86,6 +86,26 @@ function App() {
               element={<PacientesRecepcionPage />}
             />
             <Route
+              path="/secretaria/pacientes/:pacienteId"
+              element={<ExpedientePage />}
+            />
+            <Route
+              path="/secretaria/expediente"
+              element={<ExpedientePage />}
+            />
+            <Route
+              path="/secretaria/expediente/:pacienteId"
+              element={<ExpedientePage />}
+            />
+            <Route
+              path="/secretaria/expedientes"
+              element={<Navigate to="/secretaria/expediente" replace />}
+            />
+            <Route
+              path="/secretaria/expedientes/:pacienteId"
+              element={<ExpedientePage />}
+            />
+            <Route
               path="/secretaria/bloqueos"
               element={<BloqueosAgendaPage />}
             />

@@ -474,6 +474,17 @@ class PacienteTest extends TestCase
             ->assertJsonPath('data.0.motivo_consulta', 'Cefalea intensa')
             ->assertJsonPath('data.0.plan_manejo.descripcion', 'Tratamiento ambulatorio')
             ->assertJsonPath('data.0.receta.detalles.0.nombre_medicamento', 'Ibuprofeno')
-            ->assertJsonPath('data.0.cita_estado', 'ATENDIDA');
+            ->assertJsonPath('data.0.cita_estado', 'ATENDIDA')
+            ->assertJsonPath('data.0.precio', 25)
+            ->assertJsonPath('data.0.total', 25);
+
+        // La recepcionista también consulta el historial para ver diagnósticos, consultas y tarifas para cobro
+        $this->actingAs($this->recepcion)
+            ->getJson("/api/pacientes/{$paciente->id_paciente}/historial")
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.precio', 25)
+            ->assertJsonPath('data.0.total', 25);
     }
 }

@@ -97,6 +97,17 @@ export function ConsultaHistorialCard({ consulta, pacienteInfo }: ConsultaHistor
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Precio fijado por el médico para facturación / cobro */}
+          {(consulta.total != null || consulta.precio != null) && (
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800 shadow-xs"
+              title="Precio de la consulta asignado por el médico para facturación / cobro en recepción"
+            >
+              <i className="ri-money-dollar-circle-line text-sm text-emerald-700" />
+              Cobro: ${Number(consulta.total ?? consulta.precio).toFixed(2)} USD
+            </span>
+          )}
+
           {consulta.especialidadNombre && (
             <Badge variant="royal">{consulta.especialidadNombre}</Badge>
           )}
@@ -321,6 +332,38 @@ export function ConsultaHistorialCard({ consulta, pacienteInfo }: ConsultaHistor
           <span className="font-bold">Notas clínicas: </span>
           <span>{consulta.notas_adicionales}</span>
         </div>
+      )}
+
+      {/* Tarifa / Precio de la consulta para recepción y cobro */}
+      {(consulta.precio != null || consulta.total != null) && (
+        <section className="mt-3 rounded-field border border-emerald-200 bg-emerald-50/60 p-3 text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800">
+                <i className="ri-money-dollar-circle-line text-base" />
+              </span>
+              <div>
+                <span className="block font-bold text-emerald-950">
+                  Tarifa / Precio fijado por el médico:
+                </span>
+                <span className="text-[11px] text-emerald-800/80">
+                  Importe registrado por {consulta.medicoNombre} para cobro en recepción
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {consulta.precio != null && consulta.total != null && consulta.precio !== consulta.total && (
+                <span className="text-xs text-muted line-through">
+                  ${Number(consulta.precio).toFixed(2)}
+                </span>
+              )}
+              <span className="rounded-field bg-emerald-600 px-3 py-1 text-sm font-extrabold text-white shadow-xs">
+                ${Number(consulta.total ?? consulta.precio).toFixed(2)} USD
+              </span>
+            </div>
+          </div>
+        </section>
       )}
 
       {/* Mensaje de cita sin consulta si aplica */}
