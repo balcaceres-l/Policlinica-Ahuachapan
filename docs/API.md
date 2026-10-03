@@ -93,6 +93,24 @@ Omite médicos inactivos y `cantidadMedicos` cuenta solo activos — a diferenci
 
 ---
 
+## Pacientes — roles `RECEPCIONISTA` y `MEDICO`
+
+| Método | Ruta | Acceso | Query / Cuerpo |
+|---|---|---|---|
+| `GET` | `/pacientes` | Autenticado | query: `buscar`, `estado` (`ACTIVO` [default], `FALLECIDO`, `TODOS`), `categoria` (`TODOS`, `ADULTO`, `MENOR`) |
+| `POST` | `/pacientes` | `RECEPCIONISTA`, `MEDICO` | `nombre_completo`, `fecha_nacimiento`, `direccion?`, si mayor: `dui` (DUI/pasaporte obligatorio), `telefono?`; si menor: datos de responsable (`responsable_nombre`, `responsable_documento`, `responsable_telefono`, `responsable_parentesco`) |
+| `GET` | `/pacientes/{id}` | Autenticado | — |
+| `PUT` | `/pacientes/{id}` | `RECEPCIONISTA`, `MEDICO` | `nombre_completo`, `direccion?`, si mayor: `telefono?`; si menor: `responsable_nombre`, `responsable_telefono`, `responsable_parentesco`. Nota: `dui`, `fecha_nacimiento` y `numero_expediente` son estrictamente inmutables. |
+| `DELETE` | `/pacientes/{id}` | `RECEPCIONISTA`, `MEDICO` | Soft delete: cambia `estado` a `FALLECIDO` |
+
+- Almacenamiento seguro: datos sensibles (`nombre_completo`, `dui`, `telefono`, `direccion`) cifrados con AES-256 en reposo.
+- Administrador recibe `403` si intenta registrar, editar o eliminar pacientes.
+- Para menores de edad, no se solicita documento ni teléfono propio; se exigen los del responsable (guardando el DUI o pasaporte en `responsable.dui`).
+- El número de expediente `XX00-YYYY` se genera automáticamente.
+- **Edición de datos**: `dui`/pasaporte y `fecha_nacimiento` permanecen inmutables para resguardar la identidad legal y el expediente del paciente.
+
+---
+
 ## Recursos
 
 **UsuarioResource**
