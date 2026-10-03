@@ -23,6 +23,8 @@ class ConsultaResource extends JsonResource
             'fecha_hora_fin' => $this->fecha_hora_fin?->toDateTimeString(),
             'motivo_consulta' => $this->motivo_consulta,
             'notas_adicionales' => $this->notas_adicionales,
+            'precio' => $this->precio !== null ? (float) $this->precio : null,
+            'total' => $this->total !== null ? (float) $this->total : null,
             'abierta' => $this->estaAbierta(),
             'minutos_transcurridos' => $this->minutosTranscurridos(),
             'signos_vitales' => new SignosVitalesResource(
@@ -36,6 +38,9 @@ class ConsultaResource extends JsonResource
                     'expediente' => $this->cita->paciente?->numero_expediente,
                 ],
             ),
+            'examenes_fisicos' => ExamenFisicoResource::collection($this->whenLoaded('examenesFisicos')),
+            'plan_manejo' => $this->whenLoaded('planManejo', fn () => $this->planManejo ? (new PlanManejoResource($this->planManejo))->resolve() : null),
+            'receta' => $this->whenLoaded('receta', fn () => $this->receta ? (new RecetaMedicaResource($this->receta))->resolve() : null),
         ];
     }
 }

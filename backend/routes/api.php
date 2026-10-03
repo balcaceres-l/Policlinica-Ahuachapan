@@ -93,9 +93,10 @@ Route::middleware('auth:sanctum')->group(function () {
             '/consultas/especialidades-disponibles',
             [ConsultaController::class, 'especialidadesDisponibles'],
         );
+        Route::get('/medico/sala-espera', [ConsultaController::class, 'salaEspera']);
         Route::post('/citas/{cita}/consulta', [ConsultaController::class, 'store']);
         Route::get('/consultas/{consulta}', [ConsultaController::class, 'show']);
+        Route::put('/consultas/{consulta}', [ConsultaController::class, 'update']);
         Route::patch('/consultas/{consulta}/finalizar', [ConsultaController::class, 'finalizar']);
-
     });
 });

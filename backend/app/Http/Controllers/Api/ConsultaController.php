@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Concerns\RespondsWithJson;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\CitaResource;
 use App\Http\Resources\ConsultaResource;
 use App\Http\Resources\EspecialidadResource;
 use App\Models\cita;
@@ -31,11 +32,44 @@ class ConsultaController extends Controller
         return $this->success(EspecialidadResource::collection($especialidades)->resolve());
     }
 
-    public function show(consulta $consulta): JsonResponse
+    public function salaEspera(Request $request): JsonResponse
     {
+        $medico = $request->user();
+        $hoy = now()->toDateString();
+
+        $citas = cita::with(['paciente', 'especialidad', 'signosVitales.registradoPor', 'consulta'])
+            ->where('id_medico', $medico->id)
+            ->whereDate('fecha', $hoy)
+            ->whereIn('estado', ['AGENDADA', 'EN_ESPERA', 'EN_ATENCION', 'ATENDIDA'])
+            ->orderByRaw("CASE 
+                WHEN estado = 'EN_ATENCION' THEN 1 
+                WHEN estado = 'EN_ESPERA' THEN 2 
+                WHEN estado = 'AGENDADA' THEN 3 
+                ELSE 4 
+            END")
+            ->orderBy('orden_atencion')
+            ->orderBy('hora_inicio')
+            ->get();
+
+        return $this->success(CitaResource::collection($citas)->resolve());
+    }
+
+    public function show(Request $request, consulta $consulta): JsonResponse
+    {
+        if ($consulta->id_medico !== $request->user()->id) {
+            return $this->failure('Solo puedes acceder a las consultas de tu propia agenda.', 403);
+        }
+
         return $this->success(
-            (new ConsultaResource($consulta->load(['medico', 'especialidad', 'cita.paciente'])))
-                ->resolve(),
+            (new ConsultaResource($consulta->load([
+                'medico',
+                'especialidad',
+                'cita.paciente',
+                'cita.signosVitales.registradoPor',
+                'examenesFisicos',
+                'planManejo',
+                'receta.detalles',
+            ])))->resolve(),
         );
     }
 
@@ -95,10 +129,138 @@ class ConsultaController extends Controller
         });
 
         return $this->success(
-            (new ConsultaResource($consulta->load(['medico', 'especialidad', 'cita.paciente'])))
-                ->resolve(),
+            (new ConsultaResource($consulta->load([
+                'medico',
+                'especialidad',
+                'cita.paciente',
+                'cita.signosVitales.registradoPor',
+                'examenesFisicos',
+                'planManejo',
+                'receta.detalles',
+            ])))->resolve(),
             'Consulta iniciada correctamente.',
             201,
+        );
+    }
+
+    /**
+     * Guarda el progreso clínico de la consulta: motivo, notas, precio, total,
+     * examen físico, plan de manejo y receta médica.
+     */
+    public function update(Request $request, consulta $consulta): JsonResponse
+    {
+        if ($consulta->id_medico !== $request->user()->id) {
+            return $this->failure('Solo puedes modificar tus propias consultas.', 403);
+        }
+
+        if (! $consulta->estaAbierta()) {
+            return $this->failure('No se puede modificar una consulta finalizada.', 422);
+        }
+
+        $validado = $request->validate([
+            'motivo_consulta' => ['nullable', 'string', 'max:1000'],
+            'notas_adicionales' => ['nullable', 'string', 'max:2000'],
+            'precio' => ['nullable', 'numeric', 'min:0'],
+            'total' => ['nullable', 'numeric', 'min:0'],
+            'examenes_fisicos' => ['nullable', 'array'],
+            'examenes_fisicos.*.region_anatomica' => ['nullable', 'string', 'max:100'],
+            'examenes_fisicos.*.hallazgos' => ['nullable', 'string'],
+            'plan_manejo' => ['nullable', 'array'],
+            'plan_manejo.descripcion' => ['nullable', 'string'],
+            'plan_manejo.indicaciones' => ['nullable', 'string'],
+            'receta' => ['nullable', 'array'],
+            'receta.observaciones_generales' => ['nullable', 'string'],
+            'receta.detalles' => ['nullable', 'array'],
+            'receta.detalles.*.nombre_medicamento' => ['required_with:receta.detalles', 'string', 'max:200'],
+            'receta.detalles.*.dosis' => ['required_with:receta.detalles', 'string', 'max:100'],
+            'receta.detalles.*.via_administracion' => ['nullable', 'string', 'max:50'],
+            'receta.detalles.*.frecuencia' => ['required_with:receta.detalles', 'string', 'max:100'],
+            'receta.detalles.*.duracion' => ['nullable', 'string', 'max:100'],
+            'receta.detalles.*.indicaciones' => ['nullable', 'string'],
+        ]);
+
+        DB::transaction(function () use ($consulta, $validado) {
+            $camposConsulta = [];
+            foreach (['motivo_consulta', 'notas_adicionales', 'precio', 'total'] as $campo) {
+                if (array_key_exists($campo, $validado)) {
+                    $camposConsulta[$campo] = $validado[$campo];
+                }
+            }
+
+            if (! empty($camposConsulta)) {
+                $consulta->update($camposConsulta);
+            }
+
+            // Examen físico
+            if (array_key_exists('examenes_fisicos', $validado)) {
+                $consulta->examenesFisicos()->delete();
+                if (is_array($validado['examenes_fisicos'])) {
+                    foreach ($validado['examenes_fisicos'] as $ef) {
+                        if (! empty($ef['region_anatomica']) || ! empty($ef['hallazgos'])) {
+                            $consulta->examenesFisicos()->create([
+                                'region_anatomica' => $ef['region_anatomica'] ?? null,
+                                'hallazgos' => $ef['hallazgos'] ?? null,
+                            ]);
+                        }
+                    }
+                }
+            }
+
+            // Plan de manejo
+            if (array_key_exists('plan_manejo', $validado)) {
+                if ($validado['plan_manejo'] !== null) {
+                    $consulta->planManejo()->updateOrCreate(
+                        ['id_consulta' => $consulta->id_consulta],
+                        [
+                            'descripcion' => $validado['plan_manejo']['descripcion'] ?? null,
+                            'indicaciones' => $validado['plan_manejo']['indicaciones'] ?? null,
+                        ],
+                    );
+                } else {
+                    $consulta->planManejo()->delete();
+                }
+            }
+
+            // Receta médica y detalles
+            if (array_key_exists('receta', $validado)) {
+                if ($validado['receta'] !== null) {
+                    $receta = $consulta->receta()->updateOrCreate(
+                        ['id_consulta' => $consulta->id_consulta],
+                        [
+                            'observaciones_generales' => $validado['receta']['observaciones_generales'] ?? null,
+                        ],
+                    );
+
+                    if (isset($validado['receta']['detalles'])) {
+                        $receta->detalles()->delete();
+                        foreach ($validado['receta']['detalles'] as $det) {
+                            $receta->detalles()->create([
+                                'nombre_medicamento' => $det['nombre_medicamento'],
+                                'dosis' => $det['dosis'],
+                                'via_administracion' => $det['via_administracion'] ?? null,
+                                'frecuencia' => $det['frecuencia'],
+                                'duracion' => $det['duracion'] ?? null,
+                                'indicaciones' => $det['indicaciones'] ?? null,
+                            ]);
+                        }
+                    }
+                } else {
+                    $consulta->receta()->delete();
+                }
+            }
+        });
+
+        return $this->success(
+            (new ConsultaResource($consulta->fresh([
+                'medico',
+                'especialidad',
+                'cita.paciente',
+                'cita.signosVitales.registradoPor',
+                'examenesFisicos',
+                'planManejo',
+                'receta.detalles',
+            ])))->resolve(),
+            'Consulta actualizada correctamente.',
         );
     }
 
@@ -118,20 +280,37 @@ class ConsultaController extends Controller
 
         $validado = $request->validate([
             'notas_adicionales' => ['nullable', 'string', 'max:2000'],
+            'precio' => ['nullable', 'numeric', 'min:0'],
+            'total' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         DB::transaction(function () use ($consulta, $validado) {
-            $consulta->update([
-                'fecha_hora_fin' => now(),
-                'notas_adicionales' => $validado['notas_adicionales'] ?? $consulta->notas_adicionales,
-            ]);
+            $datos = ['fecha_hora_fin' => now()];
 
+            if (array_key_exists('notas_adicionales', $validado)) {
+                $datos['notas_adicionales'] = $validado['notas_adicionales'];
+            }
+            if (array_key_exists('precio', $validado)) {
+                $datos['precio'] = $validado['precio'];
+            }
+            if (array_key_exists('total', $validado)) {
+                $datos['total'] = $validado['total'];
+            }
+
+            $consulta->update($datos);
             $consulta->cita->update(['estado' => 'ATENDIDA']);
         });
 
         return $this->success(
-            (new ConsultaResource($consulta->refresh()->load(['medico', 'especialidad', 'cita.paciente'])))
-                ->resolve(),
+            (new ConsultaResource($consulta->fresh([
+                'medico',
+                'especialidad',
+                'cita.paciente',
+                'cita.signosVitales.registradoPor',
+                'examenesFisicos',
+                'planManejo',
+                'receta.detalles',
+            ])))->resolve(),
             'Consulta finalizada correctamente.',
         );
     }

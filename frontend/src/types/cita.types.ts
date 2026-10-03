@@ -44,6 +44,7 @@ export interface Cita {
   orden_atencion?: number;
   creado_por_id: string;
   signos_vitales?: SignosVitales;
+  consulta_id?: string;
   /** Minutos desde la hora agendada mientras el paciente no llega (RF-44). */
   minutos_retraso: number;
   retrasada: boolean;
