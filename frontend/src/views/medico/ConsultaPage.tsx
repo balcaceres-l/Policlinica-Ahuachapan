@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -228,10 +228,9 @@ export default function ConsultaPage() {
   }
 
   const activa = consulta.abierta;
-  const inicioMs = useMemo(
-    () => (consulta.fecha_hora_inicio ? Date.parse(consulta.fecha_hora_inicio) : 0),
-    [consulta.fecha_hora_inicio],
-  );
+  const inicioMs = consulta.fecha_hora_inicio
+    ? Date.parse(consulta.fecha_hora_inicio)
+    : 0;
   const finMs = consulta.fecha_hora_fin ? Date.parse(consulta.fecha_hora_fin) : undefined;
 
   // Cálculo dinámico de IMC
