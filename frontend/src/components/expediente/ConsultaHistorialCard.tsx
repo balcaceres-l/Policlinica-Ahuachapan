@@ -1,9 +1,20 @@
+import { useState } from 'react';
 import Badge from '@/components/ui/Badge';
+import RecetaPreviewModal from '@/components/medico/RecetaPreviewModal';
+import { generarHtmlReceta } from '@/lib/recetaPdf';
+import { calcularEdad } from '@/lib/utils';
 import type { ConsultaHistorial } from '@/types/historial.types';
 import type { EstadoCita, TipoCita } from '@/types/cita.types';
 
 interface ConsultaHistorialCardProps {
   consulta: ConsultaHistorial;
+  pacienteInfo?: {
+    nombre?: string | null;
+    numero_expediente?: string | null;
+    fecha_nacimiento?: string | null;
+    dui?: string | null;
+    telefono?: string | null;
+  };
 }
 
 /** Normaliza la fecha de Laravel o ISO para que sea compatible en todos los navegadores. */
@@ -45,7 +56,8 @@ const ETIQUETA_SECCION = 'text-xs font-bold uppercase tracking-wide text-muted f
  * HU-22 / HU-28 — visualización de una cita o consulta histórica con
  * signos vitales, examen físico, diagnósticos, plan de manejo y recetas.
  */
-export function ConsultaHistorialCard({ consulta }: ConsultaHistorialCardProps) {
+export function ConsultaHistorialCard({ consulta, pacienteInfo }: ConsultaHistorialCardProps) {
+  const [modalReceta, setModalReceta] = useState(false);
   const { diagnosticos, plan_manejo: plan, examen_fisico: examen, signos_vitales: sv } = consulta;
 
   const tieneSignos = Boolean(
@@ -250,10 +262,21 @@ export function ConsultaHistorialCard({ consulta }: ConsultaHistorialCardProps) 
       {/* Receta Médica y Medicamentos prescritos */}
       {consulta.receta && consulta.receta.detalles && consulta.receta.detalles.length > 0 && (
         <section className="mt-4 rounded-field border border-emerald-200 bg-emerald-50/40 p-3.5">
-          <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-emerald-800">
-            <i className="ri-capsule-line text-sm text-emerald-600" />
-            Medicamentos Prescritos ({consulta.receta.detalles.length})
-          </h3>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-100 pb-2">
+            <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-emerald-800">
+              <i className="ri-capsule-line text-sm text-emerald-600" />
+              Medicamentos Prescritos ({consulta.receta.detalles.length})
+            </h3>
+            <button
+              type="button"
+              onClick={() => setModalReceta(true)}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-field border border-emerald-300 bg-white px-2.5 py-1 text-xs font-semibold text-emerald-800 shadow-xs transition-colors hover:bg-emerald-50"
+              title="Previsualizar e imprimir o exportar receta a PDF"
+            >
+              <i className="ri-printer-line" />
+              Exportar / Imprimir PDF
+            </button>
+          </div>
           <div className="mt-2.5 space-y-2">
             {consulta.receta.detalles.map((med, idx) => (
               <div key={med.id || idx} className="rounded border border-emerald-100 bg-surface p-2.5 text-xs shadow-xs">
@@ -314,6 +337,38 @@ export function ConsultaHistorialCard({ consulta }: ConsultaHistorialCardProps) 
                 : 'Cita agendada / pendiente de atención médica.'}
           </div>
         )}
+
+      {consulta.receta && (
+        <RecetaPreviewModal
+          isOpen={modalReceta}
+          onClose={() => setModalReceta(false)}
+          html={generarHtmlReceta({
+            medico: {
+              nombre: consulta.medicoNombre,
+              especialidad: consulta.especialidadNombre ?? undefined,
+            },
+            paciente: {
+              nombre: pacienteInfo?.nombre,
+              expediente: pacienteInfo?.numero_expediente,
+              edad: pacienteInfo?.fecha_nacimiento ? calcularEdad(pacienteInfo.fecha_nacimiento) : null,
+              dui: pacienteInfo?.dui,
+              telefono: pacienteInfo?.telefono,
+            },
+            fecha: consulta.fecha_hora_inicio,
+            medicamentos: (consulta.receta.detalles ?? []).map((d) => ({
+              nombre_medicamento: d.nombre_medicamento,
+              dosis: d.dosis,
+              via_administracion: d.via_administracion,
+              frecuencia: d.frecuencia,
+              duracion: d.duracion,
+              indicaciones: d.indicaciones,
+            })),
+            observaciones_generales: consulta.receta.observaciones_generales,
+          })}
+          pacienteNombre={pacienteInfo?.nombre}
+          numeroExpediente={pacienteInfo?.numero_expediente}
+        />
+      )}
     </article>
   );
 }

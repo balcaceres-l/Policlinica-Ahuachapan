@@ -14,6 +14,8 @@ class ConsultaResource extends JsonResource
             'cita_id' => $this->id_cita,
             'medico_id' => $this->id_medico,
             'medicoNombre' => $this->whenLoaded('medico', fn () => $this->medico->nombre_completo),
+            'medicoTelefono' => $this->whenLoaded('medico', fn () => $this->medico->telefono),
+            'medicoCargo' => $this->whenLoaded('medico', fn () => $this->medico->cargo),
             'especialidad_atencion_id' => $this->id_especialidad_atencion,
             'especialidadNombre' => $this->whenLoaded(
                 'especialidad',
@@ -38,6 +40,9 @@ class ConsultaResource extends JsonResource
                     'id' => $this->cita->id_paciente,
                     'nombre' => $this->cita->paciente?->nombre_completo,
                     'expediente' => $this->cita->paciente?->numero_expediente,
+                    'fecha_nacimiento' => $this->cita->paciente?->fecha_nacimiento?->format('Y-m-d'),
+                    'dui' => $this->cita->paciente?->dui,
+                    'telefono' => $this->cita->paciente?->telefono,
                 ],
             ),
             'examenes_fisicos' => ExamenFisicoResource::collection($this->whenLoaded('examenesFisicos')),

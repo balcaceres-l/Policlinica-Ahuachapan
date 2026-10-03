@@ -8,6 +8,7 @@ import Modal from '@/components/ui/Modal';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import CronometroConsulta from '@/components/medico/CronometroConsulta';
 import HistorialClinicoCompleto from '@/components/expediente/HistorialClinicoCompleto';
+import RecetaPreviewModal from '@/components/medico/RecetaPreviewModal';
 import { useGuardarSignosVitales } from '@/hooks/cita/useCitas';
 import {
   consultaKeys,
@@ -15,6 +16,8 @@ import {
   useConsulta,
   useFinalizarConsulta,
 } from '@/hooks/medico/useConsultas';
+import { generarHtmlReceta } from '@/lib/recetaPdf';
+import { calcularEdad } from '@/lib/utils';
 import type { GuardarConsultaPayload } from '@/services/medico/consulta.service';
 
 
@@ -90,6 +93,8 @@ export default function ConsultaPage() {
   // Receta médica
   const [recetaObservaciones, setRecetaObservaciones] = useState('');
   const [recetaDetalles, setRecetaDetalles] = useState<DetalleRecetaLocal[]>([]);
+  const [previewRecetaOpen, setPreviewRecetaOpen] = useState(false);
+  const [previewRecetaHtml, setPreviewRecetaHtml] = useState('');
 
   // Signos vitales (Triaje clínico)
   const [signosForm, setSignosForm] = useState({
@@ -296,6 +301,51 @@ export default function ConsultaPage() {
 
   const eliminarMedicamento = (index: number) => {
     setRecetaDetalles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Previsualización y exportación de receta a PDF
+  const handlePrevisualizarReceta = () => {
+    const medicamentosValidos = recetaDetalles.filter(
+      (m) => m.nombre_medicamento && m.nombre_medicamento.trim() !== '',
+    );
+
+    if (medicamentosValidos.length === 0 && !recetaObservaciones.trim()) {
+      toast.error('Agrega al menos un medicamento o indicación a la receta para exportar.');
+      return;
+    }
+
+    const edadCalculada = consulta.paciente?.fecha_nacimiento
+      ? calcularEdad(consulta.paciente.fecha_nacimiento)
+      : null;
+
+    const html = generarHtmlReceta({
+      medico: {
+        nombre: consulta.medicoNombre,
+        especialidad: consulta.especialidadNombre ?? undefined,
+        telefono: consulta.medicoTelefono ?? undefined,
+        cargo: consulta.medicoCargo ?? undefined,
+      },
+      paciente: {
+        nombre: consulta.paciente?.nombre,
+        expediente: consulta.paciente?.expediente,
+        edad: edadCalculada,
+        dui: consulta.paciente?.dui,
+        telefono: consulta.paciente?.telefono,
+      },
+      fecha: consulta.fecha_hora_inicio || new Date(),
+      medicamentos: recetaDetalles.map((m) => ({
+        nombre_medicamento: m.nombre_medicamento,
+        dosis: m.dosis,
+        via_administracion: m.via_administracion,
+        frecuencia: m.frecuencia,
+        duracion: m.duracion,
+        indicaciones: m.indicaciones,
+      })),
+      observaciones_generales: recetaObservaciones,
+    });
+
+    setPreviewRecetaHtml(html);
+    setPreviewRecetaOpen(true);
   };
 
   // Guardar signos vitales desde la consulta
@@ -1097,15 +1147,26 @@ export default function ConsultaPage() {
                 </div>
               </div>
 
-              {activa && (
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   size="sm"
-                  icon="ri-medicine-bottle-line"
-                  onClick={agregarMedicamento}
+                  variant="secondary"
+                  icon="ri-printer-line"
+                  onClick={handlePrevisualizarReceta}
+                  title="Previsualizar e imprimir o exportar receta a PDF"
                 >
-                  Agregar Medicamento
+                  Exportar / Imprimir PDF
                 </Button>
-              )}
+                {activa && (
+                  <Button
+                    size="sm"
+                    icon="ri-medicine-bottle-line"
+                    onClick={agregarMedicamento}
+                  >
+                    Agregar Medicamento
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Observaciones generales de la receta */}
@@ -1375,6 +1436,15 @@ export default function ConsultaPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Modal de exportación / impresión de receta médica a PDF */}
+      <RecetaPreviewModal
+        isOpen={previewRecetaOpen}
+        onClose={() => setPreviewRecetaOpen(false)}
+        html={previewRecetaHtml}
+        pacienteNombre={consulta.paciente?.nombre}
+        numeroExpediente={consulta.paciente?.expediente}
+      />
     </div>
   );
 }
