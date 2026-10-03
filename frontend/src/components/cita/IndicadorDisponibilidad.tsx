@@ -1,5 +1,6 @@
+import { useMemo } from 'react';
 import { useDisponibilidad } from '@/hooks/cita/useCitas';
-import { cn } from '@/lib/utils';
+import { cn, obtenerFechaLocal, obtenerHoraLocal } from '@/lib/utils';
 
 interface IndicadorDisponibilidadProps {
   medicoId?: string;
@@ -19,6 +20,16 @@ export function IndicadorDisponibilidad({
   onSelect,
 }: IndicadorDisponibilidadProps) {
   const { data, isLoading, isError } = useDisponibilidad(medicoId, fecha);
+
+  const bloquesDisponibles = useMemo(() => {
+    if (!data?.bloques) return [];
+    const hoyStr = obtenerFechaLocal();
+    if (fecha === hoyStr) {
+      const horaActual = obtenerHoraLocal();
+      return data.bloques.filter((b) => b.hora_inicio >= horaActual);
+    }
+    return data.bloques;
+  }, [data?.bloques, fecha]);
 
   if (!medicoId || !fecha) {
     return <div className={CAJA}>Selecciona un médico y una fecha para ver sus bloques libres.</div>;
@@ -60,17 +71,26 @@ export function IndicadorDisponibilidad({
     );
   }
 
+  if (bloquesDisponibles.length === 0) {
+    return (
+      <div className="rounded-field border border-warning/30 bg-warning-soft p-3 text-center text-xs text-warning">
+        <i className="ri-time-line mr-1 align-middle" />
+        Todos los bloques de atención del médico para hoy ya han transcurrido.
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
         <span className="text-xs font-semibold text-ink">Bloques disponibles</span>
         <span className="text-xs text-muted">
-          {data.bloques.length} {data.bloques.length === 1 ? 'bloque' : 'bloques'}
+          {bloquesDisponibles.length} {bloquesDisponibles.length === 1 ? 'bloque' : 'bloques'}
         </span>
       </div>
 
       <div className="grid max-h-40 grid-cols-4 gap-2 overflow-y-auto pr-1">
-        {data.bloques.map((bloque) => {
+        {bloquesDisponibles.map((bloque) => {
           const activo = horaSeleccionada === bloque.hora_inicio;
 
           return (

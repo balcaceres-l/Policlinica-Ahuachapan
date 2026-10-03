@@ -111,6 +111,23 @@ Omite médicos inactivos y `cantidadMedicos` cuenta solo activos — a diferenci
 
 ---
 
+## Citas y Agenda — roles `RECEPCIONISTA`, `ADMINISTRADOR`, `MEDICO`
+
+| Método | Ruta | Acceso | Query / Cuerpo |
+|---|---|---|---|
+| `GET` | `/citas` | Autenticado | query: `fecha`, `desde`, `hasta`, `medico_id`, `paciente_id`, `estado`. (Médico solo ve su agenda). |
+| `POST` | `/citas` | Autenticado | `paciente_id`, `medico_id`, `especialidad_id?`, `fecha`, `hora_inicio`, `hora_fin`, `tipo_cita?` (`REGULAR`, `EMERGENCIA`, `SOBRECUPO`). |
+| `GET` | `/agenda/disponibilidad` | Autenticado | query: `medico_id`, `fecha`. Devuelve `{ bloqueado: bool, bloques: [{ hora_inicio, hora_fin }] }`. |
+| `PATCH` | `/citas/{id}/reprogramar` | `RECEPCIONISTA`, `ADMINISTRADOR` | `fecha`, `hora_inicio`, `hora_fin`, `medico_id?` (permite reasignar a otro médico si el original falta o no llega), `especialidad_id?`. |
+| `PATCH` | `/citas/{id}/cancelar` | `RECEPCIONISTA`, `ADMINISTRADOR` | `motivo_cancelacion` (obligatorio, máx 500). Libera el bloque. |
+| `PATCH` | `/citas/{id}/llegada` | `RECEPCIONISTA`, `ADMINISTRADOR` | Pasa la cita a `EN_ESPERA` y asigna orden de llegada correlativo. |
+| `PATCH` | `/citas/{id}/mover-al-final` | `RECEPCIONISTA`, `ADMINISTRADOR` | Mueve el paciente en espera al final de la fila. |
+| `PATCH` | `/medicos/{id}/agenda/desplazar`| `RECEPCIONISTA`, `ADMINISTRADOR`, `MEDICO` | `fecha`, `minutos`, `desde_hora?`. Corre citas pendientes por atraso del médico. |
+| `GET` | `/citas/{id}/signos-vitales` | Autenticado | Obtiene signos vitales (triaje). |
+| `PUT` | `/citas/{id}/signos-vitales` | `RECEPCIONISTA`, `MEDICO` | Registra/actualiza signos vitales del paciente para la cita. |
+
+---
+
 ## Recursos
 
 **UsuarioResource**
