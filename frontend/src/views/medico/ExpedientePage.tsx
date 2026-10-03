@@ -1,5 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import HistorialDiagnosticos from '@/components/expediente/HistorialDiagnosticos';
+import LaboratorioCronologico from '@/components/expediente/LaboratorioCronologico';
 import SelectorPacienteAutocomplete from '@/components/paciente/SelectorPacienteAutocomplete';
 import Button from '@/components/ui/Button';
 import EmptyState from '@/components/ui/EmptyState';
@@ -46,6 +47,13 @@ export function ExpedientePage() {
             title="Consulta de expediente clínico"
             message="Busca un paciente por nombre, número de expediente o documento para revisar su historial clínico electrónico."
           />
+        </div>
+      )}
+
+      {/* HU-23 */}
+      {pacienteId && (
+        <div className="mt-8">
+          <LaboratorioCronologico pacienteId={pacienteId} />
         </div>
       )}
     </div>

@@ -45,6 +45,8 @@ class CitaController extends Controller
             ->orderBy('hora_inicio')
             ->get();
 
+        $this->agenda->marcarAfectadas($citas);
+
         return $this->success(CitaResource::collection($citas)->resolve());
     }
 

@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import CronometroConsulta from '@/components/medico/CronometroConsulta';
+import HistorialClinicoCompleto from '@/components/expediente/HistorialClinicoCompleto';
 import { useGuardarSignosVitales } from '@/hooks/cita/useCitas';
 import {
   consultaKeys,
@@ -15,6 +16,7 @@ import {
   useFinalizarConsulta,
 } from '@/hooks/medico/useConsultas';
 import type { GuardarConsultaPayload } from '@/services/medico/consulta.service';
+
 
 const inputClase =
   'mt-1 w-full rounded-field border border-line bg-surface px-3 py-2 text-sm text-ink outline-none transition-colors focus:border-brand-600 focus:ring-4 focus:ring-brand-600/10 disabled:bg-canvas disabled:text-muted';
@@ -747,6 +749,11 @@ export default function ConsultaPage() {
 
         {/* Columna principal derecha: Expediente Clínico de la Consulta */}
         <main className="space-y-6">
+          {/* HU-28 — historial clínico completo embebido en la consulta */}
+          {consulta.paciente?.id && (
+            <HistorialClinicoCompleto pacienteId={consulta.paciente.id} />
+          )}
+
           {/* SECCIÓN 1: Motivo de Consulta y Anamnesis */}
           <section className="rounded-card border border-line bg-surface p-6 shadow-card space-y-4">
             <div className="flex items-center gap-2 border-b border-line pb-3">

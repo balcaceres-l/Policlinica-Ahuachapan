@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { useCancelarCita } from '@/hooks/cita/useCitas';
+import { extraerMensajeError } from '@/lib/apiError';
 import type { Cita } from '@/types/cita.types';
 
 interface CancelarCitaModalProps {
@@ -40,8 +41,7 @@ export function CancelarCitaModal({ cita, isOpen, onClose }: CancelarCitaModalPr
       setMotivo('');
       onClose();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al cancelar la cita.';
-      setError(msg);
+      setError(extraerMensajeError(err, 'Error al cancelar la cita.'));
     }
   };
 

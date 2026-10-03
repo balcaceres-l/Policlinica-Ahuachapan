@@ -111,6 +111,26 @@ Omite médicos inactivos y `cantidadMedicos` cuenta solo activos — a diferenci
 
 ---
 
+## Bloqueos de agenda (HU-35) — roles `ADMINISTRADOR` y `RECEPCIONISTA`
+
+Un bloqueo es de **día completo** (sin horas) o **parcial** (`hora_inicio` y `hora_fin`). Un médico puede
+tener varios bloqueos parciales el mismo día, pero no traslapados. Los bloqueos nunca cancelan ni mueven
+citas por sí solos: las que quedan dentro se devuelven para que recepción las gestione.
+
+| Método | Ruta | Detalle |
+|---|---|---|
+| `GET` | `/bloqueos` | query: `medico_id`, `desde`, `hasta` (`YYYY-MM-DD`). **No descarta fechas pasadas**: sirve de historial ("qué médicos faltaron el día X"). Cada bloqueo trae `tipo_bloqueo` (`COMPLETO`/`PARCIAL`), `hora_inicio`, `hora_fin`, `creadoPorNombre` y `citas_afectadas_total` |
+| `POST` | `/bloqueos` | `medico_id`, `fecha`, `motivo?`, `hora_inicio?` + `hora_fin?` (ambas o ninguna; fin posterior al inicio). `409` si se traslapa con otro bloqueo del mismo médico. Responde `{ bloqueo, citasAfectadas }` |
+| `GET` | `/bloqueos/{id}/citas-afectadas` | Citas `AGENDADA`/`EN_ESPERA` que hoy siguen dentro del bloqueo |
+| `PATCH` | `/bloqueos/{id}/correr-citas` | Solo bloqueos parciales. Recorre las citas pendientes en orden y una por una: las afectadas pasan a empezar cuando termina el bloqueo (una detrás de otra, conservando duración y orden) y una cita posterior solo se corre si choca con la anterior; las que ya estaban libres, y las emergencias/sobrecupos fuera del bloqueo, no se tocan. No cae en otro bloqueo del mismo día. Responde `{ citas, fueraDeHorario }` (solo las citas movidas). `422` si es de día completo o no hay citas dentro |
+| `DELETE` | `/bloqueos/{id}` | `422` si la fecha ya pasó: un bloqueo pasado es el registro de la ausencia |
+
+- `GET /citas` marca cada cita pendiente con `afectada_por_bloqueo` (bool) y `bloqueo` (`id`, `tipo_bloqueo`, `hora_inicio`, `hora_fin`, `motivo`).
+- `GET /agenda/disponibilidad` y el agendado/reprogramado descuentan los bloqueos parciales; `bloqueado: true` solo indica día completo. Las emergencias y sobrecupos siguen ignorando la validación.
+- Para reagendar o cancelar una cita afectada se usan los endpoints de siempre: `PATCH /citas/{id}/reprogramar` (con `medico_id` se puede reasignar a otro médico) y `PATCH /citas/{id}/cancelar`.
+
+---
+
 ## Citas y Agenda — roles `RECEPCIONISTA`, `ADMINISTRADOR`, `MEDICO`
 
 | Método | Ruta | Acceso | Query / Cuerpo |

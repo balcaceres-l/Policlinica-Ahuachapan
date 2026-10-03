@@ -34,6 +34,22 @@ class CitaResource extends JsonResource
             'consulta_id' => $this->whenLoaded('consulta', fn () => $this->consulta?->id_consulta),
             'minutos_retraso' => $this->minutosDeRetraso(),
             'retrasada' => $this->minutosDeRetraso() > config('clinica.retraso_paciente_min'),
+            // Solo en los listados, que resuelven el bloqueo con AgendaService::marcarAfectadas.
+            // `whenLoaded` devolvería null (no false) cuando no hay bloqueo, por eso `when`.
+            'afectada_por_bloqueo' => $this->when(
+                $this->resource->relationLoaded('bloqueoAfectante'),
+                fn () => $this->bloqueoAfectante !== null,
+            ),
+            'bloqueo' => $this->when(
+                $this->resource->relationLoaded('bloqueoAfectante'),
+                fn () => $this->bloqueoAfectante === null ? null : [
+                    'id' => $this->bloqueoAfectante->id_bloqueo,
+                    'tipo_bloqueo' => $this->bloqueoAfectante->esParcial() ? 'PARCIAL' : 'COMPLETO',
+                    'hora_inicio' => $this->bloqueoAfectante->horaInicioCorta(),
+                    'hora_fin' => $this->bloqueoAfectante->horaFinCorta(),
+                    'motivo' => $this->bloqueoAfectante->motivo ?? '',
+                ],
+            ),
         ];
     }
 

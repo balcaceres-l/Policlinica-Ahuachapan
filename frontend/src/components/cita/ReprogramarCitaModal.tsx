@@ -5,6 +5,7 @@ import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { useCatalogoEspecialidades } from '@/hooks/especialidad/useEspecialidades';
 import { useReprogramarCita } from '@/hooks/cita/useCitas';
+import { extraerMensajeError } from '@/lib/apiError';
 import { useMedicos } from '@/hooks/usuario/useUsuarios';
 import { obtenerFechaLocal, obtenerHoraLocal } from '@/lib/utils';
 import type { Cita } from '@/types/cita.types';
@@ -104,8 +105,7 @@ function FormularioReprogramar({ cita, onClose }: FormularioProps) {
       );
       onClose();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al reprogramar la cita.';
-      setError(msg);
+      setError(extraerMensajeError(err, 'Error al reprogramar la cita.'));
     }
   };
 
