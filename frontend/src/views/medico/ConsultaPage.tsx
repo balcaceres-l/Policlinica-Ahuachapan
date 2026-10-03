@@ -8,6 +8,7 @@ import { historialKeys } from "@/hooks/historial/useHistorial";
 import { useConsultas } from "@/hooks/medico/useConsultas";
 import type { PacienteConsulta } from "@/types/consulta";
 import CronometroConsulta from "@/components/medico/CronometroConsulta";
+import HistorialClinicoCompleto from "@/components/expediente/HistorialClinicoCompleto";
 
 const campo =
   "mt-1 w-full rounded-field border border-line bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-brand-600 focus:ring-4 focus:ring-brand-600/10 disabled:bg-canvas";
@@ -271,6 +272,9 @@ export default function ConsultaPage() {
         {/* Columna derecha */}
 
         <main className="space-y-5">
+          {/* HU-28 — historial clínico completo embebido en la consulta */}
+          <HistorialClinicoCompleto pacienteId={paciente.pacienteId} />
+
           {/* Registro médico */}
 
           <section className="rounded-card border border-line bg-surface p-5 shadow-card">
