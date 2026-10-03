@@ -18,7 +18,6 @@ import SalaEsperaPage from "@/views/medico/SalaEsperaPage";
 import ConsultaPage from "@/views/medico/ConsultaPage";
 import ExpedientePage from "@/views/medico/ExpedientePage";
 import LaboratorioClinicoPage from "@/views/medico/LaboratorioClinicoPage";
-import PacientesPage from "@/views/medico/PacientesPage";
 
 // Los roles de cada ProtectedRoute deben coincidir con el middleware
 // `role:` de backend/routes/api.php.
@@ -48,7 +47,7 @@ function App() {
         {/* Atención Médica (Doctor) */}
         <Route element={<ProtectedRoute roles={["MEDICO"]} />}>
           <Route element={<AppLayout />}>
-            <Route path="/medico/pacientes" element={<PacientesPage />} />
+            <Route path="/medico/pacientes" element={<Navigate to="/medico/expediente" replace />} />
             <Route path="/medico/citas" element={<CitasPage />} />
             <Route path="/medico/sala-espera" element={<SalaEsperaPage />} />
             <Route path="/medico/consulta/:id" element={<ConsultaPage />} />

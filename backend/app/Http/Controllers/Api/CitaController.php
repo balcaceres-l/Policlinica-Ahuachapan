@@ -88,6 +88,16 @@ class CitaController extends Controller
             return $this->failure('Solo puedes agendar citas en tu propia agenda.', 403);
         }
 
+        // Un médico solo puede agendar citas para sus propias especialidades asignadas.
+        if ($usuario->rol === 'MEDICO' && ! empty($validado['especialidad_id'])) {
+            $tieneEspecialidad = $usuario->especialidades()
+                ->where('especialidades.id', $validado['especialidad_id'])
+                ->exists();
+            if (! $tieneEspecialidad) {
+                return $this->failure('Solo puedes agendar citas para tus propias especialidades asignadas.', 422);
+            }
+        }
+
         try {
             $cita = $this->agenda->agendar([
                 'id_paciente' => $validado['paciente_id'],

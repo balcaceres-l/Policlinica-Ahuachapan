@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import IndicadorDisponibilidad from '@/components/cita/IndicadorDisponibilidad';
 import SelectorMedicoCascada from '@/components/cita/SelectorMedicoCascada';
 import SelectorPacienteAutocomplete from '@/components/paciente/SelectorPacienteAutocomplete';
+import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
+import { useAuth } from '@/hooks/auth/useAuth';
 import { useAgendarCita } from '@/hooks/cita/useCitas';
-import { obtenerFechaLocal, obtenerHoraLocal } from '@/lib/utils';
+import { useEspecialidadesDeMedico } from '@/hooks/especialidad/useEspecialidades';
+import { getIniciales, obtenerFechaLocal, obtenerHoraLocal } from '@/lib/utils';
 import type { TipoCita } from '@/types/cita.types';
 
 interface AgendarCitaModalProps {
@@ -28,9 +31,13 @@ export function AgendarCitaModal({
   medicoIdPredeterminado,
 }: AgendarCitaModalProps) {
   const hoy = obtenerFechaLocal();
+  const { usuario } = useAuth();
+  const esMedico = usuario?.rol === 'MEDICO';
 
   const [pacienteId, setPacienteId] = useState<string | ''>('');
-  const [medicoId, setMedicoId] = useState<string | ''>(medicoIdPredeterminado ?? '');
+  const [medicoId, setMedicoId] = useState<string | ''>(
+    esMedico ? (usuario?.id ?? '') : (medicoIdPredeterminado ?? ''),
+  );
   const [especialidadId, setEspecialidadId] = useState<string | undefined>(undefined);
   const [fecha, setFecha] = useState(fechaPredeterminada ?? hoy);
   const [horaInicio, setHoraInicio] = useState('15:00');
@@ -40,7 +47,35 @@ export function AgendarCitaModal({
 
   const agendarMutation = useAgendarCita();
 
+  // Si es médico, consultamos estrictamente sus especialidades asignadas
+  const medicoIdParaEspecialidades = esMedico ? usuario?.id : medicoId;
+  const { data: especialidadesMedico = [], isLoading: cargandoEspecialidades } =
+    useEspecialidadesDeMedico(medicoIdParaEspecialidades || null);
+
+  // Sincronizar fecha y médico cuando cambien las props o el usuario
+  useEffect(() => {
+    if (fechaPredeterminada) {
+      setFecha(fechaPredeterminada);
+    }
+  }, [fechaPredeterminada]);
+
+  useEffect(() => {
+    if (esMedico && usuario?.id) {
+      setMedicoId(usuario.id);
+    } else if (medicoIdPredeterminado) {
+      setMedicoId(medicoIdPredeterminado);
+    }
+  }, [esMedico, usuario?.id, medicoIdPredeterminado]);
+
+  // Si el médico solo tiene una especialidad asignada, seleccionarla por defecto
+  useEffect(() => {
+    if (esMedico && especialidadesMedico.length === 1 && !especialidadId) {
+      setEspecialidadId(especialidadesMedico[0].id);
+    }
+  }, [esMedico, especialidadesMedico, especialidadId]);
+
   const handleSelectMedico = (mId: string, espId?: string) => {
+    if (esMedico) return; // Un médico no puede cambiar a otro médico
     setMedicoId(mId);
     setEspecialidadId(espId);
   };
@@ -59,12 +94,18 @@ export function AgendarCitaModal({
     e.preventDefault();
     setError(null);
 
+    const medicoFinalId = esMedico ? (usuario?.id ?? '') : medicoId;
+
     if (!pacienteId) {
       setError('Debes seleccionar un paciente.');
       return;
     }
-    if (!medicoId) {
-      setError('Debes seleccionar un médico.');
+    if (!medicoFinalId) {
+      setError('Debes especificar el médico para la cita.');
+      return;
+    }
+    if (esMedico && especialidadesMedico.length > 0 && !especialidadId) {
+      setError('Debes seleccionar una de tus especialidades asignadas.');
       return;
     }
     if (!fecha) {
@@ -86,14 +127,16 @@ export function AgendarCitaModal({
     }
     const horaActual = obtenerHoraLocal();
     if (fecha === hoyStr && tipoCita === 'REGULAR' && horaInicio < horaActual) {
-      setError(`No se puede agendar para las ${horaInicio} porque esa hora ya transcurrió hoy (hora actual: ${horaActual}).`);
+      setError(
+        `No se puede agendar a las ${horaInicio} porque esa hora ya transcurrió hoy (hora actual: ${horaActual}).`,
+      );
       return;
     }
 
     try {
       await agendarMutation.mutateAsync({
         paciente_id: pacienteId,
-        medico_id: medicoId,
+        medico_id: medicoFinalId,
         especialidad_id: especialidadId,
         fecha,
         hora_inicio: horaInicio,
@@ -105,7 +148,7 @@ export function AgendarCitaModal({
       onClose();
       // Limpiar formulario al cerrar
       setPacienteId('');
-      if (!medicoIdPredeterminado) {
+      if (!esMedico && !medicoIdPredeterminado) {
         setMedicoId('');
         setEspecialidadId(undefined);
       }
@@ -115,12 +158,18 @@ export function AgendarCitaModal({
     }
   };
 
+  const medicoEfectivoId = esMedico ? usuario?.id : medicoId;
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Agendar Nueva Cita"
-      subtitle="Programa una consulta médica regular, de emergencia o sobrecupo."
+      title={esMedico ? 'Agendar Cita en Mi Agenda' : 'Agendar Nueva Cita'}
+      subtitle={
+        esMedico
+          ? 'Programa una consulta para tus especialidades asignadas.'
+          : 'Programa una consulta médica regular, de emergencia o sobrecupo.'
+      }
       size="md"
       footer={
         <>
@@ -151,11 +200,66 @@ export function AgendarCitaModal({
           onSelectPaciente={setPacienteId}
         />
 
-        {/* Selector de Médico con Filtro en Cascada por Especialidad y Autocompletado */}
-        <SelectorMedicoCascada
-          medicoId={medicoId}
-          onSelectMedico={handleSelectMedico}
-        />
+        {/* Modo Médico: Se bloquea al médico logueado y solo elige entre sus especialidades */}
+        {esMedico ? (
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-ink">
+                Médico Asignado
+              </label>
+              <div className="flex items-center justify-between rounded-card border border-brand-200 bg-brand-50/50 p-3 shadow-xs">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-700">
+                    {getIniciales(usuario?.nombreCompleto || 'Dr.')}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-ink">
+                      {usuario?.nombreCompleto}
+                    </p>
+                    <p className="truncate text-xs text-muted">
+                      {usuario?.cargo || 'Médico Especialista'}
+                    </p>
+                  </div>
+                </div>
+                <Badge variant="info">Mi Agenda</Badge>
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-ink">
+                Especialidad de la Cita{' '}
+                {especialidadesMedico.length > 0 && <span className="text-danger">*</span>}
+              </label>
+              {cargandoEspecialidades ? (
+                <p className="text-xs text-muted">Cargando especialidades...</p>
+              ) : especialidadesMedico.length === 0 ? (
+                <div className="rounded-field border border-line bg-canvas p-2.5 text-xs text-muted">
+                  No tienes especialidades clínicas asignadas. La cita se agendará como Consulta General.
+                </div>
+              ) : (
+                <select
+                  value={especialidadId ?? ''}
+                  onChange={(e) => setEspecialidadId(e.target.value || undefined)}
+                  className={CLASE_INPUT}
+                  required={especialidadesMedico.length > 0}
+                >
+                  <option value="">Selecciona tu especialidad...</option>
+                  {especialidadesMedico.map((esp) => (
+                    <option key={esp.id} value={esp.id}>
+                      {esp.nombre}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* Modo Recepción / Admin: Selector de Médico con Filtro en Cascada */
+          <SelectorMedicoCascada
+            medicoId={medicoId}
+            onSelectMedico={handleSelectMedico}
+          />
+        )}
 
         <div>
           <label className="mb-1 block text-xs font-semibold text-ink">
@@ -172,7 +276,7 @@ export function AgendarCitaModal({
 
         {tipoCita === 'REGULAR' ? (
           <IndicadorDisponibilidad
-            medicoId={medicoId || undefined}
+            medicoId={medicoEfectivoId || undefined}
             fecha={fecha || undefined}
             horaSeleccionada={horaInicio}
             onSelect={(inicio, fin) => {

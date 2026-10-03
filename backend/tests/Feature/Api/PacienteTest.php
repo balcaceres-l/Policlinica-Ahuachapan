@@ -55,7 +55,7 @@ class PacienteTest extends TestCase
         $this->assertNotEquals('02345678-9', $p->getAttributes()['dui']);
     }
 
-    public function test_medico_puede_registrar_paciente_adulto_con_pasaporte(): void
+    public function test_recepcionista_puede_registrar_paciente_adulto_con_pasaporte(): void
     {
         $payload = [
             'nombre_completo' => 'John David Smith',
@@ -64,7 +64,7 @@ class PacienteTest extends TestCase
             'telefono' => '7888-9999',
         ];
 
-        $this->actingAs($this->medico)
+        $this->actingAs($this->recepcion)
             ->postJson('/api/pacientes', $payload)
             ->assertStatus(201)
             ->assertJsonPath('success', true)
@@ -72,6 +72,19 @@ class PacienteTest extends TestCase
             ->assertJsonPath('data.dui', 'A12345678')
             ->assertJsonPath('data.tipoDocumento', 'PASAPORTE')
             ->assertJsonPath('data.esMenorEdad', false);
+    }
+
+    public function test_medico_no_puede_registrar_pacientes(): void
+    {
+        $payload = [
+            'nombre_completo' => 'Intento Medico Paciente',
+            'fecha_nacimiento' => '1990-01-01',
+            'dui' => '01234567-8',
+        ];
+
+        $this->actingAs($this->medico)
+            ->postJson('/api/pacientes', $payload)
+            ->assertStatus(403);
     }
 
     public function test_administrador_no_puede_registrar_pacientes(): void

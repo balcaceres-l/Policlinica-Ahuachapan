@@ -400,6 +400,29 @@ class AgendaTest extends TestCase
         $this->postJson('/api/citas', $this->datosCita())->assertCreated();
     }
 
+    public function test_el_medico_no_puede_agendar_con_especialidad_no_asignada(): void
+    {
+        Sanctum::actingAs($this->medico);
+        $otraEsp = \App\Models\Especialidad::create(['nombre' => 'Oftalmología', 'estado' => 'ACTIVA']);
+
+        $this->postJson('/api/citas', $this->datosCita([
+            'especialidad_id' => $otraEsp->id,
+        ]))->assertStatus(422)
+            ->assertJsonPath('message', 'Solo puedes agendar citas para tus propias especialidades asignadas.');
+    }
+
+    public function test_el_medico_puede_agendar_con_su_propia_especialidad(): void
+    {
+        Sanctum::actingAs($this->medico);
+        $miEsp = \App\Models\Especialidad::create(['nombre' => 'Medicina Interna', 'estado' => 'ACTIVA']);
+        $this->medico->especialidades()->attach($miEsp->id);
+
+        $this->postJson('/api/citas', $this->datosCita([
+            'especialidad_id' => $miEsp->id,
+        ]))->assertCreated()
+            ->assertJsonPath('data.especialidad_id', $miEsp->id);
+    }
+
     public function test_no_agenda_con_un_medico_inactivo(): void
     {
         $inactivo = User::factory()->create(['rol' => 'MEDICO', 'estado' => 'INACTIVO']);

@@ -16,6 +16,7 @@ export function DirectorioPacientes() {
   const navigate = useNavigate();
   const { usuario } = useAuth();
   const esMedico = usuario?.rol === 'MEDICO';
+  const esRecepcionista = usuario?.rol === 'RECEPCIONISTA';
 
   const [busqueda, setBusqueda] = useState('');
   const [categoriaFiltro, setCategoriaFiltro] = useState<'TODOS' | 'ADULTO' | 'MENOR'>('TODOS');
@@ -199,9 +200,11 @@ export function DirectorioPacientes() {
             Consulta expedientes clínicos, datos de contacto y registra nuevos pacientes.
           </p>
         </div>
-        <Button icon="ri-user-add-line" onClick={() => setModalNuevo(true)}>
-          Nuevo Paciente
-        </Button>
+        {esRecepcionista && (
+          <Button icon="ri-user-add-line" onClick={() => setModalNuevo(true)}>
+            Nuevo Paciente
+          </Button>
+        )}
       </div>
 
       {/* Barra de Filtros */}

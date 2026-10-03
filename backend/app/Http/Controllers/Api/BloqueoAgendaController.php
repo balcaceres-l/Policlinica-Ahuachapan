@@ -32,6 +32,11 @@ class BloqueoAgendaController extends Controller
             'hasta' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:desde'],
         ]);
 
+        $usuario = $request->user();
+        if ($usuario->rol === 'MEDICO') {
+            $validado['medico_id'] = $usuario->id;
+        }
+
         $bloqueos = bloqueo_agenda::with(['medico', 'creadoPor'])
             ->when($validado['medico_id'] ?? null, fn ($q, $id) => $q->where('id_medico', $id))
             ->when($validado['desde'] ?? null, fn ($q, $d) => $q->whereDate('fecha', '>=', $d))
