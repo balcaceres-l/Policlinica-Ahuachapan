@@ -30,7 +30,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('especialidades', EspecialidadController::class)
             ->parameters(['especialidades' => 'especialidad'])
             ->except('destroy');
-        Route::get('/medicos/{medico}/especialidades', [MedicoEspecialidadController::class, 'index']);
         Route::post('/medicos/{medico}/especialidades', [MedicoEspecialidadController::class, 'store']);
         Route::delete(
             '/medicos/{medico}/especialidades/{especialidad}',
@@ -38,19 +37,26 @@ Route::middleware('auth:sanctum')->group(function () {
         );
 
         // HU-34 — los horarios los configura el administrador.
-        Route::get('/medicos/{medico}/horarios', [HorarioMedicoController::class, 'index']);
         Route::post('/medicos/{medico}/horarios', [HorarioMedicoController::class, 'store']);
         Route::put('/medicos/{medico}/horarios', [HorarioMedicoController::class, 'sincronizar']);
         Route::put('/horarios/{horario}', [HorarioMedicoController::class, 'update']);
         Route::delete('/horarios/{horario}', [HorarioMedicoController::class, 'destroy']);
     });
 
+    // Consulta de especialidades asignadas a un médico
+    Route::get('/medicos/{medico}/especialidades', [MedicoEspecialidadController::class, 'index']);
+
+    // Consulta de horarios asignados a un médico
+    Route::get('/medicos/{medico}/horarios', [HorarioMedicoController::class, 'index']);
+
+    // Consulta de bloqueos de agenda (médico ve solo los suyos, admin/recepción ven todos)
+    Route::get('/bloqueos', [BloqueoAgendaController::class, 'index']);
+
     Route::middleware('role:ADMINISTRADOR,RECEPCIONISTA')->group(function () {
         Route::get('/catalogo/especialidades', [CatalogoEspecialidadController::class, 'index']);
         Route::get('/medicos', [UsuarioController::class, 'medicos']);
 
         // HU-35 — bloqueo de agenda por ausencia del médico.
-        Route::get('/bloqueos', [BloqueoAgendaController::class, 'index']);
         Route::post('/bloqueos', [BloqueoAgendaController::class, 'store']);
         Route::delete('/bloqueos/{bloqueo}', [BloqueoAgendaController::class, 'destroy']);
         // Citas que quedaron dentro de un bloqueo: listarlas y correrlas tras él.
@@ -81,11 +87,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/citas/{cita}/signos-vitales', [SignosVitalesController::class, 'store']);
 
     // Pacientes — consulta para personal clínico y recepción.
-    // Agregar pacientes y marcar fallecido (soft delete) es exclusivo de RECEPCIONISTA y MEDICO (no administrador).
+    // Registrar paciente es exclusivo de RECEPCIONISTA; edición y marcar fallecido es de RECEPCIONISTA y MEDICO.
     Route::get('/pacientes', [PacienteController::class, 'index']);
     Route::get('/pacientes/{paciente}', [PacienteController::class, 'show']);
-    Route::middleware('role:RECEPCIONISTA,MEDICO')->group(function () {
+    Route::get('/pacientes/{paciente}/historial', [PacienteController::class, 'historial']);
+    Route::middleware('role:RECEPCIONISTA')->group(function () {
         Route::post('/pacientes', [PacienteController::class, 'store']);
+    });
+    Route::middleware('role:RECEPCIONISTA,MEDICO')->group(function () {
         Route::put('/pacientes/{paciente}', [PacienteController::class, 'update']);
         Route::delete('/pacientes/{paciente}', [PacienteController::class, 'destroy']);
     });

@@ -18,7 +18,7 @@ import SalaEsperaPage from "@/views/medico/SalaEsperaPage";
 import ConsultaPage from "@/views/medico/ConsultaPage";
 import ExpedientePage from "@/views/medico/ExpedientePage";
 import LaboratorioClinicoPage from "@/views/medico/LaboratorioClinicoPage";
-import PacientesPage from "@/views/medico/PacientesPage";
+import MiHorarioPage from "@/views/medico/MiHorarioPage";
 
 // Los roles de cada ProtectedRoute deben coincidir con el middleware
 // `role:` de backend/routes/api.php.
@@ -48,11 +48,13 @@ function App() {
         {/* Atención Médica (Doctor) */}
         <Route element={<ProtectedRoute roles={["MEDICO"]} />}>
           <Route element={<AppLayout />}>
-            <Route path="/medico/pacientes" element={<PacientesPage />} />
+            <Route path="/medico/pacientes" element={<Navigate to="/medico/expediente" replace />} />
             <Route path="/medico/citas" element={<CitasPage />} />
             <Route path="/medico/sala-espera" element={<SalaEsperaPage />} />
             <Route path="/medico/consulta/:id" element={<ConsultaPage />} />
             <Route path="/medico/calendario" element={<CalendarioPage />} />
+            <Route path="/medico/horarios" element={<MiHorarioPage />} />
+            <Route path="/medico/horario" element={<Navigate to="/medico/horarios" replace />} />
             <Route path="/medico/expediente" element={<ExpedientePage />} />
             {/* HU-22 — expediente de un paciente concreto */}
             <Route
@@ -82,6 +84,26 @@ function App() {
             <Route
               path="/secretaria/pacientes"
               element={<PacientesRecepcionPage />}
+            />
+            <Route
+              path="/secretaria/pacientes/:pacienteId"
+              element={<ExpedientePage />}
+            />
+            <Route
+              path="/secretaria/expediente"
+              element={<ExpedientePage />}
+            />
+            <Route
+              path="/secretaria/expediente/:pacienteId"
+              element={<ExpedientePage />}
+            />
+            <Route
+              path="/secretaria/expedientes"
+              element={<Navigate to="/secretaria/expediente" replace />}
+            />
+            <Route
+              path="/secretaria/expedientes/:pacienteId"
+              element={<ExpedientePage />}
             />
             <Route
               path="/secretaria/bloqueos"

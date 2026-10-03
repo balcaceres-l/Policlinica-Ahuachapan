@@ -32,13 +32,19 @@ export default function SalaEsperaPage() {
   const [citaParaAtender, setCitaParaAtender] = useState<Cita | null>(null);
   const [especialidadElegida, setEspecialidadElegida] = useState<string>('');
 
-  const enConsulta = citas.some((c) => c.estado === 'EN_ATENCION');
+  const citaEnAtencion = citas.find((c) => c.estado === 'EN_ATENCION');
+  const enConsulta = Boolean(citaEnAtencion);
 
   const filtradas = citas.filter((c) => {
-    if (filtro === 'espera') return c.estado === 'EN_ESPERA' || c.estado === 'AGENDADA';
+    if (filtro === 'espera') return c.estado === 'EN_ESPERA' || c.estado === 'AGENDADA' || c.estado === 'EN_ATENCION';
     if (filtro === 'consulta') return c.estado === 'EN_ATENCION';
     if (filtro === 'atendido') return c.estado === 'ATENDIDA';
     return false;
+  }).sort((a, b) => {
+    // Si hay una consulta activa, colocarla de primera
+    if (a.estado === 'EN_ATENCION') return -1;
+    if (b.estado === 'EN_ATENCION') return 1;
+    return 0;
   });
 
   const cantidad = (estado: Filtro) => {
@@ -52,7 +58,7 @@ export default function SalaEsperaPage() {
 
   const handleIniciarAtencion = async (cita: Cita, espId?: string) => {
     if (enConsulta) {
-      setAviso('Ya tienes una consulta activa en este momento. Finalízala antes de atender a otro paciente.');
+      setAviso(`Ya tienes una consulta activa en curso con ${citaEnAtencion?.pacienteNombre}. Debes retomarla y finalizarla antes de atender a otro paciente.`);
       return;
     }
 
@@ -75,7 +81,10 @@ export default function SalaEsperaPage() {
       toast.success(`Consulta iniciada para ${cita.pacienteNombre}`);
       navigate(`/medico/consulta/${consultaIniciada.id}`);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al iniciar la consulta.';
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      const msg =
+        axiosErr?.response?.data?.message ||
+        (err instanceof Error ? err.message : 'Error al iniciar la consulta.');
       setAviso(msg);
       toast.error(msg);
     } finally {
@@ -108,6 +117,53 @@ export default function SalaEsperaPage() {
           Actualizar lista
         </Button>
       </header>
+
+      {/* Banner destacado si hay una consulta activa / pausada para retomar */}
+      {citaEnAtencion && (
+        <div className="rounded-card border-2 border-brand-500 bg-brand-50/80 p-5 shadow-card">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="flex size-11 items-center justify-center rounded-full bg-brand-600 text-white text-xl shadow-sm">
+                <i className="ri-stethoscope-fill" />
+              </span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-800">
+                    <span className="size-2 rounded-full bg-blue-600 animate-pulse" />
+                    Consulta en curso
+                  </span>
+                  <span className="text-xs text-muted">
+                    Horario de cita: {citaEnAtencion.hora_inicio} - {citaEnAtencion.hora_fin}
+                  </span>
+                </div>
+                <h2 className="text-lg font-bold text-ink mt-0.5">
+                  {citaEnAtencion.pacienteNombre}
+                </h2>
+                <p className="text-xs text-muted">
+                  Expediente: <span className="font-mono font-semibold text-ink">{citaEnAtencion.pacienteExpediente}</span>
+                  {citaEnAtencion.especialidadNombre && (
+                    <span> · Especialidad: <span className="font-medium text-ink">{citaEnAtencion.especialidadNombre}</span></span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {citaEnAtencion.consulta_id ? (
+                <Link
+                  to={`/medico/consulta/${citaEnAtencion.consulta_id}`}
+                  className="inline-flex items-center gap-2 rounded-field bg-brand-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors"
+                >
+                  <i className="ri-play-circle-fill text-lg" />
+                  Retomar Consulta
+                </Link>
+              ) : (
+                <span className="text-xs text-muted italic">Iniciando consulta...</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Resumen */}
       <div className="grid gap-3 sm:grid-cols-3">
@@ -281,22 +337,31 @@ export default function SalaEsperaPage() {
 
                     <td className="p-4 text-right">
                       {enEspera || agendada ? (
-                        <Button
-                          size="sm"
-                          icon="ri-stethoscope-line"
-                          disabled={enConsulta || iniciandoId !== null}
-                          loading={iniciandoId === cita.id}
-                          onClick={() => handleIniciarAtencion(cita)}
+                        <span
+                          title={
+                            enConsulta
+                              ? `Ya tienes una consulta activa en curso con ${citaEnAtencion?.pacienteNombre}. Debes retomarla y finalizarla antes de iniciar una nueva consulta.`
+                              : undefined
+                          }
+                          className="inline-block"
                         >
-                          Atender
-                        </Button>
+                          <Button
+                            size="sm"
+                            icon="ri-stethoscope-line"
+                            disabled={enConsulta || iniciandoId !== null}
+                            loading={iniciandoId === cita.id}
+                            onClick={() => handleIniciarAtencion(cita)}
+                          >
+                            Atender
+                          </Button>
+                        </span>
                       ) : esConsultaActiva && cita.consulta_id ? (
                         <Link
                           to={`/medico/consulta/${cita.consulta_id}`}
-                          className="inline-flex items-center gap-1 rounded-field bg-brand-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-700 transition-colors"
+                          className="inline-flex items-center gap-1.5 rounded-field bg-brand-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-brand-700 transition-colors"
                         >
-                          <i className="ri-play-line" />
-                          Continuar
+                          <i className="ri-play-circle-fill text-sm" />
+                          Retomar Consulta
                         </Link>
                       ) : cita.consulta_id ? (
                         <Link

@@ -32,6 +32,8 @@ class CitaResource extends JsonResource
                 fn () => $this->signosVitales ? (new SignosVitalesResource($this->signosVitales))->resolve() : null,
             ),
             'consulta_id' => $this->whenLoaded('consulta', fn () => $this->consulta?->id_consulta),
+            'consulta_precio' => $this->whenLoaded('consulta', fn () => $this->consulta?->precio !== null ? (float) $this->consulta->precio : null),
+            'consulta_total' => $this->whenLoaded('consulta', fn () => $this->consulta?->total !== null ? (float) $this->consulta->total : null),
             'minutos_retraso' => $this->minutosDeRetraso(),
             'retrasada' => $this->minutosDeRetraso() > config('clinica.retraso_paciente_min'),
             // Solo en los listados, que resuelven el bloqueo con AgendaService::marcarAfectadas.

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import CitasAfectadasModal, {
   type BloqueoGestionable,
@@ -33,6 +34,7 @@ const obtenerFechaLocal = (d = new Date()) => {
 };
 
 export function CitasRecepcionPage() {
+  const navigate = useNavigate();
   const hoyStr = useMemo(() => obtenerFechaLocal(), []);
 
   const [busqueda, setBusqueda] = useState('');
@@ -184,30 +186,54 @@ export function CitasRecepcionPage() {
     },
     {
       key: 'estado',
-      header: 'Estado',
+      header: 'Estado / Cobro',
       render: (cita) => (
-        <Badge
-          dot
-          variant={
-            cita.estado === 'ATENDIDA'
-              ? 'success'
-              : cita.estado === 'EN_ESPERA'
-                ? 'info'
-                : cita.estado === 'CANCELADA'
-                  ? 'danger'
-                  : 'royal'
-          }
-        >
-          {ESTADO_CITA_LABEL[cita.estado]}
-        </Badge>
+        <div>
+          <Badge
+            dot
+            variant={
+              cita.estado === 'ATENDIDA'
+                ? 'success'
+                : cita.estado === 'EN_ESPERA'
+                  ? 'info'
+                  : cita.estado === 'CANCELADA'
+                    ? 'danger'
+                    : 'royal'
+            }
+          >
+            {ESTADO_CITA_LABEL[cita.estado]}
+          </Badge>
+          {cita.estado === 'ATENDIDA' && (cita.consulta_total != null || cita.consulta_precio != null) && (
+            <div className="mt-1">
+              <span
+                className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800"
+                title="Tarifa / Precio fijado por el médico para cobro"
+              >
+                <i className="ri-money-dollar-circle-line" />
+                ${Number(cita.consulta_total ?? cita.consulta_precio).toFixed(2)} USD
+              </span>
+            </div>
+          )}
+        </div>
       ),
     },
     {
       key: 'acciones',
       header: 'Acciones',
-      className: 'w-44 text-right',
+      className: 'w-48 text-right',
       render: (cita) => (
         <div className="flex justify-end gap-1">
+          {/* Ver expediente clínico completo del paciente */}
+          {cita.paciente_id && (
+            <button
+              type="button"
+              onClick={() => navigate(`/secretaria/expediente/${cita.paciente_id}`)}
+              title="Ver expediente clínico y consultas del paciente"
+              className="flex size-8 cursor-pointer items-center justify-center rounded-field text-brand-600 transition-colors hover:bg-brand-50 hover:text-brand-800"
+            >
+              <i className="ri-folder-user-line text-base" />
+            </button>
+          )}
           {/* Tomar o editar signos vitales solo para citas de hoy en estado AGENDADA o EN_ESPERA */}
           {(cita.estado === 'AGENDADA' || cita.estado === 'EN_ESPERA') && cita.fecha === hoyStr && (
             <button

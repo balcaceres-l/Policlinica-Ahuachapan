@@ -18,10 +18,15 @@ class HorarioMedicoController extends Controller
 
     private const DIAS = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
 
-    public function index(User $medico): JsonResponse
+    public function index(Request $request, User $medico): JsonResponse
     {
         if ($medico->rol !== 'MEDICO') {
             return $this->failure('El usuario indicado no es médico.', 422);
+        }
+
+        // Si el usuario autenticado es médico, solo puede ver sus propios horarios
+        if ($request->user()->rol === 'MEDICO' && $request->user()->id !== $medico->id) {
+            return $this->failure('Solo puedes consultar tus propios horarios.', 403);
         }
 
         $horarios = horario_medico::where('id_medico', $medico->id)

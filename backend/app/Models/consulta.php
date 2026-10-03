@@ -32,6 +32,8 @@ class consulta extends Model
         'notas_adicionales',
         'precio',
         'total',
+        'segundos_transcurridos',
+        'en_pausa',
     ];
 
     protected $casts = [
@@ -39,6 +41,8 @@ class consulta extends Model
         'fecha_hora_fin' => 'datetime',
         'precio' => 'float',
         'total' => 'float',
+        'segundos_transcurridos' => 'integer',
+        'en_pausa' => 'boolean',
     ];
 
     public function cita(): BelongsTo
@@ -79,6 +83,10 @@ class consulta extends Model
     /** Minutos transcurridos, para la alerta de consulta excedida (HU-40). */
     public function minutosTranscurridos(): int
     {
+        if ($this->segundos_transcurridos > 0) {
+            return intdiv($this->segundos_transcurridos, 60);
+        }
+
         $fin = $this->fecha_hora_fin ?? now();
 
         return (int) $this->fecha_hora_inicio->diffInMinutes($fin);

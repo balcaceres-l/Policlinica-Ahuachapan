@@ -27,7 +27,9 @@ export interface PlanManejo {
   indicaciones: string;
 }
 
-/** Una consulta ya atendida, con lo que se registró en ella. */
+import type { EstadoCita, SignosVitales, TipoCita } from './cita.types';
+
+/** Una consulta ya atendida o cita registrada, con lo que se registró en ella. */
 export interface ConsultaHistorial {
   id: string;
   paciente_id: string;
@@ -39,8 +41,32 @@ export interface ConsultaHistorial {
   especialidad_atencion_id: string | null;
   especialidadNombre: string | null;
   motivo_consulta: string | null;
-  /** Texto libre, sin estructura por región o sistema corporal (HU-19). */
+  notas_adicionales?: string | null;
+  /** Texto libre o consolidado de hallazgos. */
   examen_fisico: string | null;
+  examenes_fisicos?: Array<{
+    id?: string;
+    region_anatomica?: string | null;
+    hallazgos?: string | null;
+  }>;
   diagnosticos: DiagnosticoConsulta[];
   plan_manejo: PlanManejo | null;
+  receta?: {
+    id?: string;
+    observaciones_generales?: string | null;
+    detalles: Array<{
+      id?: string;
+      nombre_medicamento: string;
+      dosis: string;
+      via_administracion?: string | null;
+      frecuencia: string;
+      duracion?: string | null;
+      indicaciones?: string | null;
+    }>;
+  } | null;
+  signos_vitales?: SignosVitales | null;
+  cita_estado?: EstadoCita;
+  tipo_cita?: TipoCita;
+  precio?: number | null;
+  total?: number | null;
 }

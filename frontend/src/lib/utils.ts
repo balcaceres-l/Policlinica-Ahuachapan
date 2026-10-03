@@ -76,4 +76,23 @@ export const obtenerHoraLocal = (d = new Date()): string => {
   return `${horas}:${minutos}`;
 };
 
+/**
+ * Calcula los años cumplidos a partir de una fecha de nacimiento (ISO o Date).
+ */
+export const calcularEdad = (fechaNacimiento?: string | Date | null): number | null => {
+  if (!fechaNacimiento) return null;
+  const nac =
+    typeof fechaNacimiento === 'string'
+      ? new Date(fechaNacimiento.includes('T') ? fechaNacimiento : `${fechaNacimiento.split(' ')[0]}T00:00:00`)
+      : fechaNacimiento;
+  if (isNaN(nac.getTime())) return null;
+  const hoy = new Date();
+  let edad = hoy.getFullYear() - nac.getFullYear();
+  const m = hoy.getMonth() - nac.getMonth();
+  if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) {
+    edad--;
+  }
+  return edad >= 0 ? edad : null;
+};
+
 
