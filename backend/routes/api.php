@@ -84,6 +84,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Agregar pacientes y marcar fallecido (soft delete) es exclusivo de RECEPCIONISTA y MEDICO (no administrador).
     Route::get('/pacientes', [PacienteController::class, 'index']);
     Route::get('/pacientes/{paciente}', [PacienteController::class, 'show']);
+    Route::get('/pacientes/{paciente}/historial', [PacienteController::class, 'historial']);
     Route::middleware('role:RECEPCIONISTA,MEDICO')->group(function () {
         Route::post('/pacientes', [PacienteController::class, 'store']);
         Route::put('/pacientes/{paciente}', [PacienteController::class, 'update']);
