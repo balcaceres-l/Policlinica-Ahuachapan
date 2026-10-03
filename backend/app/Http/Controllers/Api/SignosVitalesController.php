@@ -61,6 +61,10 @@ class SignosVitalesController extends Controller
             return $this->failure('No tienes acceso a esa cita.', 403);
         }
 
+        if (! $cita->fecha?->isToday()) {
+            return $this->failure('Los signos vitales solo pueden registrarse en citas del día de hoy.', 422);
+        }
+
         if (in_array($cita->estado, ['CANCELADA', 'NO_ASISTIO'], true)) {
             return $this->failure('La cita no está en condiciones de registrar signos.', 422);
         }
@@ -78,10 +82,17 @@ class SignosVitalesController extends Controller
             ]);
         }
 
-        $validado['imc'] = signos_vitales::calcularImc(
-            isset($validado['peso_kg']) ? (float) $validado['peso_kg'] : null,
-            isset($validado['talla_cm']) ? (float) $validado['talla_cm'] : null,
-        );
+        $existente = signos_vitales::where('id_cita', $cita->id_cita)->first();
+
+        $peso = array_key_exists('peso_kg', $validado)
+            ? (isset($validado['peso_kg']) ? (float) $validado['peso_kg'] : null)
+            : ($existente?->peso_kg !== null ? (float) $existente->peso_kg : null);
+
+        $talla = array_key_exists('talla_cm', $validado)
+            ? (isset($validado['talla_cm']) ? (float) $validado['talla_cm'] : null)
+            : ($existente?->talla_cm !== null ? (float) $existente->talla_cm : null);
+
+        $validado['imc'] = signos_vitales::calcularImc($peso, $talla);
         $validado['id_registrado_por'] = $request->user()->id;
 
         $signos = signos_vitales::updateOrCreate(

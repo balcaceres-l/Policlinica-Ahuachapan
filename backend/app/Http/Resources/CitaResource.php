@@ -27,6 +27,10 @@ class CitaResource extends JsonResource
             'hora_llegada' => $this->hora_llegada?->toDateTimeString(),
             'orden_atencion' => $this->orden_atencion,
             'creado_por_id' => $this->id_creado_por,
+            'signos_vitales' => $this->whenLoaded(
+                'signosVitales',
+                fn () => $this->signosVitales ? (new SignosVitalesResource($this->signosVitales))->resolve() : null,
+            ),
             'minutos_retraso' => $this->minutosDeRetraso(),
             'retrasada' => $this->minutosDeRetraso() > config('clinica.retraso_paciente_min'),
         ];

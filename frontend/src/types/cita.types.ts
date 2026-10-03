@@ -11,16 +11,16 @@ export type EstadoCita =
 export interface SignosVitales {
   id?: string;
   cita_id?: string;
-  presion_sistolica?: number;
-  presion_diastolica?: number;
-  frecuencia_cardiaca?: number;
-  frecuencia_respiratoria?: number;
-  temperatura_c?: number;
-  peso_kg?: number;
-  talla_cm?: number;
-  imc?: number;
-  saturacion_oxigeno?: number;
-  observaciones?: string;
+  presion_sistolica?: number | null;
+  presion_diastolica?: number | null;
+  frecuencia_cardiaca?: number | null;
+  frecuencia_respiratoria?: number | null;
+  temperatura_c?: number | null;
+  peso_kg?: number | null;
+  talla_cm?: number | null;
+  imc?: number | null;
+  saturacion_oxigeno?: number | null;
+  observaciones?: string | null;
   registrado_por_id?: string;
   fecha_registro?: string;
 }
