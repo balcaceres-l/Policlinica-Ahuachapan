@@ -162,7 +162,7 @@ class ConsultaController extends Controller
             'notas_adicionales' => ['nullable', 'string', 'max:2000'],
             'precio' => ['nullable', 'numeric', 'min:0'],
             'total' => ['nullable', 'numeric', 'min:0'],
-            'segundos_transcurridos' => ['nullable', 'integer', 'min:0'],
+            'segundos_transcurridos' => ['nullable', 'numeric', 'min:0'],
             'en_pausa' => ['nullable', 'boolean'],
             'examenes_fisicos' => ['nullable', 'array'],
             'examenes_fisicos.*.region_anatomica' => ['nullable', 'string', 'max:100'],
@@ -180,6 +180,10 @@ class ConsultaController extends Controller
             'receta.detalles.*.duracion' => ['nullable', 'string', 'max:100'],
             'receta.detalles.*.indicaciones' => ['nullable', 'string'],
         ]);
+
+        if (array_key_exists('segundos_transcurridos', $validado) && $validado['segundos_transcurridos'] !== null) {
+            $validado['segundos_transcurridos'] = (int) round((float) $validado['segundos_transcurridos']);
+        }
 
         DB::transaction(function () use ($consulta, $validado) {
             $camposConsulta = [];
@@ -284,8 +288,12 @@ class ConsultaController extends Controller
             'notas_adicionales' => ['nullable', 'string', 'max:2000'],
             'precio' => ['nullable', 'numeric', 'min:0'],
             'total' => ['nullable', 'numeric', 'min:0'],
-            'segundos_transcurridos' => ['nullable', 'integer', 'min:0'],
+            'segundos_transcurridos' => ['nullable', 'numeric', 'min:0'],
         ]);
+
+        if (array_key_exists('segundos_transcurridos', $validado) && $validado['segundos_transcurridos'] !== null) {
+            $validado['segundos_transcurridos'] = (int) round((float) $validado['segundos_transcurridos']);
+        }
 
         DB::transaction(function () use ($consulta, $validado) {
             $datos = [

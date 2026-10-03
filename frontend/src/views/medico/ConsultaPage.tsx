@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -77,6 +77,7 @@ export default function ConsultaPage() {
   const [precio, setPrecio] = useState<number | ''>('');
   const [total, setTotal] = useState<number | ''>('');
   const [segundosTranscurridos, setSegundosTranscurridos] = useState<number>(0);
+  const segundosRef = useRef<number>(0);
   const [enPausa, setEnPausa] = useState<boolean>(false);
 
   // Exámenes físicos
@@ -105,17 +106,21 @@ export default function ConsultaPage() {
 
   // Modales y confirmación
   const [modalFinalizarAbierto, setModalFinalizarAbierto] = useState(false);
+  const [guardandoFinalizar, setGuardandoFinalizar] = useState(false);
   const [guardandoSignos, setGuardandoSignos] = useState(false);
 
   // Inicializar o sincronizar el estado cuando cargue la consulta
   useEffect(() => {
     if (!consulta) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMotivoConsulta(consulta.motivo_consulta ?? '');
     setNotasAdicionales(consulta.notas_adicionales ?? '');
     setPrecio(consulta.precio !== null && consulta.precio !== undefined ? consulta.precio : '');
     setTotal(consulta.total !== null && consulta.total !== undefined ? consulta.total : '');
-    setSegundosTranscurridos(consulta.segundos_transcurridos ?? 0);
+    const segs = consulta.segundos_transcurridos ?? 0;
+    segundosRef.current = segs;
+    setSegundosTranscurridos(segs);
     setEnPausa(consulta.en_pausa ?? false);
 
     if (consulta.examenes_fisicos && consulta.examenes_fisicos.length > 0) {
@@ -223,9 +228,10 @@ export default function ConsultaPage() {
   }
 
   const activa = consulta.abierta;
-  const inicioMs = consulta.fecha_hora_inicio
-    ? Date.parse(consulta.fecha_hora_inicio)
-    : Date.now();
+  const inicioMs = useMemo(
+    () => (consulta.fecha_hora_inicio ? Date.parse(consulta.fecha_hora_inicio) : 0),
+    [consulta.fecha_hora_inicio],
+  );
   const finMs = consulta.fecha_hora_fin ? Date.parse(consulta.fecha_hora_fin) : undefined;
 
   // Cálculo dinámico de IMC
@@ -357,15 +363,17 @@ export default function ConsultaPage() {
     const tienePlan = planDescripcion.trim() !== '' || planIndicaciones.trim() !== '';
     const tieneReceta = recetaLimpia.length > 0 || recetaObservaciones.trim() !== '';
 
+    const segs =
+      opciones?.segundos_transcurridos !== undefined
+        ? Math.round(opciones.segundos_transcurridos)
+        : Math.round(segundosRef.current);
+
     return {
       motivo_consulta: motivoConsulta.trim() || null,
       notas_adicionales: notasAdicionales.trim() || null,
       precio: precio !== '' ? Number(precio) : null,
       total: total !== '' ? Number(total) : (precio !== '' ? Number(precio) : null),
-      segundos_transcurridos:
-        opciones?.segundos_transcurridos !== undefined
-          ? opciones.segundos_transcurridos
-          : segundosTranscurridos,
+      segundos_transcurridos: segs,
       en_pausa: opciones?.en_pausa !== undefined ? opciones.en_pausa : enPausa,
       examenes_fisicos: efLimpios.length > 0 ? efLimpios : undefined,
       plan_manejo: tienePlan
@@ -390,8 +398,10 @@ export default function ConsultaPage() {
       await actualizarMutation.mutateAsync({ id, payload });
       toast.success('Progreso de la consulta guardado');
     } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
       toast.error(
-        err instanceof Error ? err.message : 'Error al guardar el progreso',
+        axiosErr?.response?.data?.message ||
+          (err instanceof Error ? err.message : 'Error al guardar el progreso'),
       );
     }
   };
@@ -399,16 +409,23 @@ export default function ConsultaPage() {
   // Pausar y Salir a la lista de espera
   const handleGuardarYSalir = async () => {
     try {
-      const payload = construirPayload({ en_pausa: true });
-      await actualizarMutation.mutateAsync({ id, payload });
+      const segsActuales = Math.round(segundosRef.current);
+      setSegundosTranscurridos(segsActuales);
       setEnPausa(true);
+      const payload = construirPayload({
+        en_pausa: true,
+        segundos_transcurridos: segsActuales,
+      });
+      await actualizarMutation.mutateAsync({ id, payload });
       toast.success(
         'Consulta guardada y pausada. Puedes retomarla en cualquier momento desde la sala de espera.',
       );
       navigate('/medico/sala-espera');
     } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
       toast.error(
-        err instanceof Error ? err.message : 'Error al guardar la consulta',
+        axiosErr?.response?.data?.message ||
+          (err instanceof Error ? err.message : 'Error al guardar la consulta'),
       );
     }
   };
@@ -416,9 +433,14 @@ export default function ConsultaPage() {
   // Alternar pausa del cronómetro
   const handleTogglePausa = async () => {
     const nuevaPausa = !enPausa;
+    const segsActuales = Math.round(segundosRef.current);
+    setSegundosTranscurridos(segsActuales);
     setEnPausa(nuevaPausa);
     try {
-      const payload = construirPayload({ en_pausa: nuevaPausa });
+      const payload = construirPayload({
+        en_pausa: nuevaPausa,
+        segundos_transcurridos: segsActuales,
+      });
       await actualizarMutation.mutateAsync({ id, payload });
       if (nuevaPausa) {
         toast('Consulta pausada. El cronómetro se ha detenido.', { icon: '⏸️' });
@@ -432,9 +454,17 @@ export default function ConsultaPage() {
 
   // Confirmar y finalizar la consulta
   const handleConfirmarFinalizar = async () => {
+    if (guardandoFinalizar) return;
+    setGuardandoFinalizar(true);
+
     try {
+      const segsActuales = Math.round(segundosRef.current);
+
       // 1. Guardar todos los datos clínicos actuales
-      const payload = construirPayload({ en_pausa: false });
+      const payload = construirPayload({
+        en_pausa: false,
+        segundos_transcurridos: segsActuales,
+      });
       await actualizarMutation.mutateAsync({ id, payload });
 
       // 2. Finalizar la consulta y cambiar la cita a ATENDIDA
@@ -444,7 +474,7 @@ export default function ConsultaPage() {
           notas_adicionales: notasAdicionales.trim() || null,
           precio: precio !== '' ? Number(precio) : null,
           total: total !== '' ? Number(total) : (precio !== '' ? Number(precio) : null),
-          segundos_transcurridos: segundosTranscurridos,
+          segundos_transcurridos: segsActuales,
         },
       });
 
@@ -452,9 +482,24 @@ export default function ConsultaPage() {
       setModalFinalizarAbierto(false);
       navigate('/medico/sala-espera');
     } catch (err: unknown) {
+      const axiosErr = err as { response?: { status?: number; data?: { message?: string } } };
+      // Si el backend responde 422 indicando que ya fue cerrada, es un caso de éxito
+      if (
+        axiosErr?.response?.status === 422 &&
+        axiosErr?.response?.data?.message?.includes('cerrada')
+      ) {
+        toast.success('Consulta finalizada con éxito.');
+        setModalFinalizarAbierto(false);
+        navigate('/medico/sala-espera');
+        return;
+      }
+
       toast.error(
-        err instanceof Error ? err.message : 'Error al finalizar la consulta',
+        axiosErr?.response?.data?.message ||
+          (err instanceof Error ? err.message : 'Error al finalizar la consulta'),
       );
+    } finally {
+      setGuardandoFinalizar(false);
     }
   };
 
@@ -605,7 +650,9 @@ export default function ConsultaPage() {
             segundosIniciales={segundosTranscurridos}
             enPausa={enPausa}
             onPausaToggle={activa ? handleTogglePausa : undefined}
-            onTick={(segs) => setSegundosTranscurridos(segs)}
+            onTick={(segs) => {
+              segundosRef.current = segs;
+            }}
           />
 
           {/* Triaje y Signos Vitales */}
@@ -1288,14 +1335,15 @@ export default function ConsultaPage() {
           <>
             <Button
               variant="secondary"
-              disabled={finalizarMutation.isPending}
+              disabled={guardandoFinalizar || finalizarMutation.isPending || actualizarMutation.isPending}
               onClick={() => setModalFinalizarAbierto(false)}
             >
               Continuar Editando
             </Button>
             <Button
               icon="ri-check-line"
-              loading={finalizarMutation.isPending}
+              loading={guardandoFinalizar || finalizarMutation.isPending || actualizarMutation.isPending}
+              disabled={guardandoFinalizar || finalizarMutation.isPending || actualizarMutation.isPending}
               onClick={handleConfirmarFinalizar}
             >
               Confirmar y Finalizar

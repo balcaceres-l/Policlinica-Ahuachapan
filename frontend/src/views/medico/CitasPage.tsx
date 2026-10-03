@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import FilaAtencion from '@/components/cita/FilaAtencion';
 import Badge from '@/components/ui/Badge';
 import DataTable, { type Column } from '@/components/ui/DataTable';
@@ -19,6 +20,8 @@ export function CitasPage() {
 
   // El backend ya limita al médico autenticado a su propia agenda.
   const { data: citas = [], isLoading } = useCitas({ fecha });
+
+  const citaEnAtencion = citas.find((c) => c.estado === 'EN_ATENCION');
 
   const filtradas = useMemo(() => {
     const termino = normalizar(busqueda);
@@ -109,6 +112,36 @@ export function CitasPage() {
         </Badge>
       ),
     },
+    {
+      key: 'acciones',
+      header: 'Acciones',
+      className: 'w-36 text-right',
+      render: (cita) => {
+        if (cita.estado === 'EN_ATENCION' && cita.consulta_id) {
+          return (
+            <Link
+              to={`/medico/consulta/${cita.consulta_id}`}
+              className="inline-flex items-center gap-1.5 rounded-field bg-brand-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-brand-700 transition-colors"
+            >
+              <i className="ri-play-circle-fill text-sm" />
+              Retomar
+            </Link>
+          );
+        }
+        if (cita.consulta_id) {
+          return (
+            <Link
+              to={`/medico/consulta/${cita.consulta_id}`}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 underline hover:text-brand-900"
+            >
+              <i className="ri-eye-line" />
+              Ver consulta
+            </Link>
+          );
+        }
+        return <span className="text-xs text-muted">—</span>;
+      },
+    },
   ];
 
   return (
@@ -119,6 +152,53 @@ export function CitasPage() {
           Pacientes del día y orden de atención según su llegada.
         </p>
       </div>
+
+      {/* Banner destacado si hay una consulta activa / pausada para retomar */}
+      {citaEnAtencion && (
+        <div className="mb-6 rounded-card border-2 border-brand-500 bg-brand-50/80 p-5 shadow-card">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="flex size-11 items-center justify-center rounded-full bg-brand-600 text-white text-xl shadow-sm">
+                <i className="ri-stethoscope-fill" />
+              </span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-800">
+                    <span className="size-2 rounded-full bg-blue-600 animate-pulse" />
+                    Consulta en curso
+                  </span>
+                  <span className="text-xs text-muted">
+                    Horario de cita: {citaEnAtencion.hora_inicio} - {citaEnAtencion.hora_fin}
+                  </span>
+                </div>
+                <h2 className="text-lg font-bold text-ink mt-0.5">
+                  {citaEnAtencion.pacienteNombre}
+                </h2>
+                <p className="text-xs text-muted">
+                  Expediente: <span className="font-mono font-semibold text-ink">{citaEnAtencion.pacienteExpediente}</span>
+                  {citaEnAtencion.especialidadNombre && (
+                    <span> · Especialidad: <span className="font-medium text-ink">{citaEnAtencion.especialidadNombre}</span></span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {citaEnAtencion.consulta_id ? (
+                <Link
+                  to={`/medico/consulta/${citaEnAtencion.consulta_id}`}
+                  className="inline-flex items-center gap-2 rounded-field bg-brand-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors"
+                >
+                  <i className="ri-play-circle-fill text-lg" />
+                  Retomar Consulta
+                </Link>
+              ) : (
+                <span className="text-xs text-muted italic">Iniciando consulta...</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mb-6">
         <FilaAtencion citas={citas} mostrarMedico={false} />

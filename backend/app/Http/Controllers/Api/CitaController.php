@@ -32,7 +32,7 @@ class CitaController extends Controller
 
         $usuario = $request->user();
 
-        $citas = cita::with(['paciente', 'medico', 'especialidad', 'signosVitales'])
+        $citas = cita::with(['paciente', 'medico', 'especialidad', 'signosVitales', 'consulta'])
             // Un médico solo ve su propia agenda.
             ->when($usuario->rol === 'MEDICO', fn ($q) => $q->where('id_medico', $usuario->id))
             ->when($validado['medico_id'] ?? null, fn ($q, $id) => $q->where('id_medico', $id))

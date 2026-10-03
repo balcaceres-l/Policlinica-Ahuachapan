@@ -32,6 +32,7 @@ export default function CronometroConsulta({
 
   useEffect(() => {
     if (segundosIniciales !== undefined) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSegundosAcumulados(segundosIniciales);
     }
   }, [segundosIniciales]);
@@ -40,15 +41,15 @@ export default function CronometroConsulta({
     if (!activo || enPausa || fin !== undefined) return;
 
     const intervalo = window.setInterval(() => {
-      setSegundosAcumulados((prev) => {
-        const siguiente = prev + 1;
-        onTick?.(siguiente);
-        return siguiente;
-      });
+      setSegundosAcumulados((prev) => prev + 1);
     }, 1000);
 
     return () => window.clearInterval(intervalo);
-  }, [activo, enPausa, fin, onTick]);
+  }, [activo, enPausa, fin]);
+
+  useEffect(() => {
+    onTick?.(segundosAcumulados);
+  }, [segundosAcumulados, onTick]);
 
   const segundos = segundosAcumulados;
   const horas = Math.floor(segundos / 3600);
