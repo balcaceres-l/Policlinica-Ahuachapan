@@ -11,6 +11,7 @@ import BloqueosAgendaPage from "@/views/secretaria/BloqueosAgendaPage";
 import CalendarioGlobalPage from "@/views/secretaria/CalendarioGlobalPage";
 import CitasRecepcionPage from "@/views/secretaria/CitasRecepcionPage";
 import PacientesRecepcionPage from "@/views/secretaria/PacientesRecepcionPage";
+import HorariosMedicosPage from "@/views/secretaria/HorariosMedicosPage";
 import CalendarioPage from "@/views/medico/CalendarioPage";
 import CitasPage from "@/views/medico/CitasPage";
 import SalaEsperaPage from "@/views/medico/SalaEsperaPage";
@@ -85,6 +86,15 @@ function App() {
             <Route
               path="/secretaria/bloqueos"
               element={<BloqueosAgendaPage />}
+            />
+            <Route path="/secretaria/horarios" element={<HorariosMedicosPage />} />
+            <Route
+              path="/secretaria/horarios/especialidad/:especialidadId"
+              element={<HorariosMedicosPage />}
+            />
+            <Route
+              path="/secretaria/horarios/medico/:medicoId"
+              element={<HorariosMedicosPage />}
             />
           </Route>
         </Route>
