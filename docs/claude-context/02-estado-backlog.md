@@ -44,7 +44,7 @@ ya resuelto (ver `04-hallazgos-pendientes.md`).
 | SCRUM-99 | HU-12 | Validación automática de disponibilidad | Recep./Médico | 🔲 |
 | SCRUM-100 | HU-36 | Cita de emergencia o sobrecupo | Recepcionista | 🔲 |
 | SCRUM-101 | HU-13 | Cancelación de citas | Recepcionista | 🔲 |
-| SCRUM-102 | HU-35 | Bloqueo de agenda por ausencia | Recepcionista | 🔲 |
+| SCRUM-102 | HU-35 | Bloqueo de agenda por ausencia | Recepcionista | ✅ API real: `views/secretaria/BloqueosAgendaPage.tsx` (día completo y parcial, historial, gestión de citas afectadas) |
 | SCRUM-103 | HU-14 | Reprogramación de citas | Recepcionista | 🔲 |
 | SCRUM-104 | HU-37 | Reubicación de citas por atraso | Recep./Médico | 🔲 |
 | SCRUM-105 | HU-15 | Agenda propia del médico | Médico | 🔲 |

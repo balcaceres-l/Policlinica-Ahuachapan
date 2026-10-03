@@ -47,6 +47,18 @@ export interface Cita {
   /** Minutos desde la hora agendada mientras el paciente no llega (RF-44). */
   minutos_retraso: number;
   retrasada: boolean;
+  /** Pendiente que cae dentro de un bloqueo de agenda: recepción debe contactar al paciente. */
+  afectada_por_bloqueo?: boolean;
+  bloqueo?: BloqueoDeCita | null;
+}
+
+/** El bloqueo que afecta a una cita, tal como lo resume el listado de citas. */
+export interface BloqueoDeCita {
+  id: string;
+  tipo_bloqueo: 'COMPLETO' | 'PARCIAL';
+  hora_inicio: string | null;
+  hora_fin: string | null;
+  motivo: string;
 }
 
 export interface DesplazarAgendaPayload {

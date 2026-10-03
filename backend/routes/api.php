@@ -53,6 +53,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/bloqueos', [BloqueoAgendaController::class, 'index']);
         Route::post('/bloqueos', [BloqueoAgendaController::class, 'store']);
         Route::delete('/bloqueos/{bloqueo}', [BloqueoAgendaController::class, 'destroy']);
+        // Citas que quedaron dentro de un bloqueo: listarlas y correrlas tras él.
+        Route::get('/bloqueos/{bloqueo}/citas-afectadas', [BloqueoAgendaController::class, 'citasAfectadas']);
+        Route::patch('/bloqueos/{bloqueo}/correr-citas', [BloqueoAgendaController::class, 'correrCitas']);
 
         // HU-13, HU-14, HU-43 — cancelar, reprogramar y orden de atención.
         Route::patch('/citas/{cita}/cancelar', [CitaController::class, 'cancelar']);

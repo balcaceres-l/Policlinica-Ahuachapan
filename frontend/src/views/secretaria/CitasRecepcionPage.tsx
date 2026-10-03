@@ -1,5 +1,8 @@
 import { useState, useMemo } from 'react';
 import toast from 'react-hot-toast';
+import CitasAfectadasModal, {
+  type BloqueoGestionable,
+} from '@/components/bloqueo/CitasAfectadasModal';
 import AgendarCitaModal from '@/components/cita/AgendarCitaModal';
 import CancelarCitaModal from '@/components/cita/CancelarCitaModal';
 import DesplazarAgendaModal from '@/components/cita/DesplazarAgendaModal';
@@ -12,6 +15,7 @@ import DataTable, { type Column } from '@/components/ui/DataTable';
 import SearchBar from '@/components/ui/SearchBar';
 import { useCitas, useMarcarLlegada } from '@/hooks/cita/useCitas';
 import { useMedicos } from '@/hooks/usuario/useUsuarios';
+import { bloqueoDeCita, lapsoDeBloqueo } from '@/lib/bloqueo';
 import { cn, normalizar } from '@/lib/utils';
 import {
   ESTADO_CITA_LABEL,
@@ -43,6 +47,7 @@ export function CitasRecepcionPage() {
   const [citaAReprogramar, setCitaAReprogramar] = useState<Cita | null>(null);
   const [citaACancelar, setCitaACancelar] = useState<Cita | null>(null);
   const [citaSignosVitales, setCitaSignosVitales] = useState<Cita | null>(null);
+  const [bloqueoAGestionar, setBloqueoAGestionar] = useState<BloqueoGestionable | null>(null);
 
   const { data: medicos = [] } = useMedicos();
   const { data: citas = [], isLoading } = useCitas({
@@ -91,7 +96,7 @@ export function CitasRecepcionPage() {
     {
       key: 'horario',
       header: 'Horario',
-      className: 'w-32 font-semibold text-ink',
+      className: 'w-44 font-semibold text-ink',
       render: (cita) => (
         <div>
           <span>{cita.hora_inicio} - {cita.hora_fin}</span>
@@ -111,6 +116,18 @@ export function CitasRecepcionPage() {
               <i className="ri-alarm-warning-line mr-0.5 align-middle" />
               {cita.minutos_retraso} min de retraso
             </p>
+          )}
+          {/* HU-35 — la cita quedó dentro de un bloqueo: hay que contactar al paciente. */}
+          {cita.afectada_por_bloqueo && cita.bloqueo && (
+            <button
+              type="button"
+              onClick={() => setBloqueoAGestionar(bloqueoDeCita(cita))}
+              title={`Bloqueo: ${cita.bloqueo.motivo || 'sin motivo'}. Clic para gestionar las citas afectadas.`}
+              className="mt-1 inline-flex cursor-pointer items-center gap-1 rounded bg-warning-soft px-1.5 py-0.5 text-[10px] font-bold text-warning hover:brightness-95"
+            >
+              <i className="ri-calendar-close-line" />
+              En bloqueo ({lapsoDeBloqueo(cita.bloqueo)})
+            </button>
           )}
         </div>
       ),
@@ -425,6 +442,11 @@ export function CitasRecepcionPage() {
         cita={citaSignosVitales}
         isOpen={citaSignosVitales !== null}
         onClose={() => setCitaSignosVitales(null)}
+      />
+
+      <CitasAfectadasModal
+        bloqueo={bloqueoAGestionar}
+        onClose={() => setBloqueoAGestionar(null)}
       />
     </div>
   );

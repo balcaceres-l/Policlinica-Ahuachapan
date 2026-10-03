@@ -102,3 +102,21 @@ entrada de HU-26 y HU-27 (Dennis): coordinar para no pisarse.
 diagnósticos, recetas y documentos. No es así: solo existen las tablas listadas
 allí ahora. Ya corregido. `03-plan-agendamiento.md` sigue describiendo el
 backend de EP-04 como "solo migraciones"; hoy ya tiene controladores y rutas.
+
+## HU-35 — Bloqueo de agenda por ausencia (EP-04)
+
+**Estado: Resuelto (2026-10-02), pendiente de correr la migración en la base compartida.**
+
+- **Bloqueo parcial:** antes solo existía el día completo (`bloqueo_agenda` no tenía horas y
+  `crearBloqueo` rechazaba `PARCIAL` a propósito). Migración nueva
+  `2026_10_02_150000_bloqueo_agenda_parcial.php`: `hora_inicio` y `hora_fin` nullable, y la restricción
+  única `(id_medico, fecha)` se cambia por un índice normal; los traslapes se validan en
+  `BloqueoAgendaController`. Las filas existentes quedan como día completo.
+- **Defecto encontrado:** `BloqueoAgendaResource` no devolvía `tipo_bloqueo`, pero la tabla del frontend
+  lo leía, así que **todos los bloqueos se veían como "Parcial"**; el filtro por tipo tampoco se aplicaba.
+- **Historial:** `BloqueosAgendaPage` tiene pestañas Vigentes/Historial agrupadas por día ("3 médicos
+  ausentes"). Sin cambios de base: usa `GET /bloqueos`. Un bloqueo de fecha pasada ya no se puede eliminar.
+- **Citas dentro de un bloqueo:** se marcan (`afectada_por_bloqueo`) y se gestionan con
+  `CitasAfectadasModal`: reagendar, cancelar o "correr citas" (bloqueo parcial, pacientes ya en la clínica).
+- `ReprogramarCitaModal` y `CancelarCitaModal` ahora muestran el mensaje real del backend
+  (`extraerMensajeError`) en lugar de "Request failed with status code 409".

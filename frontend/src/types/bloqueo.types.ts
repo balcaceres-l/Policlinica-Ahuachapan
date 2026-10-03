@@ -6,11 +6,15 @@ export interface BloqueoAgenda {
   medicoNombre: string;
   fecha: string; // YYYY-MM-DD
   tipo_bloqueo: TipoBloqueo;
-  hora_inicio?: string; // HH:MM
-  hora_fin?: string; // HH:MM
+  /** HH:MM; null si el bloqueo es de día completo. */
+  hora_inicio: string | null;
+  hora_fin: string | null;
   motivo: string;
   creado_por_id: string;
+  creadoPorNombre?: string;
   fecha_creacion: string;
+  /** Citas pendientes que hoy siguen dentro del bloqueo; solo viene en el listado. */
+  citas_afectadas_total?: number;
 }
 
 export interface NuevoBloqueo {
