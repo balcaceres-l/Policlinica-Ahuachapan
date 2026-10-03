@@ -81,7 +81,10 @@ export default function SalaEsperaPage() {
       toast.success(`Consulta iniciada para ${cita.pacienteNombre}`);
       navigate(`/medico/consulta/${consultaIniciada.id}`);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al iniciar la consulta.';
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      const msg =
+        axiosErr?.response?.data?.message ||
+        (err instanceof Error ? err.message : 'Error al iniciar la consulta.');
       setAviso(msg);
       toast.error(msg);
     } finally {
