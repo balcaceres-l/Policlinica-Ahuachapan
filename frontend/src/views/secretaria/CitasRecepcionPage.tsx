@@ -208,8 +208,8 @@ export function CitasRecepcionPage() {
       className: 'w-44 text-right',
       render: (cita) => (
         <div className="flex justify-end gap-1">
-          {/* Tomar signos vitales para citas con estado AGENDADA */}
-          {cita.estado === 'AGENDADA' && (
+          {/* Tomar o editar signos vitales solo para citas de hoy en estado AGENDADA o EN_ESPERA */}
+          {(cita.estado === 'AGENDADA' || cita.estado === 'EN_ESPERA') && cita.fecha === hoyStr && (
             <button
               type="button"
               onClick={() => setCitaSignosVitales(cita)}

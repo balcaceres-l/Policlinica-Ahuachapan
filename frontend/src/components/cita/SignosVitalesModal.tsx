@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
-import { useGuardarSignosVitales } from '@/hooks/cita/useCitas';
+import { useGuardarSignosVitales, useSignosVitales } from '@/hooks/cita/useCitas';
+import { obtenerFechaLocal } from '@/lib/utils';
 import type { Cita, SignosVitales } from '@/types/cita.types';
 
 interface SignosVitalesModalProps {
@@ -23,29 +24,93 @@ export function SignosVitalesModal({ isOpen, onClose, cita }: SignosVitalesModal
 }
 
 function SignosVitalesModalContent({ cita, onClose }: { cita: Cita; onClose: () => void }) {
-  const previos = cita.signos_vitales;
+  const { data: signosApi } = useSignosVitales(cita.id);
+  const previos = signosApi ?? cita.signos_vitales;
 
-  const [sistolica, setSistolica] = useState<string>(previos?.presion_sistolica?.toString() ?? '');
+  const hoyStr = obtenerFechaLocal();
+  const esDeHoy = cita.fecha === hoyStr;
+
+  const [sistolica, setSistolica] = useState<string>(
+    previos?.presion_sistolica !== undefined && previos?.presion_sistolica !== null
+      ? String(previos.presion_sistolica)
+      : '',
+  );
   const [diastolica, setDiastolica] = useState<string>(
-    previos?.presion_diastolica?.toString() ?? '',
+    previos?.presion_diastolica !== undefined && previos?.presion_diastolica !== null
+      ? String(previos.presion_diastolica)
+      : '',
   );
   const [frecCardiaca, setFrecCardiaca] = useState<string>(
-    previos?.frecuencia_cardiaca?.toString() ?? '',
+    previos?.frecuencia_cardiaca !== undefined && previos?.frecuencia_cardiaca !== null
+      ? String(previos.frecuencia_cardiaca)
+      : '',
   );
   const [frecRespiratoria, setFrecRespiratoria] = useState<string>(
-    previos?.frecuencia_respiratoria?.toString() ?? '',
+    previos?.frecuencia_respiratoria !== undefined && previos?.frecuencia_respiratoria !== null
+      ? String(previos.frecuencia_respiratoria)
+      : '',
   );
   const [temperatura, setTemperatura] = useState<string>(
-    previos?.temperatura_c?.toString() ?? '',
+    previos?.temperatura_c !== undefined && previos?.temperatura_c !== null
+      ? String(previos.temperatura_c)
+      : '',
   );
-  const [peso, setPeso] = useState<string>(previos?.peso_kg?.toString() ?? '');
-  const [talla, setTalla] = useState<string>(previos?.talla_cm?.toString() ?? '');
+  const [peso, setPeso] = useState<string>(
+    previos?.peso_kg !== undefined && previos?.peso_kg !== null ? String(previos.peso_kg) : '',
+  );
+  const [talla, setTalla] = useState<string>(
+    previos?.talla_cm !== undefined && previos?.talla_cm !== null ? String(previos.talla_cm) : '',
+  );
   const [saturacion, setSaturacion] = useState<string>(
-    previos?.saturacion_oxigeno?.toString() ?? '',
+    previos?.saturacion_oxigeno !== undefined && previos?.saturacion_oxigeno !== null
+      ? String(previos.saturacion_oxigeno)
+      : '',
   );
   const [observaciones, setObservaciones] = useState<string>(previos?.observaciones ?? '');
 
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (previos) {
+      setSistolica(
+        previos.presion_sistolica !== undefined && previos.presion_sistolica !== null
+          ? String(previos.presion_sistolica)
+          : '',
+      );
+      setDiastolica(
+        previos.presion_diastolica !== undefined && previos.presion_diastolica !== null
+          ? String(previos.presion_diastolica)
+          : '',
+      );
+      setFrecCardiaca(
+        previos.frecuencia_cardiaca !== undefined && previos.frecuencia_cardiaca !== null
+          ? String(previos.frecuencia_cardiaca)
+          : '',
+      );
+      setFrecRespiratoria(
+        previos.frecuencia_respiratoria !== undefined && previos.frecuencia_respiratoria !== null
+          ? String(previos.frecuencia_respiratoria)
+          : '',
+      );
+      setTemperatura(
+        previos.temperatura_c !== undefined && previos.temperatura_c !== null
+          ? String(previos.temperatura_c)
+          : '',
+      );
+      setPeso(
+        previos.peso_kg !== undefined && previos.peso_kg !== null ? String(previos.peso_kg) : '',
+      );
+      setTalla(
+        previos.talla_cm !== undefined && previos.talla_cm !== null ? String(previos.talla_cm) : '',
+      );
+      setSaturacion(
+        previos.saturacion_oxigeno !== undefined && previos.saturacion_oxigeno !== null
+          ? String(previos.saturacion_oxigeno)
+          : '',
+      );
+      setObservaciones(previos.observaciones ?? '');
+    }
+  }, [previos]);
 
   const guardarMutation = useGuardarSignosVitales();
 
@@ -79,8 +144,14 @@ function SignosVitalesModalContent({ cita, onClose }: { cita: Cita; onClose: () 
     e.preventDefault();
     setError(null);
 
-    // Parsear valores
-    const datos: SignosVitales = {};
+    if (!esDeHoy) {
+      setError(`Los signos vitales solo pueden registrarse en citas del día de hoy (${hoyStr}).`);
+      return;
+    }
+
+    const datos: Partial<SignosVitales> = {
+      observaciones: observaciones.trim() || null,
+    };
 
     if (sistolica) {
       const val = parseInt(sistolica, 10);
@@ -89,6 +160,8 @@ function SignosVitalesModalContent({ cita, onClose }: { cita: Cita; onClose: () 
         return;
       }
       datos.presion_sistolica = val;
+    } else {
+      datos.presion_sistolica = null;
     }
 
     if (diastolica) {
@@ -98,9 +171,11 @@ function SignosVitalesModalContent({ cita, onClose }: { cita: Cita; onClose: () 
         return;
       }
       datos.presion_diastolica = val;
+    } else {
+      datos.presion_diastolica = null;
     }
 
-    if (datos.presion_sistolica !== undefined && datos.presion_diastolica !== undefined) {
+    if (datos.presion_sistolica !== null && datos.presion_diastolica !== null) {
       if (datos.presion_sistolica <= datos.presion_diastolica) {
         setError('La presión sistólica debe ser mayor que la presión diastólica.');
         return;
@@ -109,20 +184,24 @@ function SignosVitalesModalContent({ cita, onClose }: { cita: Cita; onClose: () 
 
     if (frecCardiaca) {
       const val = parseInt(frecCardiaca, 10);
-      if (isNaN(val) || val < 30 || val > 250) {
-        setError('La frecuencia cardíaca debe ser un valor válido (30 - 250 lpm).');
+      if (isNaN(val) || val < 20 || val > 250) {
+        setError('La frecuencia cardíaca debe ser un valor válido (20 - 250 lpm).');
         return;
       }
       datos.frecuencia_cardiaca = val;
+    } else {
+      datos.frecuencia_cardiaca = null;
     }
 
     if (frecRespiratoria) {
       const val = parseInt(frecRespiratoria, 10);
-      if (isNaN(val) || val < 8 || val > 80) {
-        setError('La frecuencia respiratoria debe ser un valor válido (8 - 80 rpm).');
+      if (isNaN(val) || val < 5 || val > 80) {
+        setError('La frecuencia respiratoria debe ser un valor válido (5 - 80 rpm).');
         return;
       }
       datos.frecuencia_respiratoria = val;
+    } else {
+      datos.frecuencia_respiratoria = null;
     }
 
     if (temperatura) {
@@ -132,6 +211,8 @@ function SignosVitalesModalContent({ cita, onClose }: { cita: Cita; onClose: () 
         return;
       }
       datos.temperatura_c = val;
+    } else {
+      datos.temperatura_c = null;
     }
 
     if (peso) {
@@ -141,6 +222,8 @@ function SignosVitalesModalContent({ cita, onClose }: { cita: Cita; onClose: () 
         return;
       }
       datos.peso_kg = val;
+    } else {
+      datos.peso_kg = null;
     }
 
     if (talla) {
@@ -150,6 +233,8 @@ function SignosVitalesModalContent({ cita, onClose }: { cita: Cita; onClose: () 
         return;
       }
       datos.talla_cm = val;
+    } else {
+      datos.talla_cm = null;
     }
 
     if (saturacion) {
@@ -159,31 +244,17 @@ function SignosVitalesModalContent({ cita, onClose }: { cita: Cita; onClose: () 
         return;
       }
       datos.saturacion_oxigeno = val;
-    }
-
-    if (observaciones.trim()) {
-      datos.observaciones = observaciones.trim();
-    }
-
-    // Verificar que al menos un signo vital fue capturado
-    const tieneSignos =
-      datos.presion_sistolica !== undefined ||
-      datos.presion_diastolica !== undefined ||
-      datos.frecuencia_cardiaca !== undefined ||
-      datos.frecuencia_respiratoria !== undefined ||
-      datos.temperatura_c !== undefined ||
-      datos.peso_kg !== undefined ||
-      datos.talla_cm !== undefined ||
-      datos.saturacion_oxigeno !== undefined;
-
-    if (!tieneSignos) {
-      setError('Por favor ingrese al menos una constante o signo vital.');
-      return;
+    } else {
+      datos.saturacion_oxigeno = null;
     }
 
     try {
       await guardarMutation.mutateAsync({ id: cita.id, datos });
-      toast.success(`Signos vitales registrados con éxito para ${cita.pacienteNombre}`);
+      toast.success(
+        previos
+          ? `Signos vitales actualizados para ${cita.pacienteNombre}`
+          : `Signos vitales registrados con éxito para ${cita.pacienteNombre}`,
+      );
       onClose();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al guardar los signos vitales.';
@@ -207,14 +278,22 @@ function SignosVitalesModalContent({ cita, onClose }: { cita: Cita; onClose: () 
             type="submit"
             form="form-signos-vitales"
             loading={guardarMutation.isPending}
+            disabled={guardarMutation.isPending || !esDeHoy}
             icon="ri-heart-pulse-line"
           >
-            Guardar Signos Vitales
+            {previos ? 'Actualizar Signos Vitales' : 'Guardar Signos Vitales'}
           </Button>
         </>
       }
     >
       <form id="form-signos-vitales" onSubmit={handleSubmit} noValidate className="space-y-4">
+        {!esDeHoy && (
+          <div className="rounded-field border border-warning/30 bg-warning-soft p-3 text-xs text-warning">
+            <i className="ri-error-warning-line mr-1 align-middle" />
+            Los signos vitales únicamente pueden registrarse en citas correspondientes al día de hoy ({hoyStr}). Esta cita está programada para el {cita.fecha}.
+          </div>
+        )}
+
         {/* Banner de información del paciente */}
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-field bg-brand-50/70 p-3 text-xs text-brand-900 border border-brand-100">
           <div className="flex items-center gap-2">

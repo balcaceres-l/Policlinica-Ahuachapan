@@ -1,9 +1,14 @@
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import Button from '@/components/ui/Button';
-import { useConsultas } from '@/hooks/medico/useConsultas';
-import type { PacienteConsulta } from '@/types/consulta';
+import Modal from '@/components/ui/Modal';
+import {
+  useEspecialidadesDisponibles,
+  useIniciarConsulta,
+  useSalaEspera,
+} from '@/hooks/medico/useConsultas';
+import type { Cita } from '@/types/cita.types';
 
 type Filtro = 'espera' | 'consulta' | 'atendido';
 
@@ -14,87 +19,97 @@ const filtros: { valor: Filtro; texto: string }[] = [
 ];
 
 export default function SalaEsperaPage() {
-  const { pacientes, iniciar, reiniciar, cargando } = useConsultas();
+  const navigate = useNavigate();
+  const { data: citas = [], isLoading: cargando, refetch } = useSalaEspera();
+  const { data: especialidades = [] } = useEspecialidadesDisponibles();
+  const iniciarMutation = useIniciarConsulta();
 
   const [filtro, setFiltro] = useState<Filtro>('espera');
   const [aviso, setAviso] = useState('');
-  const [iniciando, setIniciando] = useState<string | null>(null);
+  const [iniciandoId, setIniciandoId] = useState<string | null>(null);
 
-  const navigate = useNavigate();
+  // Modal para seleccionar especialidad si el médico tiene más de una
+  const [citaParaAtender, setCitaParaAtender] = useState<Cita | null>(null);
+  const [especialidadElegida, setEspecialidadElegida] = useState<string>('');
 
-  const enConsulta = pacientes.some(
-    (paciente) => paciente.estado === 'consulta'
-  );
+  const enConsulta = citas.some((c) => c.estado === 'EN_ATENCION');
 
-  const filtrados = pacientes.filter(
-    (paciente) => paciente.estado === filtro
-  );
+  const filtradas = citas.filter((c) => {
+    if (filtro === 'espera') return c.estado === 'EN_ESPERA' || c.estado === 'AGENDADA';
+    if (filtro === 'consulta') return c.estado === 'EN_ATENCION';
+    if (filtro === 'atendido') return c.estado === 'ATENDIDA';
+    return false;
+  });
 
-  const cantidad = (estado: Filtro) =>
-    pacientes.filter((paciente) => paciente.estado === estado).length;
+  const cantidad = (estado: Filtro) => {
+    return citas.filter((c) => {
+      if (estado === 'espera') return c.estado === 'EN_ESPERA' || c.estado === 'AGENDADA';
+      if (estado === 'consulta') return c.estado === 'EN_ATENCION';
+      if (estado === 'atendido') return c.estado === 'ATENDIDA';
+      return false;
+    }).length;
+  };
 
-  const atender = async (paciente: PacienteConsulta) => {
-    if (enConsulta || iniciando) {
-      setAviso('Finalice la consulta actual antes de iniciar otra.');
+  const handleIniciarAtencion = async (cita: Cita, espId?: string) => {
+    if (enConsulta) {
+      setAviso('Ya tienes una consulta activa en este momento. Finalízala antes de atender a otro paciente.');
       return;
     }
 
-    setIniciando(paciente.id);
+    // Si tiene más de una especialidad y no ha elegido aún, abrir modal
+    if (!espId && especialidades.length > 1) {
+      setCitaParaAtender(cita);
+      setEspecialidadElegida(cita.especialidad_id ?? especialidades[0].id);
+      return;
+    }
+
+    setIniciandoId(cita.id);
     setAviso('');
 
     try {
-      const resultado = await iniciar(paciente.id);
+      const consultaIniciada = await iniciarMutation.mutateAsync({
+        citaId: cita.id,
+        especialidadId: espId ?? (especialidades.length === 1 ? especialidades[0].id : cita.especialidad_id),
+      });
 
-      if (resultado) {
-        navigate(`/medico/consulta/${paciente.id}`);
-      } else {
-        setAviso(
-          'No se pudo iniciar la consulta. Verifique si existe otra consulta activa.'
-        );
-      }
-    } catch {
-      setAviso('Ocurrió un error al iniciar la consulta.');
+      toast.success(`Consulta iniciada para ${cita.pacienteNombre}`);
+      navigate(`/medico/consulta/${consultaIniciada.id}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error al iniciar la consulta.';
+      setAviso(msg);
+      toast.error(msg);
     } finally {
-      setIniciando(null);
+      setIniciandoId(null);
+      setCitaParaAtender(null);
     }
   };
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">
-
       {/* Encabezado */}
-
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-brand-600">
             Consulta del día
           </p>
-
           <h1 className="mt-1 text-2xl font-bold text-ink">
             Lista de espera
           </h1>
-
           <p className="mt-1 text-sm text-muted">
-            Pacientes pendientes, en consulta y atendidos.
+            Pacientes asignados para atención médica el día de hoy.
           </p>
         </div>
 
-        {/* Temporal: eliminar al conectar el backend */}
-
         <Button
           variant="secondary"
-          onClick={() => {
-            reiniciar();
-            setFiltro('espera');
-            setAviso('');
-          }}
+          onClick={() => refetch()}
+          icon="ri-refresh-line"
         >
-          Restablecer datos de prueba
+          Actualizar lista
         </Button>
       </header>
 
       {/* Resumen */}
-
       <div className="grid gap-3 sm:grid-cols-3">
         {filtros.map((item) => (
           <div
@@ -104,7 +119,6 @@ export default function SalaEsperaPage() {
             <p className="text-xs font-bold uppercase tracking-wide text-muted">
               {item.texto}
             </p>
-
             <p className="mt-2 text-3xl font-bold text-ink">
               {cantidad(item.valor)}
             </p>
@@ -113,7 +127,6 @@ export default function SalaEsperaPage() {
       </div>
 
       {/* Filtros */}
-
       <div
         className="flex flex-wrap gap-2 border-b border-line"
         role="tablist"
@@ -125,7 +138,7 @@ export default function SalaEsperaPage() {
             type="button"
             role="tab"
             aria-selected={filtro === item.valor}
-            className={`border-b-2 px-4 py-3 text-sm font-semibold ${
+            className={`border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
               filtro === item.valor
                 ? 'border-brand-600 text-brand-700'
                 : 'border-transparent text-muted hover:text-ink'
@@ -140,24 +153,24 @@ export default function SalaEsperaPage() {
         ))}
       </div>
 
-      {/* Mensajes */}
-
+      {/* Mensajes de aviso */}
       {aviso && (
-        <p
+        <div
           role="alert"
-          className="rounded-field bg-amber-50 p-3 text-sm text-amber-900"
+          className="flex items-center gap-2 rounded-field bg-amber-50 p-3 text-sm text-amber-900 border border-amber-200"
         >
-          {aviso}
-        </p>
+          <i className="ri-alert-line text-lg text-amber-700 shrink-0" />
+          <span>{aviso}</span>
+        </div>
       )}
 
-      {/* Pacientes */}
-
+      {/* Lista de Pacientes */}
       {cargando ? (
         <div className="rounded-card border border-line bg-surface p-10 text-center text-sm text-muted">
-          Cargando pacientes...
+          <i className="ri-loader-4-line mr-2 animate-spin align-middle" />
+          Consultando citas del día...
         </div>
-      ) : filtrados.length === 0 ? (
+      ) : filtradas.length === 0 ? (
         <div className="rounded-card border border-line bg-surface p-10 text-center text-sm text-muted">
           No hay pacientes en esta sección.
         </div>
@@ -167,7 +180,7 @@ export default function SalaEsperaPage() {
             <thead className="bg-canvas text-xs uppercase tracking-wide text-muted">
               <tr>
                 <th className="p-4">Paciente</th>
-                <th className="p-4">Signos vitales</th>
+                <th className="p-4">Signos vitales (Triaje)</th>
                 <th className="p-4">Tipo</th>
                 <th className="p-4">Estado</th>
                 <th className="p-4 text-right">Acciones</th>
@@ -175,77 +188,178 @@ export default function SalaEsperaPage() {
             </thead>
 
             <tbody className="divide-y divide-line">
-              {filtrados.map((paciente) => (
-                <tr key={paciente.id}>
+              {filtradas.map((cita) => {
+                const signos = cita.signos_vitales;
+                const enEspera = cita.estado === 'EN_ESPERA';
+                const agendada = cita.estado === 'AGENDADA';
+                const esConsultaActiva = cita.estado === 'EN_ATENCION';
+                const atendida = cita.estado === 'ATENDIDA';
 
-                  <td className="p-4">
-                    <p className="font-semibold text-ink">
-                      {paciente.nombre}
-                    </p>
+                return (
+                  <tr key={cita.id} className="hover:bg-canvas/50 transition-colors">
+                    <td className="p-4">
+                      <p className="font-semibold text-ink">
+                        {cita.pacienteNombre}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted">
+                        Expediente: <span className="font-mono text-ink">{cita.pacienteExpediente}</span>
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted">
+                        Horario: {cita.hora_inicio} - {cita.hora_fin}
+                        {cita.hora_llegada && (
+                          <span className="ml-2 font-medium text-brand-700">
+                            • Llegó: {cita.hora_llegada.slice(11, 16)}
+                          </span>
+                        )}
+                      </p>
+                    </td>
 
-                    <p className="mt-1 text-xs text-muted">
-                      {paciente.edad} años · {paciente.expediente}
-                    </p>
+                    <td className="p-4 text-xs text-muted">
+                      {signos ? (
+                        <div className="space-y-0.5">
+                          <div>
+                            <span className="font-semibold text-ink">PA:</span>{' '}
+                            {signos.presion_sistolica && signos.presion_diastolica
+                              ? `${signos.presion_sistolica}/${signos.presion_diastolica} mmHg`
+                              : '—'}{' '}
+                            • <span className="font-semibold text-ink">T°:</span>{' '}
+                            {signos.temperatura_c ? `${signos.temperatura_c} °C` : '—'}
+                          </div>
+                          <div>
+                            <span className="font-semibold text-ink">FC:</span>{' '}
+                            {signos.frecuencia_cardiaca ? `${signos.frecuencia_cardiaca} lpm` : '—'} •{' '}
+                            <span className="font-semibold text-ink">SpO₂:</span>{' '}
+                            {signos.saturacion_oxigeno ? `${signos.saturacion_oxigeno}%` : '—'}
+                          </div>
+                          {signos.imc && (
+                            <div className="text-brand-700 font-semibold">
+                              IMC: {signos.imc}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="italic text-muted/70">Sin triaje registrado</span>
+                      )}
+                    </td>
 
-                    <p className="mt-1 text-xs text-muted">
-                      {paciente.motivo} · Llegó {paciente.horaLlegada}
-                    </p>
-                  </td>
-
-                  <td className="p-4 text-muted">
-                    PA: {paciente.signos.sistolica || '—'}/
-                    {paciente.signos.diastolica || '—'}
-                    <br />
-                    T°: {paciente.signos.temperatura || '—'} °C
-                    {' · '}
-                    FC: {paciente.signos.frecuencia || '—'}
-                    <br />
-                    SpO₂: {paciente.signos.saturacion || '—'}%
-                  </td>
-
-                  <td className="p-4">
-                    <span className="rounded-full bg-brand-50 px-2 py-1 text-xs font-semibold text-brand-700">
-                      {paciente.tipo}
-                    </span>
-                  </td>
-
-                  <td className="p-4 text-muted">
-                    {paciente.estado === 'espera'
-                      ? 'En espera'
-                      : paciente.estado === 'consulta'
-                        ? 'En consulta'
-                        : 'Atendido'}
-                  </td>
-
-                  <td className="p-4 text-right">
-                    {paciente.estado === 'espera' ? (
-                      <Button
-                        size="sm"
-                        disabled={enConsulta || iniciando !== null}
-                        onClick={() => atender(paciente)}
+                    <td className="p-4">
+                      <span
+                        className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase ${
+                          cita.tipo_cita === 'EMERGENCIA'
+                            ? 'bg-danger-soft text-danger'
+                            : cita.tipo_cita === 'SOBRECUPO'
+                              ? 'bg-warning-soft text-warning'
+                              : 'bg-brand-50 text-brand-700'
+                        }`}
                       >
-                        {iniciando === paciente.id
-                          ? 'Iniciando...'
-                          : 'Atender'}
-                      </Button>
-                    ) : (
-                      <Link
-                        className="font-semibold text-brand-700 underline"
-                        to={`/medico/consulta/${paciente.id}`}
-                      >
-                        {paciente.estado === 'consulta'
-                          ? 'Continuar'
-                          : 'Ver'}
-                      </Link>
-                    )}
-                  </td>
+                        {cita.tipo_cita}
+                      </span>
+                    </td>
 
-                </tr>
-              ))}
+                    <td className="p-4">
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          atendida
+                            ? 'bg-emerald-50 text-emerald-800'
+                            : esConsultaActiva
+                              ? 'bg-blue-50 text-blue-800 animate-pulse'
+                              : enEspera
+                                ? 'bg-amber-50 text-amber-800'
+                                : 'bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        <span className="size-1.5 rounded-full bg-current" />
+                        {atendida
+                          ? 'Atendido'
+                          : esConsultaActiva
+                            ? 'En consulta'
+                            : enEspera
+                              ? 'En espera'
+                              : 'Agendada'}
+                      </span>
+                    </td>
+
+                    <td className="p-4 text-right">
+                      {enEspera || agendada ? (
+                        <Button
+                          size="sm"
+                          icon="ri-stethoscope-line"
+                          disabled={enConsulta || iniciandoId !== null}
+                          loading={iniciandoId === cita.id}
+                          onClick={() => handleIniciarAtencion(cita)}
+                        >
+                          Atender
+                        </Button>
+                      ) : esConsultaActiva && cita.consulta_id ? (
+                        <Link
+                          to={`/medico/consulta/${cita.consulta_id}`}
+                          className="inline-flex items-center gap-1 rounded-field bg-brand-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-700 transition-colors"
+                        >
+                          <i className="ri-play-line" />
+                          Continuar
+                        </Link>
+                      ) : cita.consulta_id ? (
+                        <Link
+                          to={`/medico/consulta/${cita.consulta_id}`}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 underline hover:text-brand-900"
+                        >
+                          <i className="ri-eye-line" />
+                          Ver consulta
+                        </Link>
+                      ) : (
+                        <span className="text-xs text-muted">—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
+
+      {/* Modal selector de especialidad al atender */}
+      <Modal
+        isOpen={citaParaAtender !== null}
+        onClose={() => setCitaParaAtender(null)}
+        title="Selecciona la Especialidad de Atención"
+        subtitle={`Iniciando consulta para ${citaParaAtender?.pacienteNombre}`}
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setCitaParaAtender(null)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                if (citaParaAtender) {
+                  handleIniciarAtencion(citaParaAtender, especialidadElegida);
+                }
+              }}
+              loading={iniciarMutation.isPending}
+            >
+              Iniciar Consulta
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-xs text-muted">
+            Tienes más de una especialidad activa. Elige con cuál especialidad registrarás esta atención médica:
+          </p>
+          <select
+            className="w-full rounded-field border border-line bg-surface p-2.5 text-sm text-ink outline-none focus:border-brand-600 focus:ring-4 focus:ring-brand-600/10"
+            value={especialidadElegida}
+            onChange={(e) => setEspecialidadElegida(e.target.value)}
+          >
+            {especialidades.map((esp) => (
+              <option key={esp.id} value={esp.id}>
+                {esp.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
+      </Modal>
     </div>
   );
 }

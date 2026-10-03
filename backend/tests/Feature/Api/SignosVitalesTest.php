@@ -41,7 +41,7 @@ class SignosVitalesTest extends TestCase
         $this->cita = cita::create([
             'id_paciente' => $this->paciente->id_paciente,
             'id_medico' => $this->medico->id,
-            'fecha' => '2026-09-21',
+            'fecha' => now()->toDateString(),
             'hora_inicio' => '15:00',
             'hora_fin' => '15:30',
             'id_creado_por' => $this->recepcion->id,
@@ -198,6 +198,27 @@ class SignosVitalesTest extends TestCase
 
         $this->putJson($this->ruta(), $this->datos())->assertForbidden();
         $this->getJson($this->ruta())->assertForbidden();
+    }
+
+    public function test_rechaza_registrar_signos_en_citas_de_otros_dias(): void
+    {
+        Sanctum::actingAs($this->recepcion);
+        $this->cita->update(['fecha' => now()->addDay()->toDateString()]);
+
+        $this->putJson($this->ruta(), $this->datos())
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Los signos vitales solo pueden registrarse en citas del día de hoy.');
+    }
+
+    public function test_eager_loading_de_signos_vitales_en_listado_de_citas(): void
+    {
+        Sanctum::actingAs($this->recepcion);
+        $this->putJson($this->ruta(), $this->datos())->assertCreated();
+
+        $this->getJson('/api/citas')
+            ->assertOk()
+            ->assertJsonPath('data.0.signos_vitales.presion_sistolica', 120)
+            ->assertJsonPath('data.0.signos_vitales.presion_diastolica', 80);
     }
 
     public function test_requiere_autenticacion(): void

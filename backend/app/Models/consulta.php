@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class consulta extends Model
 {
@@ -28,11 +30,15 @@ class consulta extends Model
         'fecha_hora_fin',
         'motivo_consulta',
         'notas_adicionales',
+        'precio',
+        'total',
     ];
 
     protected $casts = [
         'fecha_hora_inicio' => 'datetime',
         'fecha_hora_fin' => 'datetime',
+        'precio' => 'float',
+        'total' => 'float',
     ];
 
     public function cita(): BelongsTo
@@ -48,6 +54,21 @@ class consulta extends Model
     public function especialidad(): BelongsTo
     {
         return $this->belongsTo(especialidad::class, 'id_especialidad_atencion');
+    }
+
+    public function examenesFisicos(): HasMany
+    {
+        return $this->hasMany(examen_fisico::class, 'id_consulta', 'id_consulta');
+    }
+
+    public function planManejo(): HasOne
+    {
+        return $this->hasOne(plan_manejo::class, 'id_consulta', 'id_consulta');
+    }
+
+    public function receta(): HasOne
+    {
+        return $this->hasOne(receta_medica::class, 'id_consulta', 'id_consulta');
     }
 
     public function estaAbierta(): bool

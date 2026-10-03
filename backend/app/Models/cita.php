@@ -69,4 +69,9 @@ class cita extends Model
     {
         return $this->belongsTo(especialidad::class, 'id_especialidad');
     }
+
+    public function consulta(): HasOne
+    {
+        return $this->hasOne(consulta::class, 'id_cita', 'id_cita');
+    }
 }
