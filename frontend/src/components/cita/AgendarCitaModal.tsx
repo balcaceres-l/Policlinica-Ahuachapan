@@ -6,6 +6,7 @@ import SelectorPacienteAutocomplete from '@/components/paciente/SelectorPaciente
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { useAgendarCita } from '@/hooks/cita/useCitas';
+import { obtenerFechaLocal, obtenerHoraLocal } from '@/lib/utils';
 import type { TipoCita } from '@/types/cita.types';
 
 interface AgendarCitaModalProps {
@@ -26,7 +27,7 @@ export function AgendarCitaModal({
   fechaPredeterminada,
   medicoIdPredeterminado,
 }: AgendarCitaModalProps) {
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = obtenerFechaLocal();
 
   const [pacienteId, setPacienteId] = useState<string | ''>('');
   const [medicoId, setMedicoId] = useState<string | ''>(medicoIdPredeterminado ?? '');
@@ -70,7 +71,7 @@ export function AgendarCitaModal({
       setError('Debes indicar la fecha de la cita.');
       return;
     }
-    const hoyStr = new Date().toISOString().split('T')[0];
+    const hoyStr = obtenerFechaLocal();
     if (fecha < hoyStr) {
       setError('No se pueden agendar citas para fechas en el pasado.');
       return;
@@ -81,6 +82,11 @@ export function AgendarCitaModal({
     }
     if (horaInicio >= horaFin) {
       setError('La hora de inicio debe ser anterior a la hora de fin.');
+      return;
+    }
+    const horaActual = obtenerHoraLocal();
+    if (fecha === hoyStr && tipoCita === 'REGULAR' && horaInicio < horaActual) {
+      setError(`No se puede agendar para las ${horaInicio} porque esa hora ya transcurrió hoy (hora actual: ${horaActual}).`);
       return;
     }
 

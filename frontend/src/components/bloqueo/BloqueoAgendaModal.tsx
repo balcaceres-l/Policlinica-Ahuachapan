@@ -4,6 +4,7 @@ import SelectorMedicoCascada from '@/components/cita/SelectorMedicoCascada';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { useCrearBloqueo } from '@/hooks/bloqueo/useBloqueos';
+import { obtenerFechaLocal } from '@/lib/utils';
 import type { TipoBloqueo } from '@/types/bloqueo.types';
 
 interface BloqueoAgendaModalProps {
@@ -39,7 +40,7 @@ export function BloqueoAgendaModal({ isOpen, onClose }: BloqueoAgendaModalProps)
       setError('Debes seleccionar la fecha a bloquear.');
       return;
     }
-    const hoyStr = new Date().toISOString().split('T')[0];
+    const hoyStr = obtenerFechaLocal();
     if (fecha < hoyStr) {
       setError('No se puede registrar un bloqueo de agenda para una fecha en el pasado.');
       return;

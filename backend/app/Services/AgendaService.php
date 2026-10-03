@@ -66,6 +66,9 @@ class AgendaService
             ->whereIn('estado', cita::ESTADOS_VIGENTES)
             ->get(['hora_inicio', 'hora_fin']);
 
+        $esHoy = Carbon::parse($fecha)->isToday();
+        $ahora = now()->format('H:i');
+
         $bloques = [];
 
         foreach ($this->horariosDe($medicoId, $fecha) as $horario) {
@@ -74,9 +77,16 @@ class AgendaService
 
             while ($cursor->copy()->addMinutes(self::DURACION_BLOQUE_MIN)->lessThanOrEqualTo($cierre)) {
                 $fin = $cursor->copy()->addMinutes(self::DURACION_BLOQUE_MIN);
+                $horaInicioStr = $cursor->format('H:i');
+
+                // Si la consulta es para el día actual, no ofrecer bloques que ya transcurrieron
+                if ($esHoy && $horaInicioStr < $ahora) {
+                    $cursor = $fin;
+                    continue;
+                }
 
                 $libre = $ocupados->every(fn ($c) => ! $this->seSolapan(
-                    $cursor->format('H:i'),
+                    $horaInicioStr,
                     $fin->format('H:i'),
                     substr((string) $c->hora_inicio, 0, 5),
                     substr((string) $c->hora_fin, 0, 5),
@@ -84,7 +94,7 @@ class AgendaService
 
                 if ($libre) {
                     $bloques[] = [
-                        'hora_inicio' => $cursor->format('H:i'),
+                        'hora_inicio' => $horaInicioStr,
                         'hora_fin' => $fin->format('H:i'),
                     ];
                 }
@@ -133,28 +143,47 @@ class AgendaService
     /**
      * Libera el bloque original y valida el nuevo dentro de la misma
      * transacción, para que no quede un hueco donde otro lo tome.
+     * Permite opcionalmente reasignar la cita a otro médico ($nuevoMedicoId).
      */
-    public function reprogramar(cita $cita, string $fecha, string $horaInicio, string $horaFin): cita
-    {
-        return DB::transaction(function () use ($cita, $fecha, $horaInicio, $horaFin) {
-            User::where('id', $cita->id_medico)->lockForUpdate()->first();
+    public function reprogramar(
+        cita $cita,
+        string $fecha,
+        string $horaInicio,
+        string $horaFin,
+        ?string $nuevoMedicoId = null,
+        ?string $nuevaEspecialidadId = null,
+    ): cita {
+        return DB::transaction(function () use ($cita, $fecha, $horaInicio, $horaFin, $nuevoMedicoId, $nuevaEspecialidadId) {
+            $medicoDestinoId = $nuevoMedicoId ?? $cita->id_medico;
+
+            // Bloquear a los médicos involucrados para evitar condiciones de carrera
+            User::whereIn('id', array_unique([$cita->id_medico, $medicoDestinoId]))
+                ->lockForUpdate()
+                ->get();
 
             if (! in_array($cita->tipo_cita, cita::TIPOS_SIN_VALIDACION, true)) {
                 $this->asegurarDisponible(
-                    $cita->id_medico,
+                    $medicoDestinoId,
                     $fecha,
                     $horaInicio,
                     $horaFin,
-                    $cita->id_cita,
+                    $medicoDestinoId === $cita->id_medico ? $cita->id_cita : null,
                 );
             }
 
-            $cita->update([
+            $actualizacion = [
+                'id_medico' => $medicoDestinoId,
                 'fecha' => $fecha,
                 'hora_inicio' => $horaInicio,
                 'hora_fin' => $horaFin,
                 'estado' => 'AGENDADA',
-            ]);
+            ];
+
+            if ($nuevaEspecialidadId) {
+                $actualizacion['id_especialidad'] = $nuevaEspecialidadId;
+            }
+
+            $cita->update($actualizacion);
 
             return $cita->refresh();
         });
@@ -217,6 +246,10 @@ class AgendaService
     ): void {
         if ($this->estaBloqueado($medicoId, $fecha)) {
             throw new RuntimeException('El médico tiene la agenda bloqueada ese día.');
+        }
+
+        if (Carbon::parse($fecha)->isToday() && $horaInicio < now()->format('H:i')) {
+            throw new RuntimeException('No se pueden agendar citas regulares en horas que ya transcurrieron.');
         }
 
         if (! $this->dentroDelHorario($medicoId, $fecha, $horaInicio, $horaFin)) {

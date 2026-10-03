@@ -4,7 +4,7 @@ import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { useCrearPaciente } from '@/hooks/paciente/usePacientes';
 import { extraerMensajeError } from '@/lib/apiError';
-import { contieneLetrasOCaracteresEspeciales, formatearDui, formatearTelefono } from '@/lib/utils';
+import { contieneLetrasOCaracteresEspeciales, formatearDui, formatearTelefono, obtenerFechaLocal } from '@/lib/utils';
 import type { TipoDocumento } from '@/types/paciente.types';
 
 interface NuevoPacienteModalProps {
@@ -66,7 +66,7 @@ export function NuevoPacienteModal({ isOpen, onClose }: NuevoPacienteModalProps)
       setError('La fecha de nacimiento es obligatoria.');
       return;
     }
-    const hoyStr = new Date().toISOString().split('T')[0];
+    const hoyStr = obtenerFechaLocal();
     if (fechaNacimiento > hoyStr) {
       setError('La fecha de nacimiento no puede ser posterior a la fecha actual.');
       return;

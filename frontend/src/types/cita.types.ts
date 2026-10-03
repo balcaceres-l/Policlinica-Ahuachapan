@@ -76,6 +76,8 @@ export interface ReprogramarCitaPayload {
   fecha: string;
   hora_inicio: string;
   hora_fin: string;
+  medico_id?: string;
+  especialidad_id?: string;
 }
 
 export const ESTADO_CITA_LABEL: Record<EstadoCita, string> = {

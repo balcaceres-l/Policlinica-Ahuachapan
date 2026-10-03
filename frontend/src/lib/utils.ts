@@ -56,3 +56,24 @@ export const contieneLetrasOCaracteresEspeciales = (valor: string): boolean => {
   return /[^\d\s-]/.test(valor);
 };
 
+/**
+ * Devuelve la fecha local del navegador/dispositivo en formato YYYY-MM-DD.
+ * Evita el desface de zona horaria que ocurre al usar toISOString() (UTC).
+ */
+export const obtenerFechaLocal = (d = new Date()): string => {
+  const anio = d.getFullYear();
+  const mes = String(d.getMonth() + 1).padStart(2, '0');
+  const dia = String(d.getDate()).padStart(2, '0');
+  return `${anio}-${mes}-${dia}`;
+};
+
+/**
+ * Devuelve la hora local del navegador/dispositivo en formato HH:mm.
+ */
+export const obtenerHoraLocal = (d = new Date()): string => {
+  const horas = String(d.getHours()).padStart(2, '0');
+  const minutos = String(d.getMinutes()).padStart(2, '0');
+  return `${horas}:${minutos}`;
+};
+
+

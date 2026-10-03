@@ -7,6 +7,7 @@ use App\Models\horario_medico;
 use App\Models\paciente;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -261,6 +262,34 @@ class AgendaTest extends TestCase
         ])->assertStatus(409);
     }
 
+    public function test_reprogramar_permite_reasignar_la_cita_a_otro_medico_disponible(): void
+    {
+        Sanctum::actingAs($this->recepcion);
+
+        $otroMedico = User::factory()->create(['rol' => 'MEDICO', 'estado' => 'ACTIVO']);
+        horario_medico::create([
+            'id_medico' => $otroMedico->id,
+            'dia_semana' => 'LUNES',
+            'hora_inicio' => '15:00',
+            'hora_fin' => '18:30',
+        ]);
+
+        $id = $this->postJson('/api/citas', $this->datosCita())->json('data.id');
+
+        // Reprogramar reasignando al otro médico en su bloque de las 16:00
+        $this->patchJson("/api/citas/{$id}/reprogramar", [
+            'fecha' => self::LUNES,
+            'hora_inicio' => '16:00',
+            'hora_fin' => '16:30',
+            'medico_id' => $otroMedico->id,
+        ])->assertOk()
+            ->assertJsonPath('data.medico_id', $otroMedico->id)
+            ->assertJsonPath('data.hora_inicio', '16:00');
+
+        // El bloque original del primer médico a las 15:00 queda liberado
+        $this->postJson('/api/citas', $this->datosCita())->assertCreated();
+    }
+
     // ---- HU-35 bloqueo de agenda ----
 
     public function test_bloquear_un_dia_deja_la_agenda_sin_bloques(): void
@@ -395,5 +424,46 @@ class AgendaTest extends TestCase
 
         $this->getJson("/api/agenda/disponibilidad?medico_id={$this->medico->id}&fecha=".self::LUNES)
             ->assertJsonCount(7, 'data.bloques');
+    }
+
+    public function test_disponibilidad_hoy_omite_bloques_que_ya_pasaron(): void
+    {
+        Sanctum::actingAs($this->recepcion);
+
+        // Si hoy es lunes 2026-09-21 a las 16:15
+        Carbon::setTestNow(Carbon::parse('2026-09-21 16:15'));
+
+        // Horario médico: 15:00 a 18:30 (bloques: 15:00, 15:30, 16:00, 16:30, 17:00, 17:30, 18:00)
+        // A las 16:15, los bloques de 15:00, 15:30 y 16:00 ya pasaron.
+        // Solo deben quedar disponibles a partir de 16:30 (4 bloques: 16:30, 17:00, 17:30, 18:00).
+        $res = $this->getJson("/api/agenda/disponibilidad?medico_id={$this->medico->id}&fecha=2026-09-21")
+            ->assertOk()
+            ->assertJsonCount(4, 'data.bloques');
+
+        $this->assertSame('16:30', $res->json('data.bloques.0.hora_inicio'));
+
+        Carbon::setTestNow();
+    }
+
+    public function test_rechaza_agendar_cita_regular_en_hora_pasada_para_el_dia_de_hoy(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-09-21 17:00'));
+        Sanctum::actingAs($this->recepcion);
+
+        // Intentar agendar a las 15:00 de hoy cuando ya son las 17:00
+        $this->postJson('/api/citas', $this->datosCita([
+            'fecha' => '2026-09-21',
+            'hora_inicio' => '15:00',
+            'hora_fin' => '15:30',
+        ]))->assertStatus(409);
+
+        // Sí permite agendar a las 17:30 (futuro de hoy)
+        $this->postJson('/api/citas', $this->datosCita([
+            'fecha' => '2026-09-21',
+            'hora_inicio' => '17:30',
+            'hora_fin' => '18:00',
+        ]))->assertCreated();
+
+        Carbon::setTestNow();
     }
 }
