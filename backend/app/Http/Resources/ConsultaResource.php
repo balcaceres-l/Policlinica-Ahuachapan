@@ -27,6 +27,8 @@ class ConsultaResource extends JsonResource
             'total' => $this->total !== null ? (float) $this->total : null,
             'abierta' => $this->estaAbierta(),
             'minutos_transcurridos' => $this->minutosTranscurridos(),
+            'segundos_transcurridos' => (int) ($this->segundos_transcurridos ?? 0),
+            'en_pausa' => (bool) ($this->en_pausa ?? false),
             'signos_vitales' => new SignosVitalesResource(
                 $this->whenLoaded('cita', fn () => $this->cita->signosVitales),
             ),

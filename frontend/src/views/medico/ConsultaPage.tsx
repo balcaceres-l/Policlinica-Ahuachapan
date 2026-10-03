@@ -76,6 +76,8 @@ export default function ConsultaPage() {
   const [notasAdicionales, setNotasAdicionales] = useState('');
   const [precio, setPrecio] = useState<number | ''>('');
   const [total, setTotal] = useState<number | ''>('');
+  const [segundosTranscurridos, setSegundosTranscurridos] = useState<number>(0);
+  const [enPausa, setEnPausa] = useState<boolean>(false);
 
   // Exámenes físicos
   const [examenesFisicos, setExamenesFisicos] = useState<ExamenFisicoLocal[]>([]);
@@ -113,6 +115,8 @@ export default function ConsultaPage() {
     setNotasAdicionales(consulta.notas_adicionales ?? '');
     setPrecio(consulta.precio !== null && consulta.precio !== undefined ? consulta.precio : '');
     setTotal(consulta.total !== null && consulta.total !== undefined ? consulta.total : '');
+    setSegundosTranscurridos(consulta.segundos_transcurridos ?? 0);
+    setEnPausa(consulta.en_pausa ?? false);
 
     if (consulta.examenes_fisicos && consulta.examenes_fisicos.length > 0) {
       setExamenesFisicos(
@@ -331,7 +335,10 @@ export default function ConsultaPage() {
   };
 
   // Construir payload limpio para guardar/actualizar
-  const construirPayload = (): GuardarConsultaPayload => {
+  const construirPayload = (opciones?: {
+    en_pausa?: boolean;
+    segundos_transcurridos?: number;
+  }): GuardarConsultaPayload => {
     const efLimpios = examenesFisicos.filter(
       (ef) => ef.region_anatomica.trim() !== '' || ef.hallazgos.trim() !== '',
     );
@@ -355,6 +362,11 @@ export default function ConsultaPage() {
       notas_adicionales: notasAdicionales.trim() || null,
       precio: precio !== '' ? Number(precio) : null,
       total: total !== '' ? Number(total) : (precio !== '' ? Number(precio) : null),
+      segundos_transcurridos:
+        opciones?.segundos_transcurridos !== undefined
+          ? opciones.segundos_transcurridos
+          : segundosTranscurridos,
+      en_pausa: opciones?.en_pausa !== undefined ? opciones.en_pausa : enPausa,
       examenes_fisicos: efLimpios.length > 0 ? efLimpios : undefined,
       plan_manejo: tienePlan
         ? {
@@ -371,7 +383,7 @@ export default function ConsultaPage() {
     };
   };
 
-  // Guardar borrador / progreso
+  // Guardar borrador / progreso sin salir
   const handleGuardarProgreso = async () => {
     try {
       const payload = construirPayload();
@@ -384,11 +396,45 @@ export default function ConsultaPage() {
     }
   };
 
+  // Pausar y Salir a la lista de espera
+  const handleGuardarYSalir = async () => {
+    try {
+      const payload = construirPayload({ en_pausa: true });
+      await actualizarMutation.mutateAsync({ id, payload });
+      setEnPausa(true);
+      toast.success(
+        'Consulta guardada y pausada. Puedes retomarla en cualquier momento desde la sala de espera.',
+      );
+      navigate('/medico/sala-espera');
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : 'Error al guardar la consulta',
+      );
+    }
+  };
+
+  // Alternar pausa del cronómetro
+  const handleTogglePausa = async () => {
+    const nuevaPausa = !enPausa;
+    setEnPausa(nuevaPausa);
+    try {
+      const payload = construirPayload({ en_pausa: nuevaPausa });
+      await actualizarMutation.mutateAsync({ id, payload });
+      if (nuevaPausa) {
+        toast('Consulta pausada. El cronómetro se ha detenido.', { icon: '⏸️' });
+      } else {
+        toast('Consulta reanudada. El cronómetro sigue avanzando.', { icon: '▶️' });
+      }
+    } catch {
+      setEnPausa(!nuevaPausa);
+    }
+  };
+
   // Confirmar y finalizar la consulta
   const handleConfirmarFinalizar = async () => {
     try {
       // 1. Guardar todos los datos clínicos actuales
-      const payload = construirPayload();
+      const payload = construirPayload({ en_pausa: false });
       await actualizarMutation.mutateAsync({ id, payload });
 
       // 2. Finalizar la consulta y cambiar la cita a ATENDIDA
@@ -398,6 +444,7 @@ export default function ConsultaPage() {
           notas_adicionales: notasAdicionales.trim() || null,
           precio: precio !== '' ? Number(precio) : null,
           total: total !== '' ? Number(total) : (precio !== '' ? Number(precio) : null),
+          segundos_transcurridos: segundosTranscurridos,
         },
       });
 
@@ -425,10 +472,17 @@ export default function ConsultaPage() {
 
         <div className="flex items-center gap-2">
           {activa ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 animate-pulse">
-              <span className="size-2 rounded-full bg-blue-600" />
-              Consulta Activa
-            </span>
+            enPausa ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800">
+                <i className="ri-pause-circle-line" />
+                Consulta en Pausa
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 animate-pulse">
+                <span className="size-2 rounded-full bg-blue-600" />
+                Consulta Activa
+              </span>
+            )
           ) : (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800">
               <i className="ri-checkbox-circle-line" />
@@ -469,18 +523,59 @@ export default function ConsultaPage() {
           )}
 
           {activa && (
-            <Button
-              variant="secondary"
-              icon="ri-save-line"
-              size="sm"
-              loading={actualizarMutation.isPending}
-              onClick={handleGuardarProgreso}
-            >
-              Guardar Progreso
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                icon="ri-pause-circle-line"
+                size="sm"
+                loading={actualizarMutation.isPending}
+                onClick={handleGuardarYSalir}
+                title="Guarda los datos, detiene el cronómetro y regresa a la sala de espera"
+              >
+                Pausar y Salir
+              </Button>
+
+              <Button
+                variant="secondary"
+                icon="ri-save-line"
+                size="sm"
+                loading={actualizarMutation.isPending}
+                onClick={handleGuardarProgreso}
+              >
+                Guardar Progreso
+              </Button>
+            </div>
           )}
         </div>
       </header>
+
+      {/* Aviso si la consulta está en pausa */}
+      {activa && enPausa && (
+        <div
+          role="status"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 shadow-sm"
+        >
+          <div className="flex items-center gap-3">
+            <span className="flex size-9 items-center justify-center rounded-full bg-amber-200 text-amber-900 text-lg">
+              <i className="ri-pause-fill" />
+            </span>
+            <div>
+              <p className="font-bold">Esta consulta se encuentra pausada.</p>
+              <p className="text-xs text-amber-800 mt-0.5">
+                El cronómetro está detenido en {Math.floor(segundosTranscurridos / 60)} min {segundosTranscurridos % 60} seg. Los datos ingresados están guardados.
+              </p>
+            </div>
+          </div>
+
+          <Button
+            size="sm"
+            icon="ri-play-fill"
+            onClick={handleTogglePausa}
+          >
+            Reanudar Tiempo
+          </Button>
+        </div>
+      )}
 
       {/* Alerta si la consulta ya está finalizada */}
       {!activa && (
@@ -507,6 +602,10 @@ export default function ConsultaPage() {
             inicio={inicioMs}
             fin={finMs}
             activo={activa}
+            segundosIniciales={segundosTranscurridos}
+            enPausa={enPausa}
+            onPausaToggle={activa ? handleTogglePausa : undefined}
+            onTick={(segs) => setSegundosTranscurridos(segs)}
           />
 
           {/* Triaje y Signos Vitales */}
@@ -1146,6 +1245,16 @@ export default function ConsultaPage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  variant="secondary"
+                  icon="ri-pause-circle-line"
+                  loading={actualizarMutation.isPending}
+                  onClick={handleGuardarYSalir}
+                  title="Guarda los datos actuales, detiene el cronómetro y regresa a la sala de espera"
+                >
+                  Pausar y Salir
+                </Button>
+
                 <Button
                   variant="secondary"
                   icon="ri-save-line"

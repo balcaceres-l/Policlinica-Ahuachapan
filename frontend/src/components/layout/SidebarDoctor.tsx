@@ -6,6 +6,7 @@ const NAV_DOCTOR: ItemNav[] = [
     label: "Lista de espera",
     icon: "ri-user-received-2-line",
   },
+  { to: "/medico/pacientes", label: "Pacientes", icon: "ri-user-heart-line" },
   { to: "/medico/citas", label: "Citas", icon: "ri-calendar-check-line" },
   { to: "/medico/calendario", label: "Calendario", icon: "ri-calendar-line" },
   {

@@ -1,9 +1,8 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import HistorialDiagnosticos from '@/components/expediente/HistorialDiagnosticos';
 import LaboratorioCronologico from '@/components/expediente/LaboratorioCronologico';
+import DirectorioPacientes from '@/components/paciente/DirectorioPacientes';
 import SelectorPacienteAutocomplete from '@/components/paciente/SelectorPacienteAutocomplete';
-import Button from '@/components/ui/Button';
-import EmptyState from '@/components/ui/EmptyState';
 
 export function ExpedientePage() {
   const navigate = useNavigate();
@@ -14,48 +13,57 @@ export function ExpedientePage() {
     navigate(id ? `/medico/expediente/${id}` : '/medico/expediente');
   };
 
+  // Si no hay paciente seleccionado en la URL, mostramos la vista global de pacientes
+  // compartida con recepción para que el médico busque cualquier paciente por nombre, expediente o DUI.
+  if (!pacienteId) {
+    return (
+      <div className="space-y-6">
+        <DirectorioPacientes />
+      </div>
+    );
+  }
+
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto max-w-6xl space-y-6">
+      {/* Navegación para volver al listado */}
+      <div>
+        <button
+          type="button"
+          onClick={() => navigate('/medico/expediente')}
+          className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:text-brand-900 transition-colors"
+        >
+          <i className="ri-arrow-left-line" />
+          Volver al directorio de pacientes
+        </button>
+      </div>
+
       {/* Encabezado */}
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-ink">Expediente Clínico</h1>
+          <h1 className="text-2xl font-bold text-ink">Expediente Clínico Electrónico</h1>
           <p className="mt-1 text-sm text-muted">
             Consulta integral del historial médico, notas clínicas, recetas y diagnósticos.
           </p>
         </div>
-        <Button icon="ri-folder-add-line">Nuevo Registro</Button>
       </div>
 
-      {/* Selección de paciente */}
-      <div className="mb-6 rounded-card border border-line bg-surface p-4 shadow-card">
+      {/* Selección de paciente / Búsqueda rápida */}
+      <div className="rounded-card border border-line bg-surface p-4 shadow-card">
         <SelectorPacienteAutocomplete
           pacienteId={pacienteId}
           onSelectPaciente={seleccionarPaciente}
-          label="Paciente"
+          label="Cambiar paciente"
           required={false}
         />
       </div>
 
-      {/* HU-22 */}
-      {pacienteId ? (
-        <HistorialDiagnosticos pacienteId={pacienteId} />
-      ) : (
-        <div className="rounded-card border border-line bg-surface shadow-card">
-          <EmptyState
-            icon="ri-folder-user-line"
-            title="Consulta de expediente clínico"
-            message="Busca un paciente por nombre, número de expediente o documento para revisar su historial clínico electrónico."
-          />
-        </div>
-      )}
+      {/* HU-22 — Historial de consultas y diagnósticos */}
+      <HistorialDiagnosticos pacienteId={pacienteId} />
 
-      {/* HU-23 */}
-      {pacienteId && (
-        <div className="mt-8">
-          <LaboratorioCronologico pacienteId={pacienteId} />
-        </div>
-      )}
+      {/* HU-23 — Laboratorio cronológico */}
+      <div className="mt-8">
+        <LaboratorioCronologico pacienteId={pacienteId} />
+      </div>
     </div>
   );
 }

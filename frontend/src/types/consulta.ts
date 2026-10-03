@@ -65,6 +65,8 @@ export interface ConsultaDetalle {
   total?: number | null;
   abierta: boolean;
   minutos_transcurridos: number;
+  segundos_transcurridos?: number;
+  en_pausa?: boolean;
   signos_vitales?: {
     id?: string;
     presion_sistolica?: number | null;
