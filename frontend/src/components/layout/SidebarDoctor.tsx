@@ -9,6 +9,11 @@ const NAV_DOCTOR: ItemNav[] = [
   { to: "/medico/citas", label: "Citas", icon: "ri-calendar-check-line" },
   { to: "/medico/calendario", label: "Calendario", icon: "ri-calendar-line" },
   {
+    to: "/medico/horarios",
+    label: "Mi Horario",
+    icon: "ri-calendar-schedule-line",
+  },
+  {
     to: "/medico/expediente",
     label: "Expediente",
     icon: "ri-folder-user-line",

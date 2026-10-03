@@ -18,6 +18,7 @@ import SalaEsperaPage from "@/views/medico/SalaEsperaPage";
 import ConsultaPage from "@/views/medico/ConsultaPage";
 import ExpedientePage from "@/views/medico/ExpedientePage";
 import LaboratorioClinicoPage from "@/views/medico/LaboratorioClinicoPage";
+import MiHorarioPage from "@/views/medico/MiHorarioPage";
 
 // Los roles de cada ProtectedRoute deben coincidir con el middleware
 // `role:` de backend/routes/api.php.
@@ -52,6 +53,8 @@ function App() {
             <Route path="/medico/sala-espera" element={<SalaEsperaPage />} />
             <Route path="/medico/consulta/:id" element={<ConsultaPage />} />
             <Route path="/medico/calendario" element={<CalendarioPage />} />
+            <Route path="/medico/horarios" element={<MiHorarioPage />} />
+            <Route path="/medico/horario" element={<Navigate to="/medico/horarios" replace />} />
             <Route path="/medico/expediente" element={<ExpedientePage />} />
             {/* HU-22 — expediente de un paciente concreto */}
             <Route

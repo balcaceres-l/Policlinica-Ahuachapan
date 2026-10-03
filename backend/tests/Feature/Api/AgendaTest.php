@@ -97,6 +97,25 @@ class AgendaTest extends TestCase
         ])->assertForbidden();
     }
 
+    public function test_el_medico_puede_consultar_su_propio_horario(): void
+    {
+        Sanctum::actingAs($this->medico);
+
+        $this->getJson("/api/medicos/{$this->medico->id}/horarios")
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonCount(1, 'data');
+    }
+
+    public function test_el_medico_no_puede_consultar_el_horario_de_otro_medico(): void
+    {
+        Sanctum::actingAs($this->medico);
+        $otro = User::factory()->create(['rol' => 'MEDICO', 'estado' => 'ACTIVO']);
+
+        $this->getJson("/api/medicos/{$otro->id}/horarios")
+            ->assertForbidden();
+    }
+
     // ---- HU-12 disponibilidad ----
 
     public function test_la_disponibilidad_respeta_el_horario_configurado(): void

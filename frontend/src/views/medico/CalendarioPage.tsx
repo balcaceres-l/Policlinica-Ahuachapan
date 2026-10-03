@@ -128,9 +128,18 @@ export function CalendarioPage() {
             Visualiza tus citas agendadas, bloqueos y programa citas para tus especialidades.
           </p>
         </div>
-        <Button icon="ri-calendar-check-line" onClick={() => setModalAgendar(true)}>
-          Nueva Cita
-        </Button>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Link
+            to="/medico/horarios"
+            className="inline-flex items-center gap-1.5 rounded-field border border-line bg-surface px-3.5 py-2 text-xs font-semibold text-brand-700 shadow-xs transition-colors hover:bg-brand-50"
+          >
+            <i className="ri-calendar-schedule-line" />
+            Mi Horario Asignado
+          </Link>
+          <Button icon="ri-calendar-check-line" onClick={() => setModalAgendar(true)}>
+            Nueva Cita
+          </Button>
+        </div>
       </div>
 
       {/* Barra de control de fecha, vistas y filtros */}

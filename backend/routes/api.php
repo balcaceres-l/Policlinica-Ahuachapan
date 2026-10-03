@@ -37,7 +37,6 @@ Route::middleware('auth:sanctum')->group(function () {
         );
 
         // HU-34 — los horarios los configura el administrador.
-        Route::get('/medicos/{medico}/horarios', [HorarioMedicoController::class, 'index']);
         Route::post('/medicos/{medico}/horarios', [HorarioMedicoController::class, 'store']);
         Route::put('/medicos/{medico}/horarios', [HorarioMedicoController::class, 'sincronizar']);
         Route::put('/horarios/{horario}', [HorarioMedicoController::class, 'update']);
@@ -46,6 +45,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Consulta de especialidades asignadas a un médico
     Route::get('/medicos/{medico}/especialidades', [MedicoEspecialidadController::class, 'index']);
+
+    // Consulta de horarios asignados a un médico
+    Route::get('/medicos/{medico}/horarios', [HorarioMedicoController::class, 'index']);
 
     // Consulta de bloqueos de agenda (médico ve solo los suyos, admin/recepción ven todos)
     Route::get('/bloqueos', [BloqueoAgendaController::class, 'index']);
