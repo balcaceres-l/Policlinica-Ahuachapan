@@ -4,12 +4,16 @@ import SelectorMedicoCascada from '@/components/cita/SelectorMedicoCascada';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { useCrearBloqueo } from '@/hooks/bloqueo/useBloqueos';
+import { extraerMensajeError } from '@/lib/apiError';
+import type { BloqueoCreado } from '@/services/bloqueo/bloqueo.service';
 import { obtenerFechaLocal } from '@/lib/utils';
 import type { TipoBloqueo } from '@/types/bloqueo.types';
 
 interface BloqueoAgendaModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Se llama con el bloqueo creado y las citas que quedaron dentro de él. */
+  onCreado?: (resultado: BloqueoCreado) => void;
 }
 
 const CLASE_INPUT =
@@ -17,7 +21,7 @@ const CLASE_INPUT =
   'transition-colors placeholder:text-muted focus:border-brand-600 focus:ring-4 ' +
   'focus:ring-brand-600/15 disabled:opacity-60';
 
-export function BloqueoAgendaModal({ isOpen, onClose }: BloqueoAgendaModalProps) {
+export function BloqueoAgendaModal({ isOpen, onClose, onCreado }: BloqueoAgendaModalProps) {
   const [medicoId, setMedicoId] = useState<string | ''>('');
   const [fecha, setFecha] = useState('');
   const [tipoBloqueo, setTipoBloqueo] = useState<TipoBloqueo>('COMPLETO');
@@ -66,7 +70,7 @@ export function BloqueoAgendaModal({ isOpen, onClose }: BloqueoAgendaModalProps)
     }
 
     try {
-      await crearBloqueoMutation.mutateAsync({
+      const resultado = await crearBloqueoMutation.mutateAsync({
         medico_id: medicoId,
         fecha,
         tipo_bloqueo: tipoBloqueo,
@@ -77,6 +81,7 @@ export function BloqueoAgendaModal({ isOpen, onClose }: BloqueoAgendaModalProps)
 
       toast.success('Bloqueo de agenda programado exitosamente.');
       onClose();
+      onCreado?.(resultado);
       setMedicoId('');
       setFecha('');
       setTipoBloqueo('COMPLETO');
@@ -84,8 +89,7 @@ export function BloqueoAgendaModal({ isOpen, onClose }: BloqueoAgendaModalProps)
       setHoraFin('12:00');
       setMotivo('');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al registrar bloqueo.';
-      setError(msg);
+      setError(extraerMensajeError(err, 'Error al registrar bloqueo.'));
     }
   };
 
@@ -94,7 +98,7 @@ export function BloqueoAgendaModal({ isOpen, onClose }: BloqueoAgendaModalProps)
       isOpen={isOpen}
       onClose={onClose}
       title="Registrar Bloqueo de Agenda"
-      subtitle="Inhabilita la asignación de citas para un médico en una fecha específica (completo o parcial)."
+      subtitle="Inhabilita la asignación de citas para un médico: el día completo o solo un rango de horas."
       size="md"
       footer={
         <>

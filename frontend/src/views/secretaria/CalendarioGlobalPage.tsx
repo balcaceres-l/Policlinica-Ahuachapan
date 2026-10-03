@@ -7,6 +7,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useBloqueos } from '@/hooks/bloqueo/useBloqueos';
 import { useCitas } from '@/hooks/cita/useCitas';
 import { useMedicos } from '@/hooks/usuario/useUsuarios';
+import { lapsoDeBloqueo } from '@/lib/bloqueo';
 import { ESTADO_CITA_LABEL, TIPO_CITA_LABEL, type EstadoCita } from '@/types/cita.types';
 import { getIniciales } from '@/lib/utils';
 
@@ -278,7 +279,8 @@ export function CalendarioGlobalPage() {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {medicosFiltrados.map((medico) => {
                 const citasMedico = citasFiltradas.filter((c) => c.medico_id === medico.id);
-                const bloqueoDelDia = bloqueos.find(
+                // Un médico puede tener varios bloqueos parciales el mismo día.
+                const bloqueosDelDia = bloqueos.filter(
                   (b) => b.medico_id === medico.id && b.fecha === fechaSeleccionada,
                 );
 
@@ -314,19 +316,22 @@ export function CalendarioGlobalPage() {
 
                     {/* Lista de citas o estado de agenda */}
                     <div className="flex-1 p-3 space-y-2.5 min-h-55">
-                      {bloqueoDelDia ? (
-                        <div className="flex flex-col items-center justify-center rounded-field border border-dashed border-danger/40 bg-danger-soft/40 p-4 text-center">
+                      {bloqueosDelDia.map((bloqueo) => (
+                        <div
+                          key={bloqueo.id}
+                          className="flex flex-col items-center justify-center rounded-field border border-dashed border-danger/40 bg-danger-soft/40 p-4 text-center"
+                        >
                           <i className="ri-calendar-close-line text-2xl text-danger mb-1" />
                           <p className="text-xs font-bold text-danger">
-                            {bloqueoDelDia.tipo_bloqueo === 'PARCIAL'
-                              ? `Bloqueo Parcial (${bloqueoDelDia.hora_inicio} - ${bloqueoDelDia.hora_fin})`
+                            {bloqueo.tipo_bloqueo === 'PARCIAL'
+                              ? `Bloqueo Parcial (${lapsoDeBloqueo(bloqueo)})`
                               : 'Agenda Bloqueada (Día Completo)'}
                           </p>
-                          <p className="mt-1 text-[11px] text-danger/80">{bloqueoDelDia.motivo}</p>
+                          <p className="mt-1 text-[11px] text-danger/80">{bloqueo.motivo}</p>
                         </div>
-                      ) : null}
+                      ))}
 
-                      {citasMedico.length === 0 && !bloqueoDelDia ? (
+                      {citasMedico.length === 0 && bloqueosDelDia.length === 0 ? (
                         <div className="flex h-full flex-col items-center justify-center rounded-field border border-dashed border-line p-6 text-center text-muted">
                           <i className="ri-calendar-check-line text-2xl opacity-40 mb-1" />
                           <p className="text-xs font-medium">Sin citas programadas</p>
@@ -376,6 +381,15 @@ export function CalendarioGlobalPage() {
                               <p className="text-[11px] text-muted">
                                 Exp: {cita.pacienteExpediente}
                               </p>
+                              {cita.afectada_por_bloqueo && cita.bloqueo && (
+                                <p
+                                  className="mt-1 inline-flex items-center gap-1 rounded bg-warning-soft px-1.5 py-0.5 text-[10px] font-bold text-warning"
+                                  title="Cae dentro de un bloqueo: recepción debe contactar al paciente."
+                                >
+                                  <i className="ri-alarm-warning-line" />
+                                  En bloqueo ({lapsoDeBloqueo(cita.bloqueo)})
+                                </p>
+                              )}
                               {cita.tipo_cita !== 'REGULAR' && (
                                 <div className="mt-1">
                                   <span className="inline-block rounded px-1.5 py-0.5 text-[10px] font-bold uppercase bg-warning-soft text-warning">
