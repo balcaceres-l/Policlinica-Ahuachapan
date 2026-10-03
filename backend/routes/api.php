@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\ConsultaController;
 use App\Http\Controllers\Api\EspecialidadController;
 use App\Http\Controllers\Api\HorarioMedicoController;
 use App\Http\Controllers\Api\MedicoEspecialidadController;
+use App\Http\Controllers\Api\PacienteController;
 use App\Http\Controllers\Api\SignosVitalesController;
 use App\Http\Controllers\Api\UsuarioController;
 use Illuminate\Support\Facades\Route;
@@ -52,6 +53,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/bloqueos', [BloqueoAgendaController::class, 'index']);
         Route::post('/bloqueos', [BloqueoAgendaController::class, 'store']);
         Route::delete('/bloqueos/{bloqueo}', [BloqueoAgendaController::class, 'destroy']);
+        // Citas que quedaron dentro de un bloqueo: listarlas y correrlas tras él.
+        Route::get('/bloqueos/{bloqueo}/citas-afectadas', [BloqueoAgendaController::class, 'citasAfectadas']);
+        Route::patch('/bloqueos/{bloqueo}/correr-citas', [BloqueoAgendaController::class, 'correrCitas']);
 
         // HU-13, HU-14, HU-43 — cancelar, reprogramar y orden de atención.
         Route::patch('/citas/{cita}/cancelar', [CitaController::class, 'cancelar']);
@@ -76,15 +80,26 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/citas/{cita}/signos-vitales', [SignosVitalesController::class, 'show']);
     Route::put('/citas/{cita}/signos-vitales', [SignosVitalesController::class, 'store']);
 
+    // Pacientes — consulta para personal clínico y recepción.
+    // Agregar pacientes y marcar fallecido (soft delete) es exclusivo de RECEPCIONISTA y MEDICO (no administrador).
+    Route::get('/pacientes', [PacienteController::class, 'index']);
+    Route::get('/pacientes/{paciente}', [PacienteController::class, 'show']);
+    Route::middleware('role:RECEPCIONISTA,MEDICO')->group(function () {
+        Route::post('/pacientes', [PacienteController::class, 'store']);
+        Route::put('/pacientes/{paciente}', [PacienteController::class, 'update']);
+        Route::delete('/pacientes/{paciente}', [PacienteController::class, 'destroy']);
+    });
+
     // HU-39 — el médico abre la consulta eligiendo con qué especialidad atiende.
     Route::middleware('role:MEDICO')->group(function () {
         Route::get(
             '/consultas/especialidades-disponibles',
             [ConsultaController::class, 'especialidadesDisponibles'],
         );
+        Route::get('/medico/sala-espera', [ConsultaController::class, 'salaEspera']);
         Route::post('/citas/{cita}/consulta', [ConsultaController::class, 'store']);
         Route::get('/consultas/{consulta}', [ConsultaController::class, 'show']);
+        Route::put('/consultas/{consulta}', [ConsultaController::class, 'update']);
         Route::patch('/consultas/{consulta}/finalizar', [ConsultaController::class, 'finalizar']);
-
     });
 });

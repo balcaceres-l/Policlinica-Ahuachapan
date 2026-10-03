@@ -32,7 +32,7 @@ class CitaController extends Controller
 
         $usuario = $request->user();
 
-        $citas = cita::with(['paciente', 'medico', 'especialidad'])
+        $citas = cita::with(['paciente', 'medico', 'especialidad', 'signosVitales'])
             // Un médico solo ve su propia agenda.
             ->when($usuario->rol === 'MEDICO', fn ($q) => $q->where('id_medico', $usuario->id))
             ->when($validado['medico_id'] ?? null, fn ($q, $id) => $q->where('id_medico', $id))
@@ -44,6 +44,8 @@ class CitaController extends Controller
             ->orderBy('fecha')
             ->orderBy('hora_inicio')
             ->get();
+
+        $this->agenda->marcarAfectadas($citas);
 
         return $this->success(CitaResource::collection($citas)->resolve());
     }
@@ -135,10 +137,20 @@ class CitaController extends Controller
             'fecha' => ['required', 'date_format:Y-m-d'],
             'hora_inicio' => ['required', 'date_format:H:i'],
             'hora_fin' => ['required', 'date_format:H:i', 'after:hora_inicio'],
+            'medico_id' => ['nullable', 'uuid', 'exists:users,id'],
+            'especialidad_id' => ['nullable', 'uuid', 'exists:especialidades,id'],
         ]);
 
         if (in_array($cita->estado, ['ATENDIDA', 'EN_ATENCION'], true)) {
             return $this->failure('Una cita en atención o ya atendida no se reprograma.', 422);
+        }
+
+        $nuevoMedicoId = $validado['medico_id'] ?? null;
+        if ($nuevoMedicoId && $nuevoMedicoId !== $cita->id_medico) {
+            $nuevoMedico = User::find($nuevoMedicoId);
+            if ($nuevoMedico->rol !== 'MEDICO' || $nuevoMedico->estado !== 'ACTIVO') {
+                return $this->failure('El médico seleccionado para la reasignación no está disponible.', 422);
+            }
         }
 
         try {
@@ -147,13 +159,15 @@ class CitaController extends Controller
                 $validado['fecha'],
                 $validado['hora_inicio'],
                 $validado['hora_fin'],
+                $nuevoMedicoId,
+                $validado['especialidad_id'] ?? null,
             );
         } catch (RuntimeException $e) {
             return $this->failure($e->getMessage(), 409);
         }
 
         return $this->success(
-            (new CitaResource($cita->load(['paciente', 'medico'])))->resolve(),
+            (new CitaResource($cita->load(['paciente', 'medico', 'especialidad'])))->resolve(),
             'Cita reprogramada correctamente.',
         );
     }

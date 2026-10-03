@@ -5,6 +5,7 @@ import {
   desplazarAgenda,
   getCitas,
   getDisponibilidad,
+  getSignosVitales,
   guardarSignosVitales,
   marcarLlegadaCita,
   reprogramarCita,
@@ -84,13 +85,22 @@ export const useCancelarCita = () => {
   });
 };
 
+export const useSignosVitales = (citaId?: string) => {
+  return useQuery({
+    queryKey: ['signos-vitales', citaId],
+    queryFn: () => (citaId ? getSignosVitales(citaId) : null),
+    enabled: Boolean(citaId),
+  });
+};
+
 export const useGuardarSignosVitales = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, datos }: { id: string; datos: SignosVitales }) =>
+    mutationFn: ({ id, datos }: { id: string; datos: Partial<SignosVitales> }) =>
       guardarSignosVitales(id, datos),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: citasKeys.all });
+      void queryClient.invalidateQueries({ queryKey: ['signos-vitales', variables.id] });
     },
   });
 };

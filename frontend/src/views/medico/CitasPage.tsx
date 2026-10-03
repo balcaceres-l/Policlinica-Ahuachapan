@@ -4,6 +4,7 @@ import Badge from '@/components/ui/Badge';
 import DataTable, { type Column } from '@/components/ui/DataTable';
 import SearchBar from '@/components/ui/SearchBar';
 import { useCitas } from '@/hooks/cita/useCitas';
+import { lapsoDeBloqueo } from '@/lib/bloqueo';
 import { normalizar } from '@/lib/utils';
 import { ESTADO_CITA_LABEL, TIPO_CITA_LABEL, type Cita } from '@/types/cita.types';
 
@@ -44,6 +45,15 @@ export function CitasPage() {
             <p className="text-[10px] font-bold text-danger">
               <i className="ri-alarm-warning-line mr-0.5 align-middle" />
               {cita.minutos_retraso} min de retraso
+            </p>
+          )}
+          {cita.afectada_por_bloqueo && cita.bloqueo && (
+            <p
+              className="mt-0.5 text-[10px] font-bold text-warning"
+              title="Esta cita cae dentro de un bloqueo de tu agenda; recepción contactará al paciente."
+            >
+              <i className="ri-calendar-close-line mr-0.5 align-middle" />
+              En bloqueo ({lapsoDeBloqueo(cita.bloqueo)})
             </p>
           )}
         </div>

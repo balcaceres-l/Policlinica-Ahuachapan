@@ -11,16 +11,16 @@ export type EstadoCita =
 export interface SignosVitales {
   id?: string;
   cita_id?: string;
-  presion_sistolica?: number;
-  presion_diastolica?: number;
-  frecuencia_cardiaca?: number;
-  frecuencia_respiratoria?: number;
-  temperatura_c?: number;
-  peso_kg?: number;
-  talla_cm?: number;
-  imc?: number;
-  saturacion_oxigeno?: number;
-  observaciones?: string;
+  presion_sistolica?: number | null;
+  presion_diastolica?: number | null;
+  frecuencia_cardiaca?: number | null;
+  frecuencia_respiratoria?: number | null;
+  temperatura_c?: number | null;
+  peso_kg?: number | null;
+  talla_cm?: number | null;
+  imc?: number | null;
+  saturacion_oxigeno?: number | null;
+  observaciones?: string | null;
   registrado_por_id?: string;
   fecha_registro?: string;
 }
@@ -44,9 +44,22 @@ export interface Cita {
   orden_atencion?: number;
   creado_por_id: string;
   signos_vitales?: SignosVitales;
+  consulta_id?: string;
   /** Minutos desde la hora agendada mientras el paciente no llega (RF-44). */
   minutos_retraso: number;
   retrasada: boolean;
+  /** Pendiente que cae dentro de un bloqueo de agenda: recepción debe contactar al paciente. */
+  afectada_por_bloqueo?: boolean;
+  bloqueo?: BloqueoDeCita | null;
+}
+
+/** El bloqueo que afecta a una cita, tal como lo resume el listado de citas. */
+export interface BloqueoDeCita {
+  id: string;
+  tipo_bloqueo: 'COMPLETO' | 'PARCIAL';
+  hora_inicio: string | null;
+  hora_fin: string | null;
+  motivo: string;
 }
 
 export interface DesplazarAgendaPayload {
@@ -76,6 +89,8 @@ export interface ReprogramarCitaPayload {
   fecha: string;
   hora_inicio: string;
   hora_fin: string;
+  medico_id?: string;
+  especialidad_id?: string;
 }
 
 export const ESTADO_CITA_LABEL: Record<EstadoCita, string> = {

@@ -97,21 +97,24 @@ export const desplazarAgenda = async (
 };
 
 /**
- * Pendiente de Sprint 2: los signos vitales cuelgan de `consulta`, que todavía
- * no existe en la base. La pantalla los calcula pero no se persisten.
+ * HU-18 — Guarda o actualiza los signos vitales de una cita (triaje de recepción o atención médica).
  */
 export const guardarSignosVitales = async (
-  _id: string,
-  datos: SignosVitales,
+  id: string,
+  datos: Partial<SignosVitales>,
 ): Promise<SignosVitales> => {
-  let imc = datos.imc;
-  if (datos.peso_kg && datos.talla_cm && datos.talla_cm > 0) {
-    const metros = datos.talla_cm / 100;
-    imc = Number((datos.peso_kg / (metros * metros)).toFixed(1));
-  }
-
-  throw Object.assign(
-    new Error('El registro de signos vitales estará disponible en el siguiente sprint.'),
-    { imcCalculado: imc },
+  const { data } = await api.put<ApiResponse<SignosVitales>>(
+    `/citas/${id}/signos-vitales`,
+    datos,
   );
+  return data.data;
+};
+
+export const getSignosVitales = async (
+  id: string,
+): Promise<SignosVitales | null> => {
+  const { data } = await api.get<ApiResponse<SignosVitales | null>>(
+    `/citas/${id}/signos-vitales`,
+  );
+  return data.data;
 };
