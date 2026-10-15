@@ -48,9 +48,32 @@ sincronizar no los altera.
     oficial, pero estática (archivos de 2009) y con derechos de reproducción reservados.
   - El catálogo del CEMECE está actualizado (2024), es de un centro colaborador
     designado por la OPS/OMS y su licencia permite usarlo.
-- **Por qué cargarlo en la base y no consultar la API en vivo:** la clínica puede
-  quedarse sin internet, y cada búsqueda sería una llamada externa con credenciales.
+- **Por qué cargarlo en la base y no consultar la API en vivo:**
+  1. **Idioma.** La API solo tiene la CIE-10 en inglés. Consultada en vivo, el médico
+     que escribe "dolor de garganta" no encontraría nada. El español existe porque se
+     cruzó y se guardó en la base.
+  2. **Internet.** Si la clínica se queda sin conexión o la OMS está caída, no se
+     podría codificar.
+  3. **Velocidad y credenciales.** Cada búsqueda sería una llamada a la OMS con la
+     clave secreta. Desde la base responde al instante y la clave no sale del servidor.
+
   La API solo se usa al sincronizar.
+
+## ¿Los códigos guardados en la base se desactualizan?
+
+No. El buscador consulta la base, pero la base es una copia idéntica de lo que la OMS
+publica:
+
+- La CIE-10 **2019 es la versión final**. La OMS no publica versiones nuevas de la
+  CIE-10, solo correcciones puntuales y muy raras.
+- Consultar la API en vivo devolvería exactamente los mismos 10 673 códigos que ya
+  están en la base.
+- Si la OMS publica una corrección, basta con volver a correr
+  `php artisan cie10:sincronizar-oms` y la base queda igual a la API.
+
+Mejoras propuestas, aún no implementadas:
+- Programar la sincronización para que corra sola, por ejemplo una vez al mes.
+- Mostrar en el buscador "CIE-10 OMS 2019 · sincronizado el …".
 
 ## Cómo se mantiene
 
