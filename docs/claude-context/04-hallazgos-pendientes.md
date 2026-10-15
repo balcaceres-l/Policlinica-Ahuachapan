@@ -76,9 +76,53 @@ Estado, qué cumple, qué no cumple, por qué no se arregla ahora (si aplica),
 y los pasos concretos para cuando se retome.
 -->
 
+## Sprint 2 — HU marcadas "Finalizada" en Jira que no cumplían (2026-10-13)
+
+**Estado: Resuelto (2026-10-13) en la rama `sprint3-kath`. Migraciones `2026_10_13_*`
+corridas en la base compartida el 2026-10-14. Catálogo CIE-10: ver `05-catalogo-cie10.md`.**
+
+Auditoría de las 18 HU del Sprint 2 contra sus criterios y el código de `development`:
+
+- **HU-44 (SCRUM-114) — catálogo CIE-10:** no existía tabla, endpoint ni buscador.
+  Ahora: tabla `catalogo_cie10`, `GET /catalogo/cie10` y botón "Buscar código CIE-10"
+  en la consulta. Se llena con la lista oficial de códigos de la OMS (CIE-10 2019) y
+  descripciones oficiales en español; decisión y razones en `05-catalogo-cie10.md`.
+- **HU-20 (SCRUM-113) — diagnóstico:** no había entidad; se escribía dentro del campo
+  "Diagnóstico y Plan Clínico" del plan de manejo y el historial devolvía
+  `'diagnosticos' => []` fijo. Ahora: tabla `diagnostico` ligada a la consulta, con código
+  CIE-10 opcional (sin código es texto libre). Los diagnósticos que ya estaban escritos
+  dentro del plan de manejo no se migraron.
+- **HU-41 (SCRUM-117) — registro de laboratorio:** no existía nada; `LaboratorioClinicoPage`
+  era una pantalla vacía con un botón sin acción. Ahora: tabla `resultado_laboratorio`,
+  registro como texto y/o adjunto (imagen o PDF en disco privado).
+- **HU-23 (SCRUM-118) — laboratorio cronológico:** leía una constante `MUESTRA` fija por
+  UUID de paciente. Ahora lee de la API. Se quitó la tabla de parámetros
+  (valor / referencia / alterado), que solo existía en los datos de muestra: el criterio
+  pide foto o texto.
+- **HU-22, HU-28, HU-26:** arrastraban lo anterior (diagnósticos vacíos, laboratorio de
+  muestra). Quedan resueltas con los cambios de arriba.
+- **HU-42 (SCRUM-121) — numeración de expediente:** dos registros simultáneos podían
+  calcular el mismo número y el segundo terminaba en error de base. Ahora reintenta con el
+  siguiente correlativo.
+- **Datos simulados eliminados:** `services/mockData.ts`, `consulta.mock.service.ts`, el
+  hook legacy `useConsultas()` y `ResultadosLaboratorioHistorial.tsx`.
+  `SelectorPacienteAutocomplete` mostraba pacientes falsos cuando la API devolvía vacío.
+- **Receta:** imprimía "JVPM: En trámite / Registrado" como texto fijo. Ahora usa
+  `users.jvpm`; si el médico no lo tiene, la línea se omite.
+
+Pendientes que no son de código:
+- `recetaPdf.ts` trae fijos la dirección, el teléfono y el correo de la policlínica.
+  Hay que confirmarlos con el cliente.
+- El lint del frontend reporta 7 problemas previos a estos cambios (`AgendarCitaModal`,
+  `IndicadorDisponibilidad`, `SignosVitalesModal`, `EspecialidadModal`,
+  `EditarPacienteModal`).
+- La regla "Solo frontend" de `CLAUDE.md` y la sección "Backend (no se toca)" de
+  `00-contexto-proyecto.md` ya no describen cómo se trabaja.
+
 ## HU-19 — Examen físico (EP-06, Sprint 2)
 
-**Estado: 🟠 completa en frontend con mock; pendiente de backend.**
+**Estado: Resuelto.** El backend ya existe (tabla `examen_fisico`). El texto de abajo se
+conserva como historial.
 
 - ✅ Criterio 51: `ConsultaPage.tsx` tiene un campo de texto libre para el examen
   físico, sin estructura por región o sistema.
@@ -91,7 +135,8 @@ y los pasos concretos para cuando se retome.
 
 ## HU-22 — Historial de diagnósticos y tratamientos (EP-07, Sprint 2)
 
-**Estado: 🟠 completa en frontend con mock; pendiente de backend.** Depende de
+**Estado: Resuelto (2026-10-13)**, ver la sección del Sprint 2 arriba. Historial:
+era 🟠 completa en frontend con mock; pendiente de backend. Dependía de
 HU-20 (diagnóstico), HU-44 (catálogo CIE-10) y HU-21 (plan de manejo), asignadas
 a otras personas, y de sus tablas. `ExpedientePage.tsx` también es el punto de
 entrada de HU-26 y HU-27 (Dennis): coordinar para no pisarse.
@@ -105,7 +150,7 @@ backend de EP-04 como "solo migraciones"; hoy ya tiene controladores y rutas.
 
 ## HU-35 — Bloqueo de agenda por ausencia (EP-04)
 
-**Estado: Resuelto (2026-10-02), pendiente de correr la migración en la base compartida.**
+**Estado: Resuelto (2026-10-02). La migración `bloqueo_agenda_parcial` ya está corrida en la base compartida (lote 3, verificado el 2026-10-14).**
 
 - **Bloqueo parcial:** antes solo existía el día completo (`bloqueo_agenda` no tenía horas y
   `crearBloqueo` rechazaba `PARCIAL` a propósito). Migración nueva

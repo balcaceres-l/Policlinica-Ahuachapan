@@ -92,8 +92,10 @@ export const generarHtmlReceta = (datos: DatosRecetaPdf): string => {
     especialidad: datos.medico?.especialidad || 'Medicina General',
     cargo: datos.medico?.cargo || 'Médico de Planta',
     telefono: datos.medico?.telefono || clinica.telefono,
-    jvpm: datos.medico?.jvpm || 'En trámite / Registrado',
+    jvpm: datos.medico?.jvpm?.trim() || '',
   };
+  // Sin número registrado la línea se omite: la receta no inventa uno.
+  const lineaJvpm = medico.jvpm ? `JVPM: ${escapeHtml(medico.jvpm)}` : '';
 
   const paciente = {
     nombre: datos.paciente?.nombre || 'Paciente',
@@ -521,7 +523,7 @@ export const generarHtmlReceta = (datos: DatosRecetaPdf): string => {
     <div class="header-medico">
       <div class="doc-name">${escapeHtml(medico.nombre)}</div>
       <div class="doc-spec">${escapeHtml(medico.especialidad)}</div>
-      <div class="doc-jvpm">JVPM: ${escapeHtml(medico.jvpm)}</div>
+      ${lineaJvpm ? `<div class="doc-jvpm">${lineaJvpm}</div>` : ''}
     </div>
   </header>
 
@@ -583,7 +585,7 @@ export const generarHtmlReceta = (datos: DatosRecetaPdf): string => {
         <div class="signature-line"></div>
         <div class="signature-doctor">${escapeHtml(medico.nombre)}</div>
         <div class="signature-spec">${escapeHtml(medico.especialidad)}</div>
-        <div class="signature-title">Firma y Sello Médico &bull; JVPM: ${escapeHtml(medico.jvpm)}</div>
+        <div class="signature-title">Firma y Sello Médico${lineaJvpm ? ` &bull; ${lineaJvpm}` : ''}</div>
       </div>
     </div>
   </footer>

@@ -29,6 +29,9 @@ export const editarUsuarioSchema = z.object({
       message: 'El teléfono debe tener el formato 1111-1111 (8 dígitos).',
     })
     .optional(),
+  /** Número de junta de vigilancia: JVPM para médicos, JVPE para enfermería. */
+  jvpm: z.string().trim().max(20, 'No puede superar los 20 caracteres.').optional(),
+  jvpe: z.string().trim().max(20, 'No puede superar los 20 caracteres.').optional(),
 });
 
 export const usuarioSchema = editarUsuarioSchema.extend({
@@ -48,5 +51,16 @@ export const usuarioFormDefaults: UsuarioFormValues = {
   cargo: '',
   rol: 'MEDICO',
   telefono: '',
+  jvpm: '',
+  jvpe: '',
   password: '',
 };
+
+/**
+ * Cada junta aplica a un rol: al cambiar de rol el número que ya no
+ * corresponde se envía en null para que no quede guardado.
+ */
+export const juntaSegunRol = (valores: Pick<EditarUsuarioFormValues, 'rol' | 'jvpm' | 'jvpe'>) => ({
+  jvpm: valores.rol === 'MEDICO' ? valores.jvpm?.trim() || null : null,
+  jvpe: valores.rol === 'RECEPCIONISTA' ? valores.jvpe?.trim() || null : null,
+});

@@ -1,21 +1,4 @@
-export type EstadoConsulta =
-  | 'espera'
-  | 'consulta'
-  | 'atendido';
-
-export type TipoAtencion =
-  | 'Con cita'
-  | 'Sin cita';
-
-export interface SignosVitales {
-  sistolica: string;
-  diastolica: string;
-  temperatura: string;
-  frecuencia: string;
-  saturacion: string;
-  peso: string;
-  talla: string;
-}
+import type { DiagnosticoConsulta } from '@/types/historial.types';
 
 export interface ExamenFisico {
   id?: string;
@@ -57,6 +40,8 @@ export interface ConsultaDetalle {
   medicoNombre?: string;
   medicoTelefono?: string;
   medicoCargo?: string;
+  /** Número de junta del médico; lo imprime la receta. */
+  medicoJvpm?: string | null;
   especialidad_atencion_id?: string | null;
   especialidadNombre?: string | null;
   fecha_hora_inicio: string;
@@ -91,36 +76,7 @@ export interface ConsultaDetalle {
     telefono?: string;
   };
   examenes_fisicos: ExamenFisico[];
+  diagnosticos?: DiagnosticoConsulta[];
   plan_manejo?: PlanManejo | null;
   receta?: RecetaMedica | null;
-}
-
-export interface PacienteConsulta {
-  id: string;
-  /** Paciente del sistema (expediente). Une la consulta con su historial. */
-  pacienteId: string;
-  nombre: string;
-  expediente: string;
-  edad: number;
-  tipo: TipoAtencion;
-  horaLlegada: string;
-  motivo: string;
-  estado: EstadoConsulta;
-
-  // Marcas de tiempo en milisegundos.
-  inicio?: number;
-  fin?: number;
-
-  signos: SignosVitales;
-
-  anamnesis: string;
-  examen: string;
-  diagnostico: string;
-  plan: string;
-  observaciones: string;
-
-  // Se completan al finalizar, para registrar la consulta en el historial.
-  medicoId?: string;
-  medicoNombre?: string;
-  especialidadNombre?: string;
 }

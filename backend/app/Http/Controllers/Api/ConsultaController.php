@@ -12,6 +12,7 @@ use App\Models\consulta;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class ConsultaController extends Controller
 {
@@ -67,6 +68,7 @@ class ConsultaController extends Controller
                 'cita.paciente',
                 'cita.signosVitales.registradoPor',
                 'examenesFisicos',
+                'diagnosticos',
                 'planManejo',
                 'receta.detalles',
             ])))->resolve(),
@@ -135,6 +137,7 @@ class ConsultaController extends Controller
                 'cita.paciente',
                 'cita.signosVitales.registradoPor',
                 'examenesFisicos',
+                'diagnosticos',
                 'planManejo',
                 'receta.detalles',
             ])))->resolve(),
@@ -145,7 +148,7 @@ class ConsultaController extends Controller
 
     /**
      * Guarda el progreso clínico de la consulta: motivo, notas, precio, total,
-     * examen físico, plan de manejo y receta médica.
+     * examen físico, diagnósticos, plan de manejo y receta médica.
      */
     public function update(Request $request, consulta $consulta): JsonResponse
     {
@@ -167,6 +170,10 @@ class ConsultaController extends Controller
             'examenes_fisicos' => ['nullable', 'array'],
             'examenes_fisicos.*.region_anatomica' => ['nullable', 'string', 'max:100'],
             'examenes_fisicos.*.hallazgos' => ['nullable', 'string'],
+            // HU-20 / HU-44 — el código es opcional: sin él queda como texto libre.
+            'diagnosticos' => ['nullable', 'array'],
+            'diagnosticos.*.descripcion' => ['required', 'string', 'max:500'],
+            'diagnosticos.*.codigo_cie10' => ['nullable', 'string', 'max:10', Rule::exists('catalogo_cie10', 'codigo')],
             'plan_manejo' => ['nullable', 'array'],
             'plan_manejo.descripcion' => ['nullable', 'string'],
             'plan_manejo.indicaciones' => ['nullable', 'string'],
@@ -209,6 +216,17 @@ class ConsultaController extends Controller
                             ]);
                         }
                     }
+                }
+            }
+
+            // Diagnósticos
+            if (array_key_exists('diagnosticos', $validado)) {
+                $consulta->diagnosticos()->delete();
+                foreach ($validado['diagnosticos'] ?? [] as $dx) {
+                    $consulta->diagnosticos()->create([
+                        'codigo_cie10' => $dx['codigo_cie10'] ?? null,
+                        'descripcion' => trim($dx['descripcion']),
+                    ]);
                 }
             }
 
@@ -263,6 +281,7 @@ class ConsultaController extends Controller
                 'cita.paciente',
                 'cita.signosVitales.registradoPor',
                 'examenesFisicos',
+                'diagnosticos',
                 'planManejo',
                 'receta.detalles',
             ])))->resolve(),
@@ -325,6 +344,7 @@ class ConsultaController extends Controller
                 'cita.paciente',
                 'cita.signosVitales.registradoPor',
                 'examenesFisicos',
+                'diagnosticos',
                 'planManejo',
                 'receta.detalles',
             ])))->resolve(),

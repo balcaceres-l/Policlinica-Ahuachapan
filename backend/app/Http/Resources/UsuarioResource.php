@@ -17,6 +17,8 @@ class UsuarioResource extends JsonResource
             'rol' => $this->rol,
             'estado' => $this->estado,
             'telefono' => $this->telefono,
+            'jvpm' => $this->jvpm,
+            'jvpe' => $this->jvpe,
             'fechaRegistro' => $this->created_at?->toDateString(),
             'horarios' => HorarioMedicoResource::collection($this->whenLoaded('horarios')),
         ];

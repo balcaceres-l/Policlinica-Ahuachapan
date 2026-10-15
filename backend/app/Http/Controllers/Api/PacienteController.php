@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Concerns\RespondsWithJson;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\DiagnosticoResource;
 use App\Http\Resources\PacienteResource;
 use App\Http\Resources\SignosVitalesResource;
 use App\Models\paciente;
 use App\Models\responsable;
 use Carbon\Carbon;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -161,25 +163,40 @@ class PacienteController extends Controller
             $anio = now()->year;
 
             $correlativo = paciente::where('numero_expediente', 'LIKE', "{$prefijo}%-{$anio}")->count() + 1;
-            $expediente = sprintf('%s%02d-%d', $prefijo, $correlativo, $anio);
-            while (paciente::where('numero_expediente', $expediente)->exists()) {
-                $correlativo++;
-                $expediente = sprintf('%s%02d-%d', $prefijo, $correlativo, $anio);
-            }
 
-            $paciente = paciente::create([
-                'numero_expediente' => $expediente,
-                'nombre_completo' => $nombreLimpio,
-                'fecha_nacimiento' => $request->fecha_nacimiento,
-                'dui' => $docPaciente,
-                'telefono' => $telPaciente,
-                'direccion' => $request->filled('direccion') ? trim((string) $request->direccion) : null,
-                'es_menor_edad' => $esMenor,
-                'estado' => 'ACTIVO',
-                'id_responsable' => $idResponsable,
-                'id_registrado_por' => $request->user()->id,
-                'fecha_registro' => now(),
-            ]);
+            // Dos registros simultáneos pueden calcular el mismo correlativo. La
+            // columna es única: si otro lo ganó, se toma el siguiente (HU-42).
+            $paciente = null;
+            for ($intento = 1; $paciente === null; $intento++) {
+                $expediente = sprintf('%s%02d-%d', $prefijo, $correlativo, $anio);
+                while (paciente::where('numero_expediente', $expediente)->exists()) {
+                    $correlativo++;
+                    $expediente = sprintf('%s%02d-%d', $prefijo, $correlativo, $anio);
+                }
+
+                try {
+                    // El punto de guardado evita que el choque deje inservible
+                    // la transacción en motores que la abortan al fallar.
+                    $paciente = DB::transaction(fn () => paciente::create([
+                        'numero_expediente' => $expediente,
+                        'nombre_completo' => $nombreLimpio,
+                        'fecha_nacimiento' => $request->fecha_nacimiento,
+                        'dui' => $docPaciente,
+                        'telefono' => $telPaciente,
+                        'direccion' => $request->filled('direccion') ? trim((string) $request->direccion) : null,
+                        'es_menor_edad' => $esMenor,
+                        'estado' => 'ACTIVO',
+                        'id_responsable' => $idResponsable,
+                        'id_registrado_por' => $request->user()->id,
+                        'fecha_registro' => now(),
+                    ]));
+                } catch (UniqueConstraintViolationException $e) {
+                    if ($intento >= 5) {
+                        throw $e;
+                    }
+                    $correlativo++;
+                }
+            }
 
             return $this->success(
                 (new PacienteResource($paciente->load('responsable')))->resolve(),
@@ -285,6 +302,7 @@ class PacienteController extends Controller
                 'signosVitales.registradoPor',
                 'consulta.especialidad',
                 'consulta.examenesFisicos',
+                'consulta.diagnosticos',
                 'consulta.planManejo',
                 'consulta.receta.detalles',
             ])
@@ -342,13 +360,16 @@ class PacienteController extends Controller
                 'fecha_hora_fin' => $consulta?->fecha_hora_fin?->toDateTimeString(),
                 'medico_id' => $cita->id_medico,
                 'medicoNombre' => $cita->medico?->nombre_completo ?? 'Dr. Médico',
+                'medicoJvpm' => $cita->medico?->jvpm,
                 'especialidad_atencion_id' => $consulta?->id_especialidad_atencion ?? $cita->id_especialidad,
                 'especialidadNombre' => $consulta?->especialidad?->nombre ?? $cita->especialidad?->nombre,
                 'motivo_consulta' => $consulta?->motivo_consulta,
                 'notas_adicionales' => $consulta?->notas_adicionales,
                 'examen_fisico' => $examenTexto,
                 'examenes_fisicos' => $examenesFormateados,
-                'diagnosticos' => [],
+                'diagnosticos' => $consulta
+                    ? DiagnosticoResource::collection($consulta->diagnosticos)->resolve()
+                    : [],
                 'plan_manejo' => $consulta?->planManejo ? [
                     'id' => $consulta->planManejo->id_plan,
                     'consulta_id' => $consulta->id_consulta,

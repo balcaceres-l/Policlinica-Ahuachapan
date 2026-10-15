@@ -119,6 +119,9 @@ class UsuarioController extends Controller
             'rol' => ['required', Rule::in(['ADMINISTRADOR', 'MEDICO', 'RECEPCIONISTA'])],
             'estado' => ['sometimes', Rule::in(['ACTIVO', 'INACTIVO'])],
             'telefono' => ['nullable', 'string', 'max:25'],
+            // Número de junta de vigilancia: lo imprime la receta.
+            'jvpm' => ['nullable', 'string', 'max:20', Rule::unique('users', 'jvpm')->ignore($user)],
+            'jvpe' => ['nullable', 'string', 'max:20', Rule::unique('users', 'jvpe')->ignore($user)],
         ];
 
         // Solo al crear. Cambiar la contraseña pasa por

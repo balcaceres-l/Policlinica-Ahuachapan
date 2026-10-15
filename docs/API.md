@@ -32,7 +32,7 @@ Cambiar la contraseña revoca las demás sesiones y conserva la actual.
 | Método | Ruta | HU | Cuerpo |
 |---|---|---|---|
 | `GET` | `/usuarios` | HU-06 | query: `rol`, `estado`, `buscar` |
-| `POST` | `/usuarios` | HU-03 | `nombre_completo`, `usuario`, `cargo`, `rol`, `telefono?`, `password` |
+| `POST` | `/usuarios` | HU-03 | `nombre_completo`, `usuario`, `cargo`, `rol`, `telefono?`, `jvpm?`, `jvpe?`, `password` |
 | `GET` | `/usuarios/{id}` | — | — |
 | `PUT` | `/usuarios/{id}` | HU-04 | igual que POST, **sin** `password` |
 | `PATCH` | `/usuarios/{id}/estado` | HU-05 | `estado` |
@@ -43,6 +43,8 @@ Los tres filtros del listado son opcionales y combinables. Sin paginación, orde
 - Desactivar revoca los tokens del usuario.
 - Un administrador no puede desactivarse a sí mismo (`422`).
 - `usuario` es un correo y es único (`422` si se repite).
+- `jvpm` y `jvpe` son el número de junta de vigilancia del profesional (médica y de
+  enfermería). Opcionales y únicos. La receta imprime el `jvpm` del médico.
 - No hay `DELETE`: las cuentas se desactivan.
 
 ---
@@ -148,6 +150,49 @@ citas por sí solos: las que quedan dentro se devuelven para que recepción las 
 
 ---
 
+## Diagnósticos y catálogo CIE-10 (HU-20, HU-44) — rol `MEDICO`
+
+| Método | Ruta | Query / Cuerpo |
+|---|---|---|
+| `GET` | `/catalogo/cie10` | query: `buscar` (2 a 100 caracteres). Devuelve hasta 25 `{ codigo, descripcion }`. |
+| `PUT` | `/consultas/{id}` | además de lo que ya aceptaba: `diagnosticos: [{ descripcion, codigo_cie10? }]`. |
+
+- La búsqueda acepta una frase de síntomas o el inicio de un código. Ignora conectores,
+  números y palabras de dos letras; basta con que coincida una palabra y primero salen
+  las filas que coinciden con más.
+- Con el catálogo vacío responde `503` con un mensaje para el médico.
+- `codigo_cie10` es opcional: sin él el diagnóstico queda como texto libre. Si viene,
+  debe existir en el catálogo (`422`).
+- Enviar `diagnosticos` reemplaza la lista completa; no enviarlo la deja como está.
+- `GET /consultas/{id}` y `GET /pacientes/{id}/historial` devuelven `diagnosticos`
+  (`id`, `consulta_id`, `codigo_cie10`, `descripcion`, `es_texto_libre`) y `medicoJvpm`.
+
+El catálogo se arma con `php artisan cie10:sincronizar-oms`: códigos de la API de la OMS
+(CIE-10 2019) y descripciones en español de `backend/database/data/cie10_descripciones_es.csv`.
+Requiere `ICD_CLIENT_ID` e `ICD_CLIENT_SECRET` en el `.env`. Detalle y razones en
+`docs/claude-context/05-catalogo-cie10.md`. Para cargar un CSV propio sigue disponible
+`php artisan cie10:importar <archivo.csv>`.
+
+---
+
+## Resultados de laboratorio (HU-41, HU-23)
+
+| Método | Ruta | Acceso | Query / Cuerpo |
+|---|---|---|---|
+| `GET` | `/pacientes/{id}/laboratorio` | `MEDICO`, `RECEPCIONISTA` | Resultados del paciente, del más reciente al más antiguo. |
+| `POST` | `/pacientes/{id}/laboratorio` | `MEDICO` | `multipart/form-data`: `nombre_examen`, `fecha_examen`, `resultado_texto?`, `archivo?`, `consulta_id?`. |
+| `GET` | `/laboratorio` | `MEDICO` | Últimos 100 resultados de todos los pacientes. |
+| `GET` | `/laboratorio/{id}/archivo` | `MEDICO`, `RECEPCIONISTA` | Devuelve el adjunto. No hay URL pública. |
+| `DELETE` | `/laboratorio/{id}` | `MEDICO` | Solo quien lo registró (`403` para los demás). |
+
+- Hace falta `resultado_texto`, `archivo` o ambos (`422` si faltan los dos).
+- `archivo`: JPG, PNG, WEBP o PDF, máximo 5 MB. El límite real también depende de
+  `upload_max_filesize` de PHP (2 MB por defecto).
+- `fecha_examen` no puede ser futura.
+- `consulta_id` debe ser una consulta de ese mismo paciente.
+
+---
+
 ## Recursos
 
 **UsuarioResource**
@@ -200,5 +245,5 @@ Los mensajes de validación llegan en español.
 
 ## Aún sin implementar
 
-Las tablas de pacientes, citas, horarios, consultas, diagnósticos, recetas y documentos
-médicos existen en la base, pero todavía no tienen endpoints.
+Catálogo de medicamentos (HU-45), constancias (HU-31) y referencias médicas (HU-32):
+no tienen tabla ni endpoint.

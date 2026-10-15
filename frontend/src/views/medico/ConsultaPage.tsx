@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import CronometroConsulta from '@/components/medico/CronometroConsulta';
+import DiagnosticosConsulta, { type DiagnosticoLocal } from '@/components/medico/DiagnosticosConsulta';
 import HistorialClinicoCompleto from '@/components/expediente/HistorialClinicoCompleto';
 import RecetaPreviewModal from '@/components/medico/RecetaPreviewModal';
 import { useGuardarSignosVitales } from '@/hooks/cita/useCitas';
@@ -86,6 +87,9 @@ export default function ConsultaPage() {
   // Exámenes físicos
   const [examenesFisicos, setExamenesFisicos] = useState<ExamenFisicoLocal[]>([]);
 
+  /** HU-20 / HU-44 — diagnósticos con código CIE-10 opcional. */
+  const [diagnosticos, setDiagnosticos] = useState<DiagnosticoLocal[]>([]);
+
   // Plan de manejo
   const [planDescripcion, setPlanDescripcion] = useState('');
   const [planIndicaciones, setPlanIndicaciones] = useState('');
@@ -139,6 +143,13 @@ export default function ConsultaPage() {
     } else {
       setExamenesFisicos([{ region_anatomica: 'Examen General', hallazgos: '' }]);
     }
+
+    setDiagnosticos(
+      (consulta.diagnosticos ?? []).map((dx) => ({
+        descripcion: dx.descripcion,
+        codigo_cie10: dx.codigo_cie10,
+      })),
+    );
 
     setPlanDescripcion(consulta.plan_manejo?.descripcion ?? '');
     setPlanIndicaciones(consulta.plan_manejo?.indicaciones ?? '');
@@ -324,6 +335,7 @@ export default function ConsultaPage() {
         especialidad: consulta.especialidadNombre ?? undefined,
         telefono: consulta.medicoTelefono ?? undefined,
         cargo: consulta.medicoCargo ?? undefined,
+        jvpm: consulta.medicoJvpm,
       },
       paciente: {
         nombre: consulta.paciente?.nombre,
@@ -425,6 +437,9 @@ export default function ConsultaPage() {
       segundos_transcurridos: segs,
       en_pausa: opciones?.en_pausa !== undefined ? opciones.en_pausa : enPausa,
       examenes_fisicos: efLimpios.length > 0 ? efLimpios : undefined,
+      diagnosticos: diagnosticos
+        .filter((dx) => dx.descripcion.trim() !== '')
+        .map((dx) => ({ descripcion: dx.descripcion.trim(), codigo_cie10: dx.codigo_cie10 })),
       plan_manejo: tienePlan
         ? {
             descripcion: planDescripcion.trim() || null,
@@ -946,7 +961,10 @@ export default function ConsultaPage() {
         <main className="space-y-6">
           {/* HU-28 — historial clínico completo embebido en la consulta */}
           {consulta.paciente?.id && (
-            <HistorialClinicoCompleto pacienteId={consulta.paciente.id} />
+            <HistorialClinicoCompleto
+              pacienteId={consulta.paciente.id}
+              consultaId={activa ? consulta.id : null}
+            />
           )}
 
           {/* SECCIÓN 1: Motivo de Consulta y Anamnesis */}
@@ -1091,28 +1109,50 @@ export default function ConsultaPage() {
             </div>
           </section>
 
-          {/* SECCIÓN 3: Plan de Manejo e Indicaciones */}
+          {/* SECCIÓN 3: Diagnóstico — HU-20 / HU-44 */}
           <section className="rounded-card border border-line bg-surface p-6 shadow-card space-y-4">
             <div className="flex items-center gap-2 border-b border-line pb-3">
               <span className="flex size-7 items-center justify-center rounded-full bg-brand-50 text-xs font-bold text-brand-700">
                 3
               </span>
               <div>
+                <h2 className="text-base font-bold text-ink">Diagnóstico</h2>
+                <p className="text-xs text-muted">
+                  Diagnóstico presuntivo o definitivo, con su código CIE-10 cuando aplique
+                </p>
+              </div>
+            </div>
+
+            <DiagnosticosConsulta
+              diagnosticos={diagnosticos}
+              onChange={setDiagnosticos}
+              disabled={!activa}
+              inputClassName={inputClase}
+            />
+          </section>
+
+          {/* SECCIÓN 4: Plan de Manejo e Indicaciones */}
+          <section className="rounded-card border border-line bg-surface p-6 shadow-card space-y-4">
+            <div className="flex items-center gap-2 border-b border-line pb-3">
+              <span className="flex size-7 items-center justify-center rounded-full bg-brand-50 text-xs font-bold text-brand-700">
+                4
+              </span>
+              <div>
                 <h2 className="text-base font-bold text-ink">Plan de Manejo</h2>
                 <p className="text-xs text-muted">
-                  Diagnóstico presuntivo o definitivo e indicaciones no farmacológicas
+                  Conducta a seguir e indicaciones no farmacológicas
                 </p>
               </div>
             </div>
 
             <div className="space-y-4">
               <label className="block text-sm font-semibold text-ink">
-                Diagnóstico y Plan Clínico
+                Plan Clínico
                 <textarea
                   rows={3}
                   disabled={!activa}
                   className={inputClase}
-                  placeholder="Diagnóstico clínico, conducta a seguir, solicitud de exámenes de laboratorio o imágenes..."
+                  placeholder="Conducta a seguir, solicitud de exámenes de laboratorio o imágenes..."
                   value={planDescripcion}
                   onChange={(e) => setPlanDescripcion(e.target.value)}
                 />
@@ -1132,12 +1172,12 @@ export default function ConsultaPage() {
             </div>
           </section>
 
-          {/* SECCIÓN 4: Receta Médica */}
+          {/* SECCIÓN 5: Receta Médica */}
           <section className="rounded-card border border-line bg-surface p-6 shadow-card space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
               <div className="flex items-center gap-2">
                 <span className="flex size-7 items-center justify-center rounded-full bg-brand-50 text-xs font-bold text-brand-700">
-                  4
+                  5
                 </span>
                 <div>
                   <h2 className="text-base font-bold text-ink">Receta Médica</h2>

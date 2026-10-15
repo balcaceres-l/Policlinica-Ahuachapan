@@ -2,7 +2,6 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import Badge from '@/components/ui/Badge';
 import { usePacientes } from '@/hooks/paciente/usePacientes';
 import { getIniciales, normalizar } from '@/lib/utils';
-import { mockPacientes } from '@/services/mockData';
 import type { Paciente } from '@/types/paciente.types';
 
 interface SelectorPacienteAutocompleteProps {
@@ -22,9 +21,9 @@ export function SelectorPacienteAutocomplete({
   disabled = false,
   error,
 }: SelectorPacienteAutocompleteProps) {
-  const { data: rawPacientes = [] } = usePacientes();
+  const { data: rawPacientes } = usePacientes();
   const pacientes: Paciente[] = useMemo(() => {
-    return Array.isArray(rawPacientes) && rawPacientes.length > 0 ? rawPacientes : mockPacientes;
+    return Array.isArray(rawPacientes) ? rawPacientes : [];
   }, [rawPacientes]);
 
   const [busqueda, setBusqueda] = useState('');

@@ -1,13 +1,15 @@
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import toast from 'react-hot-toast';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
+import CampoJuntaVigilancia from '@/components/usuario/CampoJuntaVigilancia';
 import { useCrearUsuario } from '@/hooks/usuario/useUsuarios';
 import { extraerMensajeError } from '@/lib/apiError';
 import { ROL_LABEL } from '@/lib/constants/roles';
 import { formatearTelefono } from '@/lib/utils';
 import {
+  juntaSegunRol,
   usuarioFormDefaults,
   usuarioSchema,
   type UsuarioFormValues,
@@ -35,11 +37,13 @@ export function NuevoUsuarioModal({ isOpen, onClose }: NuevoUsuarioModalProps) {
     reset,
     setError,
     setValue,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<UsuarioFormValues>({
     resolver: zodResolver(usuarioSchema),
     defaultValues: usuarioFormDefaults,
   });
+  const rol = useWatch({ control, name: 'rol' });
 
   const cerrar = () => {
     reset(usuarioFormDefaults);
@@ -51,6 +55,7 @@ export function NuevoUsuarioModal({ isOpen, onClose }: NuevoUsuarioModalProps) {
       const creado = await crear.mutateAsync({
         ...valores,
         telefono: valores.telefono?.trim() || undefined,
+        ...juntaSegunRol(valores),
       });
       toast.success(`Cuenta de ${creado.nombreCompleto} registrada.`);
       cerrar();
@@ -159,6 +164,15 @@ export function NuevoUsuarioModal({ isOpen, onClose }: NuevoUsuarioModalProps) {
             {errors.cargo && <p className="mt-1.5 text-xs text-danger">{errors.cargo.message}</p>}
           </div>
         </div>
+
+        <CampoJuntaVigilancia
+          rol={rol}
+          idPrefijo="nuevo"
+          registrar={(campo) => register(campo)}
+          mensajeError={(campo) => errors[campo]?.message}
+          disabled={isSubmitting}
+          className={CLASE_CAMPO}
+        />
 
         <div className="mb-4 grid gap-4 sm:grid-cols-2">
           <div>

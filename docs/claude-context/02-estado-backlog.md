@@ -69,15 +69,34 @@ detallado está en `03-plan-agendamiento.md`.
 - Los horarios se pueden eliminar, con modal de confirmación. La tabla
   `horarios_medicos` no tiene columna de estado, así que no se desactivan.
 
-## Sprint 2 — Expediente clínico y consulta (HU de Katherinne)
+## Sprint 2 — Expediente clínico y consulta
+
+Cierre del sprint en la rama `sprint3-kath` (2026-10-13). Todo con API real y
+base de datos; no quedan datos simulados en el frontend (`services/mockData.ts`
+y `consulta.mock.service.ts` se eliminaron). Detalle de lo que se encontró en
+`04-hallazgos-pendientes.md`.
 
 | Jira | HU | Estado |
 |---|---|---|
-| SCRUM-112 | HU-19 Examen físico | 🟠 completa en frontend con mock: campo de texto libre en `ConsultaPage.tsx`; al finalizar, la consulta pasa al historial del paciente. Falta backend. |
-| SCRUM-116 | HU-22 Historial de diagnósticos y tratamientos | 🟠 completa en frontend con mock: `components/expediente/HistorialDiagnosticos.tsx`, ruta `/medico/expediente/:pacienteId`. Falta backend y depende de HU-20, 21 y 44. |
+| SCRUM-112 | HU-19 Examen físico | ✅ API real: tabla `examen_fisico`, sección 2 de `ConsultaPage.tsx`. |
+| SCRUM-113 | HU-20 Registro de diagnóstico | ✅ API real: tabla `diagnostico`, `components/medico/DiagnosticosConsulta.tsx` (sección 3 de `ConsultaPage.tsx`). |
+| SCRUM-114 | HU-44 Catálogo CIE-10 | ✅ API real: tabla `catalogo_cie10`, `GET /catalogo/cie10`, `components/medico/BuscarCie10Modal.tsx`. Códigos oficiales de la OMS (CIE-10 2019) con descripción en español; se carga con `php artisan cie10:sincronizar-oms`. Decisión en `05-catalogo-cie10.md`. |
+| SCRUM-116 | HU-22 Historial de diagnósticos y tratamientos | ✅ API real: `components/expediente/HistorialDiagnosticos.tsx`; ya recibe los diagnósticos. |
+| SCRUM-117 | HU-41 Registro de resultados de laboratorio | ✅ API real: tabla `resultado_laboratorio`, `components/expediente/RegistrarResultadoLaboratorioModal.tsx`. |
+| SCRUM-118 | HU-23 Consulta cronológica de laboratorio | ✅ API real: `components/expediente/LaboratorioCronologico.tsx`, `views/medico/LaboratorioClinicoPage.tsx`. |
+| SCRUM-121 | HU-42 Numeración de expediente | ✅ reintento ante choque del número único en `PacienteController::store`. |
+| SCRUM-125 / SCRUM-123 | HU-28 / HU-26 | ✅ la pestaña de laboratorio y los diagnósticos ya salen de la base. |
 
-Contrato de datos: `types/historial.types.ts`. Qué deben saber los demás y qué
-falta en backend: `docs/avance-historial-clinico-hu-19-22.md`.
+Fuera de backlog, pedido por el cliente: `users.jvpm` y `users.jvpe` (número de
+junta de vigilancia). Se capturan en el formulario de usuarios y la receta
+imprime el JVPM del médico.
+
+Las migraciones `2026_10_13_*` ya están corridas en la base local y en la
+compartida (lotes 6 y 7, 2026-10-14). El catálogo CIE-10 está cargado en ambas: 10 673
+códigos de la OMS (CIE-10 2019), 10 627 con descripción en español.
+
+Contrato de datos: `types/historial.types.ts`, `types/laboratorio.types.ts`,
+`types/cie10.types.ts`. Endpoints: `docs/API.md`.
 
 ## Cómo actualizar este archivo
 
