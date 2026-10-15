@@ -13,6 +13,7 @@
 @docs/claude-context/02-estado-backlog.md
 @docs/claude-context/03-plan-agendamiento.md
 @docs/claude-context/04-hallazgos-pendientes.md
+@docs/claude-context/05-catalogo-cie10.md
 
 ---
 

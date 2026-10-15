@@ -55,10 +55,12 @@ equipo de backend trabaja esto por separado. Lo que hoy existe:
   vitales y consultas (abrir, ver, finalizar). Las tablas existentes son
   `paciente`, `responsable`, `historial_clinico`, `horario_medico`,
   `bloqueo_agenda`, `cita`, `consulta` y `signos_vitales` (nombres en singular).
-- **Todavía NO existen** (ni tabla ni endpoint): pacientes (rutas), catálogo
-  CIE-10, diagnósticos, plan de manejo, examen físico, medicamentos, recetas y
-  documentos clínicos. La propuesta para historial clínico está en
-  `docs/avance-historial-clinico-hu-19-22.md`.
+- **Actualizado (2026-10-13):** también existen con tabla y endpoint pacientes,
+  examen físico, plan de manejo, receta (`receta_medica`, `detalle_receta`),
+  diagnósticos (`diagnostico`), catálogo CIE-10 (`catalogo_cie10`) y resultados
+  de laboratorio (`resultado_laboratorio`). Detalle en `docs/API.md`.
+- **Todavía NO existen** (ni tabla ni endpoint): catálogo de medicamentos,
+  constancias y referencias médicas.
 
 ## Estructura de carpetas del frontend
 
