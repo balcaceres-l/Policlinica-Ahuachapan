@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BloqueoAgendaController;
+use App\Http\Controllers\Api\CatalogoCie10Controller;
 use App\Http\Controllers\Api\CatalogoEspecialidadController;
 use App\Http\Controllers\Api\CitaController;
 use App\Http\Controllers\Api\ConsultaController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\Api\EspecialidadController;
 use App\Http\Controllers\Api\HorarioMedicoController;
 use App\Http\Controllers\Api\MedicoEspecialidadController;
 use App\Http\Controllers\Api\PacienteController;
+use App\Http\Controllers\Api\ResultadoLaboratorioController;
 use App\Http\Controllers\Api\SignosVitalesController;
 use App\Http\Controllers\Api\UsuarioController;
 use Illuminate\Support\Facades\Route;
@@ -97,6 +99,21 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:RECEPCIONISTA,MEDICO')->group(function () {
         Route::put('/pacientes/{paciente}', [PacienteController::class, 'update']);
         Route::delete('/pacientes/{paciente}', [PacienteController::class, 'destroy']);
+    });
+
+    // HU-23 — el expediente es compartido: médicos y recepción consultan los
+    // resultados de laboratorio. Registrarlos (HU-41) es del médico.
+    Route::middleware('role:MEDICO,RECEPCIONISTA')->group(function () {
+        Route::get('/pacientes/{paciente}/laboratorio', [ResultadoLaboratorioController::class, 'porPaciente']);
+        Route::get('/laboratorio/{resultado}/archivo', [ResultadoLaboratorioController::class, 'archivo']);
+    });
+    Route::middleware('role:MEDICO')->group(function () {
+        Route::get('/laboratorio', [ResultadoLaboratorioController::class, 'index']);
+        Route::post('/pacientes/{paciente}/laboratorio', [ResultadoLaboratorioController::class, 'store']);
+        Route::delete('/laboratorio/{resultado}', [ResultadoLaboratorioController::class, 'destroy']);
+
+        // HU-44 — búsqueda de códigos CIE-10 al registrar el diagnóstico.
+        Route::get('/catalogo/cie10', [CatalogoCie10Controller::class, 'index']);
     });
 
     // HU-39 — el médico abre la consulta eligiendo con qué especialidad atiende.

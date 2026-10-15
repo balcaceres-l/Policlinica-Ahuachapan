@@ -389,6 +389,7 @@ export function ConsultaHistorialCard({ consulta, pacienteInfo }: ConsultaHistor
             medico: {
               nombre: consulta.medicoNombre,
               especialidad: consulta.especialidadNombre ?? undefined,
+              jvpm: consulta.medicoJvpm,
             },
             paciente: {
               nombre: pacienteInfo?.nombre,

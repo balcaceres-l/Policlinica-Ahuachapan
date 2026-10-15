@@ -65,6 +65,11 @@ class consulta extends Model
         return $this->hasMany(examen_fisico::class, 'id_consulta', 'id_consulta');
     }
 
+    public function diagnosticos(): HasMany
+    {
+        return $this->hasMany(diagnostico::class, 'id_consulta', 'id_consulta');
+    }
+
     public function planManejo(): HasOne
     {
         return $this->hasOne(plan_manejo::class, 'id_consulta', 'id_consulta');

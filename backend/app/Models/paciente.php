@@ -66,6 +66,11 @@ class paciente extends Model
         return $this->hasMany(cita::class, 'id_paciente', 'id_paciente');
     }
 
+    public function resultadosLaboratorio(): HasMany
+    {
+        return $this->hasMany(resultado_laboratorio::class, 'id_paciente', 'id_paciente');
+    }
+
     public function registradoPor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'id_registrado_por', 'id');

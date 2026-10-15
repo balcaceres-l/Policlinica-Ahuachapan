@@ -1,8 +1,7 @@
 import api from '@/services/api';
 import type { ApiResponse } from '@/types/api.types';
 import type { Cita } from '@/types/cita.types';
-import type { ConsultaDetalle, PacienteConsulta } from '@/types/consulta';
-import { consultaMockService } from './consulta.mock.service';
+import type { ConsultaDetalle } from '@/types/consulta';
 
 export interface GuardarConsultaPayload {
   motivo_consulta?: string | null;
@@ -15,6 +14,11 @@ export interface GuardarConsultaPayload {
     id_examen?: string;
     region_anatomica?: string | null;
     hallazgos?: string | null;
+  }>;
+  /** HU-20 / HU-44 — `codigo_cie10` en null lo guarda como texto libre. */
+  diagnosticos?: Array<{
+    descripcion: string;
+    codigo_cie10?: string | null;
   }>;
   plan_manejo?: {
     descripcion?: string | null;
@@ -97,14 +101,3 @@ export const getEspecialidadesDisponibles = async (): Promise<EspecialidadDispon
   );
   return data.data;
 };
-
-export interface ConsultaService {
-  suscribir: (callback: () => void) => () => void;
-  obtenerPacientes: () => PacienteConsulta[];
-  iniciar: (id: string) => Promise<boolean>;
-  modificar: (id: string, cambios: Partial<PacienteConsulta>) => Promise<void>;
-  finalizar: (id: string) => Promise<void>;
-  reiniciar: () => Promise<void>;
-}
-
-export const consultasService: ConsultaService = consultaMockService;

@@ -32,6 +32,8 @@ class User extends Authenticatable
         'rol',
         'estado',
         'telefono',
+        'jvpm',
+        'jvpe',
         'password',
     ];
 

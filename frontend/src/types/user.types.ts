@@ -13,6 +13,10 @@ export interface Usuario {
   rol: RolUsuario;
   estado: EstadoUsuario;
   telefono?: string;
+  /** Junta de Vigilancia de la Profesión Médica; lo imprime la receta. */
+  jvpm?: string | null;
+  /** Junta de Vigilancia de la Profesión de Enfermería. */
+  jvpe?: string | null;
   fechaRegistro: string;
   /** Solo viene en el catálogo, que los carga para recepción. */
   horarios?: HorarioMedico[];
@@ -25,6 +29,8 @@ export interface EditarUsuario {
   cargo: string;
   rol: RolUsuario;
   telefono?: string;
+  jvpm?: string | null;
+  jvpe?: string | null;
 }
 
 export interface NuevoUsuario extends EditarUsuario {

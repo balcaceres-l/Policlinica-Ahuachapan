@@ -35,4 +35,17 @@ return [
         ],
     ],
 
+    /*
+     * API de la OMS para la CIE (HU-44). Las credenciales se obtienen en
+     * https://icd.who.int/icdapi ("View API access key"). La CIE-10 2019 es su
+     * versión final; se sincroniza con `php artisan cie10:sincronizar-oms`.
+     */
+    'oms_icd' => [
+        'client_id' => env('ICD_CLIENT_ID'),
+        'client_secret' => env('ICD_CLIENT_SECRET'),
+        'token_url' => env('ICD_TOKEN_URL', 'https://icdaccessmanagement.who.int/connect/token'),
+        'api_url' => env('ICD_API_URL', 'https://id.who.int'),
+        'release_cie10' => env('ICD10_RELEASE', '2019'),
+    ],
+
 ];

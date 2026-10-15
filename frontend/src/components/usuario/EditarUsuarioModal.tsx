@@ -1,15 +1,17 @@
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import toast from 'react-hot-toast';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
+import CampoJuntaVigilancia from '@/components/usuario/CampoJuntaVigilancia';
 import { useActualizarUsuario } from '@/hooks/usuario/useUsuarios';
 import { extraerMensajeError } from '@/lib/apiError';
 import { ROL_LABEL } from '@/lib/constants/roles';
 import { formatearTelefono } from '@/lib/utils';
 import {
   editarUsuarioSchema,
+  juntaSegunRol,
   type EditarUsuarioFormValues,
 } from '@/lib/validations/usuarioSchema';
 import type { RolUsuario, Usuario } from '@/types/user.types';
@@ -35,10 +37,12 @@ export function EditarUsuarioModal({ usuario, onClose }: EditarUsuarioModalProps
     reset,
     setError,
     setValue,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<EditarUsuarioFormValues>({
     resolver: zodResolver(editarUsuarioSchema),
   });
+  const rol = useWatch({ control, name: 'rol' });
 
   // El modal se monta una sola vez y cambia de usuario por prop.
   useEffect(() => {
@@ -50,6 +54,8 @@ export function EditarUsuarioModal({ usuario, onClose }: EditarUsuarioModalProps
       cargo: usuario.cargo,
       rol: usuario.rol,
       telefono: usuario.telefono ?? '',
+      jvpm: usuario.jvpm ?? '',
+      jvpe: usuario.jvpe ?? '',
     });
   }, [usuario, reset]);
 
@@ -59,7 +65,11 @@ export function EditarUsuarioModal({ usuario, onClose }: EditarUsuarioModalProps
     try {
       await actualizar.mutateAsync({
         id: usuario.id,
-        payload: { ...valores, telefono: valores.telefono?.trim() || undefined },
+        payload: {
+          ...valores,
+          telefono: valores.telefono?.trim() || undefined,
+          ...juntaSegunRol(valores),
+        },
       });
       toast.success('Usuario actualizado correctamente.');
       onClose();
@@ -163,6 +173,17 @@ export function EditarUsuarioModal({ usuario, onClose }: EditarUsuarioModalProps
             {errors.cargo && <p className="mt-1.5 text-xs text-danger">{errors.cargo.message}</p>}
           </div>
         </div>
+
+        {rol && (
+          <CampoJuntaVigilancia
+            rol={rol}
+            idPrefijo="editar"
+            registrar={(campo) => register(campo)}
+            mensajeError={(campo) => errors[campo]?.message}
+            disabled={isSubmitting}
+            className={CLASE_CAMPO}
+          />
+        )}
 
         <div className="mb-1">
           <label htmlFor="editar_telefono" className="mb-1.5 block text-sm font-medium text-ink">

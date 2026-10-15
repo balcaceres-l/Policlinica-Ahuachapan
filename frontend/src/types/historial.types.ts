@@ -4,9 +4,6 @@
  * Los nombres siguen las convenciones del backend: columnas en snake_case y
  * `medicoNombre` / `especialidadNombre` como en `ConsultaResource`. Las fechas
  * llegan como `YYYY-MM-DD HH:mm:ss` (`toDateTimeString()` de Laravel).
- *
- * Aún no existen las tablas de diagnóstico ni de plan de manejo: ver
- * `docs/avance-historial-clinico-hu-19-22.md`.
  */
 
 /** Diagnóstico registrado en una consulta (HU-20). */
@@ -38,6 +35,7 @@ export interface ConsultaHistorial {
   fecha_hora_fin: string | null;
   medico_id: string;
   medicoNombre: string;
+  medicoJvpm?: string | null;
   especialidad_atencion_id: string | null;
   especialidadNombre: string | null;
   motivo_consulta: string | null;

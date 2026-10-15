@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import HistorialDiagnosticos from '@/components/expediente/HistorialDiagnosticos';
-import ResultadosLaboratorioHistorial from '@/components/expediente/ResultadosLaboratorioHistorial';
+import LaboratorioCronologico from '@/components/expediente/LaboratorioCronologico';
 import SignosVitalesHistorial from '@/components/expediente/SignosVitalesHistorial';
 import { cn } from '@/lib/utils';
 
@@ -16,7 +16,14 @@ const PESTANAS: { clave: Pestana; etiqueta: string; icono: string }[] = [
  * HU-28 — historial clínico completo embebido en la consulta activa.
  * Reutiliza HistorialDiagnosticos (HU-22) y agrega signos vitales y laboratorio.
  */
-export function HistorialClinicoCompleto({ pacienteId }: { pacienteId: string }) {
+export function HistorialClinicoCompleto({
+  pacienteId,
+  consultaId,
+}: {
+  pacienteId: string;
+  /** Consulta abierta: los resultados de laboratorio registrados aquí quedan ligados a ella. */
+  consultaId?: string | null;
+}) {
   const [abierto, setAbierto] = useState(true);
   const [pestana, setPestana] = useState<Pestana>('consultas');
 
@@ -65,7 +72,9 @@ export function HistorialClinicoCompleto({ pacienteId }: { pacienteId: string })
           <div role="tabpanel">
             {pestana === 'consultas' && <HistorialDiagnosticos pacienteId={pacienteId} />}
             {pestana === 'signos' && <SignosVitalesHistorial pacienteId={pacienteId} />}
-            {pestana === 'laboratorio' && <ResultadosLaboratorioHistorial pacienteId={pacienteId} />}
+            {pestana === 'laboratorio' && (
+              <LaboratorioCronologico pacienteId={pacienteId} consultaId={consultaId} />
+            )}
           </div>
         </div>
       )}
