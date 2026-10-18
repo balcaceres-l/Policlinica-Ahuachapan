@@ -36,16 +36,25 @@ return [
     ],
 
     /*
-     * API de la OMS para la CIE (HU-44). Las credenciales se obtienen en
-     * https://icd.who.int/icdapi ("View API access key"). La CIE-10 2019 es su
-     * versión final; se sincroniza con `php artisan cie10:sincronizar-oms`.
+     * API de la OMS para la CIE-11 (HU-44). El navegador nunca habla con la OMS: la
+     * herramienta de búsqueda pasa por el proxy `/api/oms-icd/...`, que agrega el
+     * token de la OMS. Credenciales en https://icd.who.int/icdapi ("View API access key").
+     *
+     * Desarrollo: ICD_API_URL=https://icd11restapi-developer-test.azurewebsites.net y
+     * ICD_API_SECURED=false (servidor de pruebas sin autenticación).
+     * Producción: ICD_API_URL=https://id.who.int y ICD_API_SECURED=true.
      */
     'oms_icd' => [
         'client_id' => env('ICD_CLIENT_ID'),
         'client_secret' => env('ICD_CLIENT_SECRET'),
         'token_url' => env('ICD_TOKEN_URL', 'https://icdaccessmanagement.who.int/connect/token'),
         'api_url' => env('ICD_API_URL', 'https://id.who.int'),
-        'release_cie10' => env('ICD10_RELEASE', '2019'),
+        'api_secured' => (bool) env('ICD_API_SECURED', true),
+        // Pase que firma el backend para que el navegador use el proxy.
+        'minutos_pase_proxy' => (int) env('ICD_PROXY_MINUTOS', 15),
+        // Peticiones por minuto y por médico al proxy. Una búsqueda por cada pausa
+        // al escribir: un humano no se acerca a esta cifra; un script, sí.
+        'limite_por_minuto' => (int) env('ICD_PROXY_LIMITE', 240),
     ],
 
 ];

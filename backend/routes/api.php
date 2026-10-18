@@ -2,8 +2,9 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BloqueoAgendaController;
-use App\Http\Controllers\Api\CatalogoCie10Controller;
 use App\Http\Controllers\Api\CatalogoEspecialidadController;
+use App\Http\Controllers\Api\Cie11Controller;
+use App\Http\Controllers\Api\Cie11ProxyController;
 use App\Http\Controllers\Api\CitaController;
 use App\Http\Controllers\Api\ConsultaController;
 use App\Http\Controllers\Api\EspecialidadController;
@@ -16,6 +17,10 @@ use App\Http\Controllers\Api\UsuarioController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:login');
+
+// HU-44 — proxy hacia la API de la OMS para la herramienta de búsqueda CIE-11. Se
+// autentica con el pase de /cie11/pase (no con Sanctum) y agrega el token de la OMS.
+Route::match(['GET', 'POST'], '/oms-icd/{ruta}', [Cie11ProxyController::class, 'reenviar'])->where('ruta', '.*');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
@@ -101,6 +106,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/pacientes/{paciente}', [PacienteController::class, 'destroy']);
     });
 
+    // HU-44 — bloque y capítulo de un diagnóstico guardado (reportes, expediente).
+    Route::get('/cie11/jerarquia', [Cie11Controller::class, 'jerarquia']);
+
     // HU-23 — el expediente es compartido: médicos y recepción consultan los
     // resultados de laboratorio. Registrarlos (HU-41) es del médico.
     Route::middleware('role:MEDICO,RECEPCIONISTA')->group(function () {
@@ -112,8 +120,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/pacientes/{paciente}/laboratorio', [ResultadoLaboratorioController::class, 'store']);
         Route::delete('/laboratorio/{resultado}', [ResultadoLaboratorioController::class, 'destroy']);
 
-        // HU-44 — búsqueda de códigos CIE-10 al registrar el diagnóstico.
-        Route::get('/catalogo/cie10', [CatalogoCie10Controller::class, 'index']);
+        // HU-44 — buscador CIE-11: pase de corta duración para el proxy y versión vigente.
+        Route::get('/cie11/pase', [Cie11Controller::class, 'pase'])->middleware('throttle:30,1');
+        Route::get('/cie11/configuracion', [Cie11Controller::class, 'configuracion']);
     });
 
     // HU-39 — el médico abre la consulta eligiendo con qué especialidad atiende.

@@ -2,117 +2,110 @@
 
 namespace App\Services;
 
-use Illuminate\Http\Client\Pool;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
 /**
- * Cliente mínimo de la API de la CIE de la OMS (https://icd.who.int/icdapi).
- * Autenticación OAuth2 por credenciales de cliente; el token dura una hora y
- * se renueva solo cuando la API responde 401.
+ * Cliente de la API de la OMS (https://icd.who.int/icdapi). El token OAuth2 se
+ * pide con las credenciales del servidor, se guarda en caché mientras es válido
+ * y nunca sale del backend. En el servidor de pruebas (`api_secured = false`) no
+ * se usa token.
  */
 class ClienteIcdOms
 {
-    private ?string $token = null;
+    private const CLAVE_CACHE_TOKEN = 'oms_icd_token';
 
-    public function __construct(
-        private readonly string $clientId,
-        private readonly string $clientSecret,
-        private readonly string $tokenUrl,
-        private readonly string $apiUrl,
-    ) {}
+    /** Margen para no usar un token a segundos de vencer. */
+    private const MARGEN_SEGUNDOS = 120;
 
-    public static function desdeConfiguracion(): self
+    public function apiUrl(): string
     {
-        $config = config('services.oms_icd');
-
-        if (empty($config['client_id']) || empty($config['client_secret'])) {
-            throw new RuntimeException(
-                'Faltan ICD_CLIENT_ID e ICD_CLIENT_SECRET en el .env. Se obtienen en https://icd.who.int/icdapi ("View API access key").',
-            );
-        }
-
-        return new self($config['client_id'], $config['client_secret'], $config['token_url'], rtrim($config['api_url'], '/'));
-    }
-
-    public function urlRelease(string $release): string
-    {
-        return "{$this->apiUrl}/icd/release/10/{$release}";
-    }
-
-    /** Entidad por su URI. La API devuelve los hijos con `http://`; se piden por HTTPS. */
-    public function entidad(string $uri): array
-    {
-        return $this->obtenerVarias([$uri])[$uri];
+        return rtrim((string) config('services.oms_icd.api_url'), '/');
     }
 
     /**
-     * Pide varias entidades en paralelo.
+     * Reenvía una petición a la API de la OMS con el token del servidor.
      *
-     * @param  list<string>  $uris
-     * @return array<string, array>
+     * @param  array<string, mixed>  $query
+     * @param  array<string, mixed>  $formulario
      */
-    public function obtenerVarias(array $uris): array
+    public function reenviar(string $metodo, string $ruta, array $query, array $formulario, string $idioma, string $versionApi): Response
     {
-        $respuestas = $this->enviar($uris);
+        $url = $this->apiUrl().'/'.ltrim($ruta, '/');
 
-        if (collect($respuestas)->contains(fn ($r) => $r instanceof Response && $r->status() === 401)) {
-            $this->token = null;
-            $respuestas = $this->enviar($uris);
+        $enviar = fn () => $metodo === 'POST'
+            ? $this->peticion($idioma, $versionApi)->asForm()->post($url.($query ? '?'.http_build_query($query) : ''), $formulario)
+            : $this->peticion($idioma, $versionApi)->get($url, $query);
+
+        $respuesta = $enviar();
+
+        // Token revocado o vencido antes de tiempo: se pide otro una sola vez.
+        if ($respuesta->status() === 401 && $this->usaToken()) {
+            Cache::forget(self::CLAVE_CACHE_TOKEN);
+            $respuesta = $enviar();
         }
 
-        $resultado = [];
-        foreach ($uris as $uri) {
-            $respuesta = $respuestas[$uri] ?? null;
-            if (! $respuesta instanceof Response || ! $respuesta->successful()) {
-                $estado = $respuesta instanceof Response ? $respuesta->status() : 'sin respuesta';
-                throw new RuntimeException("La API de la OMS no respondió bien para {$uri} ({$estado}).");
-            }
-            $resultado[$uri] = $respuesta->json();
-        }
-
-        return $resultado;
+        return $respuesta;
     }
 
-    /** @param list<string> $uris */
-    private function enviar(array $uris): array
+    /** Entidad de la CIE-11 por su URI, en el idioma pedido. */
+    public function entidad(string $uri, string $idioma = 'es'): array
     {
-        $token = $this->token();
+        $ruta = parse_url($uri, PHP_URL_PATH);
+        $respuesta = $this->reenviar('GET', (string) $ruta, [], [], $idioma, 'v2');
 
-        return Http::pool(fn (Pool $pool) => array_map(
-            fn (string $uri) => $pool->as($uri)
-                ->withToken($token)
-                ->withHeaders(['Accept' => 'application/json', 'Accept-Language' => 'en', 'API-Version' => 'v2'])
-                ->timeout(60)
-                ->retry(3, 2000, throw: false)
-                ->get($this->aHttps($uri)),
-            $uris,
-        ));
+        if (! $respuesta->successful()) {
+            throw new RuntimeException("La OMS no devolvió la entidad {$uri} ({$respuesta->status()}).");
+        }
+
+        return $respuesta->json();
+    }
+
+    private function peticion(string $idioma, string $versionApi)
+    {
+        $peticion = Http::withHeaders([
+            'Accept' => 'application/json',
+            'Accept-Language' => $idioma,
+            'API-Version' => $versionApi,
+        ])->timeout(20);
+
+        return $this->usaToken() ? $peticion->withToken($this->token()) : $peticion;
+    }
+
+    private function usaToken(): bool
+    {
+        return (bool) config('services.oms_icd.api_secured');
     }
 
     private function token(): string
     {
-        if ($this->token !== null) {
-            return $this->token;
+        $guardado = Cache::get(self::CLAVE_CACHE_TOKEN);
+        if (is_string($guardado) && $guardado !== '') {
+            return $guardado;
         }
 
-        $respuesta = Http::asForm()->timeout(60)->post($this->tokenUrl, [
-            'client_id' => $this->clientId,
-            'client_secret' => $this->clientSecret,
+        $config = config('services.oms_icd');
+        if (empty($config['client_id']) || empty($config['client_secret'])) {
+            throw new RuntimeException('Faltan ICD_CLIENT_ID e ICD_CLIENT_SECRET en el .env del backend.');
+        }
+
+        $respuesta = Http::asForm()->timeout(20)->post($config['token_url'], [
+            'client_id' => $config['client_id'],
+            'client_secret' => $config['client_secret'],
             'scope' => 'icdapi_access',
             'grant_type' => 'client_credentials',
         ]);
 
-        if (! $respuesta->successful() || ! $respuesta->json('access_token')) {
-            throw new RuntimeException('La OMS rechazó las credenciales de la API (revisa ICD_CLIENT_ID e ICD_CLIENT_SECRET).');
+        $token = $respuesta->json('access_token');
+        if (! $respuesta->successful() || ! is_string($token)) {
+            throw new RuntimeException('La OMS rechazó las credenciales de la API.');
         }
 
-        return $this->token = $respuesta->json('access_token');
-    }
+        $segundos = max(60, (int) $respuesta->json('expires_in', 3600) - self::MARGEN_SEGUNDOS);
+        Cache::put(self::CLAVE_CACHE_TOKEN, $token, $segundos);
 
-    private function aHttps(string $uri): string
-    {
-        return preg_replace('#^http://#', 'https://', $uri);
+        return $token;
     }
 }

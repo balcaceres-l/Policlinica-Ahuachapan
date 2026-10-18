@@ -1,0 +1,10 @@
+/*
+ * Ajustes a la herramienta de búsqueda de la OMS (ECT) dentro del sistema.
+ * La ECT asume la sangría por defecto de las listas (40px) y la compensa con
+ * `margin-left: -40px`; el reset de Tailwind la quita y la lista se corre a la
+ * izquierda, cortando los códigos.
+ */
+.ctw-window ul {
+  padding-left: 40px;
+  list-style: none;
+}

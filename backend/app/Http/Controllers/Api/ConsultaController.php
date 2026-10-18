@@ -12,11 +12,13 @@ use App\Models\consulta;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 
 class ConsultaController extends Controller
 {
     use RespondsWithJson;
+
+    /** URI de linearización MMS de la CIE-11; el grupo 1 es la versión (release). */
+    private const URI_LINEARIZACION = '#^https?://id\.who\.int/icd/release/11/(\d{4}-\d{2})/mms/#';
 
     /**
      * Especialidades con las que el médico autenticado puede atender. La
@@ -170,10 +172,13 @@ class ConsultaController extends Controller
             'examenes_fisicos' => ['nullable', 'array'],
             'examenes_fisicos.*.region_anatomica' => ['nullable', 'string', 'max:100'],
             'examenes_fisicos.*.hallazgos' => ['nullable', 'string'],
-            // HU-20 / HU-44 — el código es opcional: sin él queda como texto libre.
+            // HU-20 / HU-44 — CIE-11 de la OMS. Sin código ni URI es texto libre; lo
+            // elegido de la OMS debe ser una categoría con código.
             'diagnosticos' => ['nullable', 'array'],
             'diagnosticos.*.descripcion' => ['required', 'string', 'max:500'],
-            'diagnosticos.*.codigo_cie10' => ['nullable', 'string', 'max:10', Rule::exists('catalogo_cie10', 'codigo')],
+            'diagnosticos.*.codigo_cie11' => ['nullable', 'string', 'max:20', 'required_with:diagnosticos.*.uri_linearizacion'],
+            'diagnosticos.*.uri_linearizacion' => ['nullable', 'string', 'max:255', 'regex:'.self::URI_LINEARIZACION, 'required_with:diagnosticos.*.codigo_cie11'],
+            'diagnosticos.*.uri_foundation' => ['nullable', 'string', 'max:255', 'regex:#^https?://id\.who\.int/icd/entity/#'],
             'plan_manejo' => ['nullable', 'array'],
             'plan_manejo.descripcion' => ['nullable', 'string'],
             'plan_manejo.indicaciones' => ['nullable', 'string'],
@@ -186,6 +191,11 @@ class ConsultaController extends Controller
             'receta.detalles.*.frecuencia' => ['required_with:receta.detalles', 'string', 'max:100'],
             'receta.detalles.*.duracion' => ['nullable', 'string', 'max:100'],
             'receta.detalles.*.indicaciones' => ['nullable', 'string'],
+        ], [
+            'diagnosticos.*.codigo_cie11.required_with' => 'Ese elemento de la CIE-11 no tiene código: elige un diagnóstico más específico o escríbelo como texto libre.',
+            'diagnosticos.*.uri_linearizacion.required_with' => 'El código CIE-11 debe venir del buscador de la OMS.',
+            'diagnosticos.*.uri_linearizacion.regex' => 'La URI del diagnóstico no es de la CIE-11 de la OMS.',
+            'diagnosticos.*.uri_foundation.regex' => 'La URI Foundation del diagnóstico no es de la OMS.',
         ]);
 
         if (array_key_exists('segundos_transcurridos', $validado) && $validado['segundos_transcurridos'] !== null) {
@@ -223,8 +233,14 @@ class ConsultaController extends Controller
             if (array_key_exists('diagnosticos', $validado)) {
                 $consulta->diagnosticos()->delete();
                 foreach ($validado['diagnosticos'] ?? [] as $dx) {
+                    $uri = $dx['uri_linearizacion'] ?? null;
+                    preg_match(self::URI_LINEARIZACION, (string) $uri, $version);
+
                     $consulta->diagnosticos()->create([
-                        'codigo_cie10' => $dx['codigo_cie10'] ?? null,
+                        'codigo_cie11' => $uri ? $dx['codigo_cie11'] : null,
+                        'uri_foundation' => $uri ? ($dx['uri_foundation'] ?? null) : null,
+                        'uri_linearizacion' => $uri,
+                        'release_cie11' => $version[1] ?? null,
                         'descripcion' => trim($dx['descripcion']),
                     ]);
                 }

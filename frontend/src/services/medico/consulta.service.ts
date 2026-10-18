@@ -15,10 +15,12 @@ export interface GuardarConsultaPayload {
     region_anatomica?: string | null;
     hallazgos?: string | null;
   }>;
-  /** HU-20 / HU-44 — `codigo_cie10` en null lo guarda como texto libre. */
+  /** HU-20 / HU-44 — sin código ni URI se guarda como texto libre. */
   diagnosticos?: Array<{
     descripcion: string;
-    codigo_cie10?: string | null;
+    codigo_cie11?: string | null;
+    uri_foundation?: string | null;
+    uri_linearizacion?: string | null;
   }>;
   plan_manejo?: {
     descripcion?: string | null;

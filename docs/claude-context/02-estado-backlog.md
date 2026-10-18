@@ -80,7 +80,7 @@ y `consulta.mock.service.ts` se eliminaron). Detalle de lo que se encontró en
 |---|---|---|
 | SCRUM-112 | HU-19 Examen físico | ✅ API real: tabla `examen_fisico`, sección 2 de `ConsultaPage.tsx`. |
 | SCRUM-113 | HU-20 Registro de diagnóstico | ✅ API real: tabla `diagnostico`, `components/medico/DiagnosticosConsulta.tsx` (sección 3 de `ConsultaPage.tsx`). |
-| SCRUM-114 | HU-44 Catálogo CIE-10 | ✅ API real: tabla `catalogo_cie10`, `GET /catalogo/cie10`, `components/medico/BuscarCie10Modal.tsx`. Códigos oficiales de la OMS (CIE-10 2019) con descripción en español; se carga con `php artisan cie10:sincronizar-oms`. Decisión en `05-catalogo-cie10.md`. |
+| SCRUM-114 | HU-44 Catálogo estandarizado de diagnósticos | ✅ CIE-11 de la OMS en vivo, en español, con la herramienta oficial de la OMS a través de un proxy del backend; texto libre como respaldo. `components/medico/BuscadorCie11.tsx`, `Cie11ProxyController`. Decisión en `05-diagnostico-cie11.md`. |
 | SCRUM-116 | HU-22 Historial de diagnósticos y tratamientos | ✅ API real: `components/expediente/HistorialDiagnosticos.tsx`; ya recibe los diagnósticos. |
 | SCRUM-117 | HU-41 Registro de resultados de laboratorio | ✅ API real: tabla `resultado_laboratorio`, `components/expediente/RegistrarResultadoLaboratorioModal.tsx`. |
 | SCRUM-118 | HU-23 Consulta cronológica de laboratorio | ✅ API real: `components/expediente/LaboratorioCronologico.tsx`, `views/medico/LaboratorioClinicoPage.tsx`. |
@@ -92,11 +92,18 @@ junta de vigilancia). Se capturan en el formulario de usuarios y la receta
 imprime el JVPM del médico.
 
 Las migraciones `2026_10_13_*` ya están corridas en la base local y en la
-compartida (lotes 6 y 7, 2026-10-14). El catálogo CIE-10 está cargado en ambas: 10 673
-códigos de la OMS (CIE-10 2019), 10 627 con descripción en español.
+compartida (lotes 6 y 7, 2026-10-14). La migración `2026_10_17_100000` (paso a CIE-11, elimina
+`catalogo_cie10`) está corrida en local; en la compartida se corre **después** de mezclar el PR.
 
 Contrato de datos: `types/historial.types.ts`, `types/laboratorio.types.ts`,
-`types/cie10.types.ts`. Endpoints: `docs/API.md`.
+`types/cie11.types.ts`. Endpoints: `docs/API.md`.
+
+## Pendiente acordado fuera de las HU (2026-10-17)
+
+- **Horario y bloqueos propios del médico** (módulo del médico): editar su propio horario y
+  bloquear su agenda **solo si no hay citas agendadas** en ese rango. Si hay citas, el bloqueo
+  lo hace la recepcionista, porque tiene que contactar a los pacientes. Va después de cerrar
+  la CIE-11 y junto con el Sprint 3.
 
 ## Cómo actualizar este archivo
 

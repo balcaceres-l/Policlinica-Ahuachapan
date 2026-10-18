@@ -7,7 +7,8 @@ import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import CronometroConsulta from '@/components/medico/CronometroConsulta';
-import DiagnosticosConsulta, { type DiagnosticoLocal } from '@/components/medico/DiagnosticosConsulta';
+import DiagnosticosConsulta from '@/components/medico/DiagnosticosConsulta';
+import { nuevoDiagnosticoLocal, type DiagnosticoLocal } from '@/lib/diagnostico';
 import HistorialClinicoCompleto from '@/components/expediente/HistorialClinicoCompleto';
 import RecetaPreviewModal from '@/components/medico/RecetaPreviewModal';
 import { useGuardarSignosVitales } from '@/hooks/cita/useCitas';
@@ -17,6 +18,7 @@ import {
   useConsulta,
   useFinalizarConsulta,
 } from '@/hooks/medico/useConsultas';
+import { precargarEct } from '@/lib/ect';
 import { generarHtmlReceta } from '@/lib/recetaPdf';
 import { calcularEdad } from '@/lib/utils';
 import type { GuardarConsultaPayload } from '@/services/medico/consulta.service';
@@ -87,7 +89,7 @@ export default function ConsultaPage() {
   // Exámenes físicos
   const [examenesFisicos, setExamenesFisicos] = useState<ExamenFisicoLocal[]>([]);
 
-  /** HU-20 / HU-44 — diagnósticos con código CIE-10 opcional. */
+  /** HU-20 / HU-44 — diagnósticos con código CIE-11 de la OMS o como texto libre. */
   const [diagnosticos, setDiagnosticos] = useState<DiagnosticoLocal[]>([]);
 
   // Plan de manejo
@@ -118,6 +120,13 @@ export default function ConsultaPage() {
   const [guardandoFinalizar, setGuardandoFinalizar] = useState(false);
   const [guardandoSignos, setGuardandoSignos] = useState(false);
 
+  // HU-44 — el buscador de la OMS pesa ~750 KB: se carga mientras el médico
+  // llena el motivo y el examen físico, para que esté listo en el diagnóstico.
+  const consultaAbierta = consulta?.abierta === true;
+  useEffect(() => {
+    if (consultaAbierta) precargarEct();
+  }, [consultaAbierta]);
+
   // Inicializar o sincronizar el estado cuando cargue la consulta
   useEffect(() => {
     if (!consulta) return;
@@ -145,10 +154,15 @@ export default function ConsultaPage() {
     }
 
     setDiagnosticos(
-      (consulta.diagnosticos ?? []).map((dx) => ({
-        descripcion: dx.descripcion,
-        codigo_cie10: dx.codigo_cie10,
-      })),
+      (consulta.diagnosticos ?? []).map((dx) =>
+        nuevoDiagnosticoLocal({
+          descripcion: dx.descripcion,
+          codigo_cie11: dx.codigo_cie11,
+          uri_foundation: dx.uri_foundation,
+          uri_linearizacion: dx.uri_linearizacion,
+          textosOms: dx.codigo_cie11 ? [dx.descripcion] : undefined,
+        }),
+      ),
     );
 
     setPlanDescripcion(consulta.plan_manejo?.descripcion ?? '');
@@ -439,7 +453,12 @@ export default function ConsultaPage() {
       examenes_fisicos: efLimpios.length > 0 ? efLimpios : undefined,
       diagnosticos: diagnosticos
         .filter((dx) => dx.descripcion.trim() !== '')
-        .map((dx) => ({ descripcion: dx.descripcion.trim(), codigo_cie10: dx.codigo_cie10 })),
+        .map((dx) => ({
+          descripcion: dx.descripcion.trim(),
+          codigo_cie11: dx.codigo_cie11,
+          uri_foundation: dx.uri_foundation,
+          uri_linearizacion: dx.uri_linearizacion,
+        })),
       plan_manejo: tienePlan
         ? {
             descripcion: planDescripcion.trim() || null,
@@ -1118,7 +1137,7 @@ export default function ConsultaPage() {
               <div>
                 <h2 className="text-base font-bold text-ink">Diagnóstico</h2>
                 <p className="text-xs text-muted">
-                  Diagnóstico presuntivo o definitivo, con su código CIE-10 cuando aplique
+                  Diagnóstico presuntivo o definitivo, con su código CIE-11 de la OMS cuando aplique
                 </p>
               </div>
             </div>

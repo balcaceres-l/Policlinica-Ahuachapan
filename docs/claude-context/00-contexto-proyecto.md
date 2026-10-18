@@ -57,7 +57,7 @@ equipo de backend trabaja esto por separado. Lo que hoy existe:
   `bloqueo_agenda`, `cita`, `consulta` y `signos_vitales` (nombres en singular).
 - **Actualizado (2026-10-13):** también existen con tabla y endpoint pacientes,
   examen físico, plan de manejo, receta (`receta_medica`, `detalle_receta`),
-  diagnósticos (`diagnostico`), catálogo CIE-10 (`catalogo_cie10`) y resultados
+  diagnósticos (`diagnostico`, con código CIE-11 de la OMS consultada en vivo) y resultados
   de laboratorio (`resultado_laboratorio`). Detalle en `docs/API.md`.
 - **Todavía NO existen** (ni tabla ni endpoint): catálogo de medicamentos,
   constancias y referencias médicas.

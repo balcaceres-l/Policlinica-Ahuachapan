@@ -12,9 +12,12 @@ class DiagnosticoResource extends JsonResource
         return [
             'id' => $this->id_diagnostico,
             'consulta_id' => $this->id_consulta,
-            'codigo_cie10' => $this->codigo_cie10,
+            'codigo_cie11' => $this->codigo_cie11,
             'descripcion' => $this->descripcion,
-            'es_texto_libre' => $this->codigo_cie10 === null,
+            'uri_foundation' => $this->uri_foundation,
+            'uri_linearizacion' => $this->uri_linearizacion,
+            'release_cie11' => $this->release_cie11,
+            'es_texto_libre' => $this->codigo_cie11 === null,
         ];
     }
 }
