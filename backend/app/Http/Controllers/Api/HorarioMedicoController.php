@@ -118,7 +118,7 @@ class HorarioMedicoController extends Controller
             }
         });
 
-        return $this->index($medico);
+        return $this->index($request, $medico);
     }
 
     /** @param array<string, string> $tramo */

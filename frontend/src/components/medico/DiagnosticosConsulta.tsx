@@ -105,6 +105,11 @@ export function DiagnosticosConsulta({ diagnosticos, onChange, disabled, inputCl
             Agregar diagnóstico
           </button>
           <p className="text-xs text-muted">
+            <i className="ri-information-line mr-1" />
+            Al escribir aparecen diagnósticos de la CIE-11 con su código: elige uno para guardarlo con
+            código. Si no aparece lo que buscas, se guarda tal como lo escribiste.
+          </p>
+          <p className="text-xs text-muted">
             <i className="ri-shield-check-line mr-1" />
             Lo que escribes aquí se consulta en la OMS: no escribas el nombre ni datos del paciente.
           </p>

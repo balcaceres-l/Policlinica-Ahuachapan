@@ -165,3 +165,41 @@ backend de EP-04 como "solo migraciones"; hoy ya tiene controladores y rutas.
   `CitasAfectadasModal`: reagendar, cancelar o "correr citas" (bloqueo parcial, pacientes ya en la clínica).
 - `ReprogramarCitaModal` y `CancelarCitaModal` ahora muestran el mensaje real del backend
   (`extraerMensajeError`) en lugar de "Request failed with status code 409".
+
+## Mayúsculas en nombres de archivo (backend, Linux)
+
+**Estado: Resuelto (2026-10-17), sin commit todavía.**
+
+- El modelo `Especialidad` estaba en `app/Models/especialidad.php`. Windows no distingue mayúsculas,
+  pero en Linux el autoload PSR-4 busca `Especialidad.php` y falla con "Class not found". Según qué
+  referencia se cargara primero (`Especialidad::class` en `User` y los controladores, o
+  `especialidad::class` en `cita` y `consulta`), la falla aparecía o no.
+- Se renombró a `Especialidad.php` y todas las referencias quedaron como `Especialidad`.
+- Los demás modelos (`cita`, `consulta`, `paciente`…) se llaman en minúscula igual que su archivo, así
+  que están bien. El frontend no tiene imports con mayúsculas distintas al archivo, y los nombres de
+  tabla del código coinciden con los de las migraciones (MariaDB en Linux también distingue mayúsculas
+  en nombres de tabla).
+
+## HU-34 — Guardar el horario semanal daba error 500 (EP-04)
+
+**Estado: Resuelto (2026-10-17), sin commit todavía.**
+
+- Desde el commit `ec8f48c` (2026-10-02), `index()` recibe `(Request $request, User $medico)`, pero
+  `sincronizar()` seguía llamando `$this->index($medico)`. El `PUT /medicos/{medico}/horarios` sí
+  guardaba (la transacción ya había terminado) y después respondía 500, así que la pantalla seguía
+  mostrando el horario anterior y parecía que no se guardaba.
+- Corregido en `HorarioMedicoController::sincronizar`. Nueva prueba en `AgendaTest`
+  (`test_el_administrador_guarda_la_semana_completa_y_recibe_el_horario_nuevo`); antes no había
+  ninguna que cubriera ese endpoint.
+
+## HU-22 — El expediente no mostraba lo recién guardado (2026-10-18)
+
+**Estado: Resuelto (2026-10-18), sin commit todavía.**
+
+- Guardar y finalizar la consulta (`useActualizarConsulta`, `useFinalizarConsulta`) no invalidaban
+  `historialKeys`. El historial queda 5 min en caché (`staleTime` global) y ya se había cargado
+  durante la consulta, así que el expediente mostraba la consulta "En atención" y sin diagnóstico
+  aunque la base ya lo tenía. Ahora ambas invalidan el historial.
+- Relacionado (CIE-11): al guardar, el campo del diagnóstico se vuelve a montar y el relanzamiento
+  de `lib/ect.ts` abría la lista de sugerencias encima del modal. Ahora solo relanza si el médico
+  escribió en ese campo antes de que la herramienta estuviera lista.

@@ -83,6 +83,19 @@ class DiagnosticoTest extends TestCase
             ->assertJsonPath('data.diagnosticos.0.es_texto_libre', false);
     }
 
+    /** La OMS sugiere algunos códigos ya combinados, ej. "gastritis aguda" = DA42.Z&XT5R. */
+    public function test_guarda_un_codigo_combinado_que_sugiere_la_oms(): void
+    {
+        Sanctum::actingAs($this->medico);
+
+        $this->putJson($this->url(), ['diagnosticos' => [$this->hipertension([
+            'descripcion' => 'gastritis aguda, no clasificados en otra parte',
+            'codigo_cie11' => 'DA42.Z&XT5R',
+        ])]])
+            ->assertOk()
+            ->assertJsonPath('data.diagnosticos.0.codigo_cie11', 'DA42.Z&XT5R');
+    }
+
     public function test_guarda_un_diagnostico_como_texto_libre(): void
     {
         Sanctum::actingAs($this->medico);

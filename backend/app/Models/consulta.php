@@ -57,7 +57,7 @@ class consulta extends Model
 
     public function especialidad(): BelongsTo
     {
-        return $this->belongsTo(especialidad::class, 'id_especialidad_atencion');
+        return $this->belongsTo(Especialidad::class, 'id_especialidad_atencion');
     }
 
     public function examenesFisicos(): HasMany

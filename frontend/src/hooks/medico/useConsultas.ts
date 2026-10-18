@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { historialKeys } from '@/hooks/historial/useHistorial';
 import {
   actualizarConsulta,
   finalizarConsulta,
@@ -74,6 +75,8 @@ export const useActualizarConsulta = () => {
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: consultaKeys.detalle(variables.id) });
       void queryClient.invalidateQueries({ queryKey: consultaKeys.salaEspera });
+      // El expediente muestra esta consulta (diagnósticos, plan, examen).
+      void queryClient.invalidateQueries({ queryKey: historialKeys.all });
     },
   });
 };
@@ -93,6 +96,7 @@ export const useFinalizarConsulta = () => {
       void queryClient.invalidateQueries({ queryKey: consultaKeys.detalle(variables.id) });
       void queryClient.invalidateQueries({ queryKey: consultaKeys.salaEspera });
       void queryClient.invalidateQueries({ queryKey: ['citas'] });
+      void queryClient.invalidateQueries({ queryKey: historialKeys.all });
     },
   });
 };

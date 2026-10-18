@@ -19,7 +19,6 @@ interface ManejadoresCampo {
 interface HandlerEct {
   configure: (settings: Record<string, unknown>, callbacks: Record<string, unknown>) => void;
   bind: (iNo: string) => void;
-  search: (iNo: string, q: string) => void;
 }
 
 const campos = new Map<string, ManejadoresCampo>();
@@ -50,9 +49,13 @@ async function preparar(): Promise<HandlerEct> {
       language: 'es',
       popupMode: true,
       autoBind: false,
-      wordsAvailable: false,
-      chaptersAvailable: false,
-      flexisearchAvailable: true,
+      // Solo código y nombre: sin poscoordinación (+), capítulos relacionados
+      // (J, K), detalles ni visor de la jerarquía. El sistema guarda un solo
+      // código por diagnóstico. Este modo también apaga palabras, capítulos y
+      // búsqueda flexible.
+      simplifiedMode: true,
+      disableHierarchy: true,
+      enableKeyboard: false,
       sourceApp: 'Policlinica Ahuachapaneca',
     },
     {
@@ -73,29 +76,65 @@ async function preparar(): Promise<HandlerEct> {
   return ect.Handler;
 }
 
+/** Clase que la herramienta le pone al campo cuando termina su inicio. */
+const CLASE_LISTO = 'apiInitializationCompleted';
+
+/**
+ * Campos en los que el médico escribió antes de que la herramienta estuviera
+ * lista. Solo esos se relanzan: un campo que se vuelve a montar con un
+ * diagnóstico ya guardado (por ejemplo al guardar la consulta) no debe abrir
+ * sugerencias.
+ */
+const escritosAntesDeListo = new Set<string>();
+document.addEventListener(
+  'input',
+  (evento) => {
+    const campo = evento.target;
+    if (
+      campo instanceof HTMLInputElement &&
+      campo.classList.contains('ctw-input') &&
+      !campo.classList.contains(CLASE_LISTO) &&
+      campo.dataset.ctwIno
+    ) {
+      escritosAntesDeListo.add(campo.dataset.ctwIno);
+    }
+  },
+  true,
+);
+
 /**
  * Si el médico escribió mientras la herramienta cargaba, esas letras no
- * dispararon búsqueda. `bind` termina su inicio por su cuenta y sin avisar, así
- * que se revisa cada medio segundo (hasta ~8 s) y, si el campo sigue con texto
- * y sin sugerencias, se busca lo escrito una sola vez.
+ * dispararon búsqueda. `bind` termina su inicio por su cuenta (con la base
+ * compartida puede tardar más de 20 s), así que se espera a que el campo tenga
+ * `CLASE_LISTO` (hasta 60 s) y, si sigue con texto y sin sugerencias, se busca
+ * lo escrito una sola vez. Durante el inicio la herramienta deshabilita el
+ * campo y este pierde el foco: si nadie más lo tomó, se le devuelve.
+ *
+ * Se relanza con un evento `input`, el mismo camino que el teclado:
+ * `Handler.search` justo al terminar el inicio no buscaba.
  */
-function relanzarLoEscrito(handler: HandlerEct, iNo: string): void {
+function relanzarLoEscrito(iNo: string): void {
   let intentos = 0;
   const revisar = window.setInterval(() => {
     intentos += 1;
     const campo = document.querySelector<HTMLInputElement>(`input.ctw-input[data-ctw-ino="${iNo}"]`);
-    const ventana = document.querySelector<HTMLElement>(`.ctw-window[data-ctw-ino="${iNo}"]`);
-    const conSugerencias = Boolean(ventana?.innerText.trim());
 
-    if (!campo || conSugerencias || intentos > 16) {
+    if (!campo || intentos > 200) {
       window.clearInterval(revisar);
       return;
     }
-    // Cada 2 s: si la herramienta aún no terminaba de iniciar, ignora la búsqueda.
-    if (intentos % 4 === 3 && document.activeElement === campo && campo.value.trim().length >= 3) {
-      handler.search(iNo, campo.value);
+    if (!campo.classList.contains(CLASE_LISTO)) return;
+
+    window.clearInterval(revisar);
+    if (!escritosAntesDeListo.delete(iNo)) return;
+    const ventana = document.querySelector<HTMLElement>(`.ctw-window[data-ctw-ino="${iNo}"]`);
+    const conSugerencias = Boolean(ventana?.innerText.trim());
+    const focoLibre = document.activeElement === campo || document.activeElement === document.body;
+    if (!conSugerencias && focoLibre && campo.value.trim().length >= 3) {
+      campo.focus();
+      campo.dispatchEvent(new Event('input', { bubbles: true }));
     }
-  }, 500);
+  }, 300);
 }
 
 /** Empieza a cargar la herramienta antes de que el médico llegue al diagnóstico. */
@@ -121,7 +160,7 @@ export async function enlazarCampoCie11(iNo: string, manejadores: ManejadoresCam
       handler.bind(iNo);
       enlazados.add(iNo);
 
-      relanzarLoEscrito(handler, iNo);
+      relanzarLoEscrito(iNo);
     }
   } catch {
     preparacion = null;
