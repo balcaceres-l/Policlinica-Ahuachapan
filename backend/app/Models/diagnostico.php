@@ -20,7 +20,10 @@ class diagnostico extends Model
 
     protected $fillable = [
         'id_consulta',
-        'codigo_cie10',
+        'codigo_cie11',
+        'uri_foundation',
+        'uri_linearizacion',
+        'release_cie11',
         'descripcion',
     ];
 

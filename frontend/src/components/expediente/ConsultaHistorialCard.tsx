@@ -219,8 +219,8 @@ export function ConsultaHistorialCard({ consulta, pacienteInfo }: ConsultaHistor
           <ul className="mt-2 space-y-1.5">
             {diagnosticos.map((d) => (
               <li key={d.id} className="flex flex-wrap items-center gap-2 text-sm text-ink">
-                {d.codigo_cie10 ? (
-                  <Badge variant="royal">{d.codigo_cie10}</Badge>
+                {d.codigo_cie11 ? (
+                  <Badge variant="royal" className="font-mono">CIE-11 {d.codigo_cie11}</Badge>
                 ) : (
                   <Badge variant="default">Texto libre</Badge>
                 )}

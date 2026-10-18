@@ -1,5 +1,7 @@
 # Avance de HU-19 y HU-22 — qué deben saber los demás
 
+> **Histórico.** El diagnóstico se implementó con la CIE-11 de la OMS en vivo (`codigo_cie11`, URIs y release); ver `docs/claude-context/05-diagnostico-cie11.md`. Lo de abajo describe la propuesta inicial con CIE-10.
+
 > Rama: `feature/hu-sprint2-kath`. Todo el trabajo es **solo frontend, con datos
 > simulados**. No se tocó `backend/`, no se creó ni ejecutó ninguna migración y
 > no se modificó la base de datos compartida.

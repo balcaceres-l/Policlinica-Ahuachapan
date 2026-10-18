@@ -79,14 +79,14 @@ y los pasos concretos para cuando se retome.
 ## Sprint 2 — HU marcadas "Finalizada" en Jira que no cumplían (2026-10-13)
 
 **Estado: Resuelto (2026-10-13) en la rama `sprint3-kath`. Migraciones `2026_10_13_*`
-corridas en la base compartida el 2026-10-14. Catálogo CIE-10: ver `05-catalogo-cie10.md`.**
+corridas en la base compartida el 2026-10-14. El 2026-10-17 el diagnóstico pasó a CIE-11 de la OMS en vivo: ver `05-diagnostico-cie11.md`.**
 
 Auditoría de las 18 HU del Sprint 2 contra sus criterios y el código de `development`:
 
 - **HU-44 (SCRUM-114) — catálogo CIE-10:** no existía tabla, endpoint ni buscador.
   Ahora: tabla `catalogo_cie10`, `GET /catalogo/cie10` y botón "Buscar código CIE-10"
   en la consulta. Se llena con la lista oficial de códigos de la OMS (CIE-10 2019) y
-  descripciones oficiales en español; decisión y razones en `05-catalogo-cie10.md`.
+  descripciones oficiales en español; decisión y razones en `05-catalogo-cie10.md`. **Reemplazado el 2026-10-17** por la CIE-11 de la OMS en vivo (`05-diagnostico-cie11.md`).
 - **HU-20 (SCRUM-113) — diagnóstico:** no había entidad; se escribía dentro del campo
   "Diagnóstico y Plan Clínico" del plan de manejo y el historial devolvía
   `'diagnosticos' => []` fijo. Ahora: tabla `diagnostico` ligada a la consulta, con código

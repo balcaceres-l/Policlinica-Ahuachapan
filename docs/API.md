@@ -150,28 +150,30 @@ citas por sí solos: las que quedan dentro se devuelven para que recepción las 
 
 ---
 
-## Diagnósticos y catálogo CIE-10 (HU-20, HU-44) — rol `MEDICO`
+## Diagnósticos con CIE-11 de la OMS (HU-20, HU-44)
 
-| Método | Ruta | Query / Cuerpo |
-|---|---|---|
-| `GET` | `/catalogo/cie10` | query: `buscar` (2 a 100 caracteres). Devuelve hasta 25 `{ codigo, descripcion }`. |
-| `PUT` | `/consultas/{id}` | además de lo que ya aceptaba: `diagnosticos: [{ descripcion, codigo_cie10? }]`. |
+| Método | Ruta | Acceso | Query / Cuerpo |
+|---|---|---|---|
+| `GET` | `/cie11/pase` | `MEDICO` (30/min) | Pase de 15 min para el buscador: `{ token, vence }`. **No** es el token de la OMS. |
+| `GET` | `/cie11/configuracion` | `MEDICO` | `{ release, idioma, linearizacion }`: versión vigente de la CIE-11 (ej. `2026-01`). |
+| `GET` | `/cie11/jerarquia` | Autenticado | query: `uri` (URI de linearización guardada). Devuelve `categoria`, `bloque`, `bloques[]` y `capitulo` en español. Caché de 30 días. |
+| `GET`/`POST` | `/oms-icd/{ruta}` | Pase de `/cie11/pase` | Proxy hacia la API de la OMS para la herramienta de búsqueda. Solo `icd/release/11/...` e `icd/entity...`. |
+| `PUT` | `/consultas/{id}` | `MEDICO` | Además de lo que ya aceptaba: `diagnosticos: [{ descripcion, codigo_cie11?, uri_foundation?, uri_linearizacion? }]`. |
 
-- La búsqueda acepta una frase de síntomas o el inicio de un código. Ignora conectores,
-  números y palabras de dos letras; basta con que coincida una palabra y primero salen
-  las filas que coinciden con más.
-- Con el catálogo vacío responde `503` con un mensaje para el médico.
-- `codigo_cie10` es opcional: sin él el diagnóstico queda como texto libre. Si viene,
-  debe existir en el catálogo (`422`).
+- Sin `codigo_cie11` ni `uri_linearizacion` el diagnóstico es texto libre.
+- Con uno debe venir el otro (`422`). Un elemento de la OMS sin código se rechaza.
+- `uri_linearizacion` debe ser `http(s)://id.who.int/icd/release/11/AAAA-MM/mms/...`; el
+  release se toma de ahí.
 - Enviar `diagnosticos` reemplaza la lista completa; no enviarlo la deja como está.
 - `GET /consultas/{id}` y `GET /pacientes/{id}/historial` devuelven `diagnosticos`
-  (`id`, `consulta_id`, `codigo_cie10`, `descripcion`, `es_texto_libre`) y `medicoJvpm`.
+  (`id`, `consulta_id`, `codigo_cie11`, `descripcion`, `uri_foundation`,
+  `uri_linearizacion`, `release_cie11`, `es_texto_libre`) y `medicoJvpm`.
+- **Proxy:**
+  - Responde `401` sin pase válido, `429` si se pasa del límite por médico (240/min por
+    defecto) y `502`/`503` si la OMS no responde.
+  - Las estadísticas de la herramienta (`analytics/...`) se descartan con `204`.
 
-El catálogo se arma con `php artisan cie10:sincronizar-oms`: códigos de la API de la OMS
-(CIE-10 2019) y descripciones en español de `backend/database/data/cie10_descripciones_es.csv`.
-Requiere `ICD_CLIENT_ID` e `ICD_CLIENT_SECRET` en el `.env`. Detalle y razones en
-`docs/claude-context/05-catalogo-cie10.md`. Para cargar un CSV propio sigue disponible
-`php artisan cie10:importar <archivo.csv>`.
+Detalle, seguridad y configuración en `docs/claude-context/05-diagnostico-cie11.md`.
 
 ---
 

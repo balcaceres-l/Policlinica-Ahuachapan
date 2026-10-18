@@ -10,10 +10,15 @@
 export interface DiagnosticoConsulta {
   id: string;
   consulta_id: string;
-  /** Código CIE-10 del catálogo (HU-44); null si se escribió como texto libre. */
-  codigo_cie10: string | null;
-  /** Descripción del catálogo o texto libre escrito por el médico. */
+  /** Código CIE-11 de la OMS (HU-44); null si se escribió como texto libre. */
+  codigo_cie11: string | null;
+  /** Nombre oficial en español de la OMS, o el texto libre del médico. */
   descripcion: string;
+  uri_foundation: string | null;
+  /** URI de linearización MMS: con ella se pide a la OMS el bloque y el capítulo. */
+  uri_linearizacion: string | null;
+  /** Versión de la CIE-11 de la que salió el código, ej. "2026-01". */
+  release_cie11: string | null;
   es_texto_libre: boolean;
 }
 
