@@ -4,7 +4,7 @@ namespace Tests\Feature\Api;
 
 use App\Models\cita;
 use App\Models\consulta;
-use App\Models\especialidad;
+use App\Models\Especialidad;
 use App\Models\paciente;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -31,8 +31,8 @@ class ConsultaTest extends TestCase
         $admin = User::factory()->create(['rol' => 'ADMINISTRADOR', 'estado' => 'ACTIVO']);
         $this->medico = User::factory()->create(['rol' => 'MEDICO', 'estado' => 'ACTIVO']);
 
-        $this->ginecologia = especialidad::create(['nombre' => 'Ginecología', 'estado' => 'ACTIVA']);
-        $this->interna = especialidad::create(['nombre' => 'Medicina Interna', 'estado' => 'ACTIVA']);
+        $this->ginecologia = Especialidad::create(['nombre' => 'Ginecología', 'estado' => 'ACTIVA']);
+        $this->interna = Especialidad::create(['nombre' => 'Medicina Interna', 'estado' => 'ACTIVA']);
 
         $this->paciente = paciente::create([
             'numero_expediente' => 'PT01-2026',

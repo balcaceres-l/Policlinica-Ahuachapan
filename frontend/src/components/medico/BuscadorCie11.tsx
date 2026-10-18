@@ -22,8 +22,22 @@ interface BuscadorCie11Props {
 export function BuscadorCie11({ valor, onEscribir, onSeleccionar, disabled, className }: BuscadorCie11Props) {
   const [iNo] = useState(() => `dx${++siguienteCampo}`);
   const [aviso, setAviso] = useState<string | null>(null);
-  // Tras elegir, las sugerencias se ocultan; vuelven en cuanto se escribe.
+  // Se ocultan al elegir, con Escape, con la × o con un clic fuera del campo;
+  // vuelven en cuanto se escribe. La ECT no las cierra por su cuenta.
   const [sugerenciasOcultas, setSugerenciasOcultas] = useState(false);
+  const contenedor = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const alPulsar = (evento: PointerEvent) => {
+      const objetivo = evento.target as Element | null;
+      if (!contenedor.current || !objetivo) return;
+      if (!contenedor.current.contains(objetivo) || objetivo.closest('.closeicon')) {
+        setSugerenciasOcultas(true);
+      }
+    };
+    document.addEventListener('pointerdown', alPulsar);
+    return () => document.removeEventListener('pointerdown', alPulsar);
+  }, []);
 
   // Los manejadores cambian en cada render; la ECT se enlaza una sola vez.
   const seleccionar = useRef(onSeleccionar);
@@ -61,7 +75,7 @@ export function BuscadorCie11({ valor, onEscribir, onSeleccionar, disabled, clas
   }, [iNo, disabled]);
 
   return (
-    <div className="relative">
+    <div ref={contenedor} className="relative">
       <input
         type="text"
         className={`ctw-input ${className}`}

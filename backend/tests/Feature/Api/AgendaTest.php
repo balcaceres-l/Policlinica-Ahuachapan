@@ -86,6 +86,22 @@ class AgendaTest extends TestCase
         ])->assertStatus(422);
     }
 
+    public function test_el_administrador_guarda_la_semana_completa_y_recibe_el_horario_nuevo(): void
+    {
+        Sanctum::actingAs($this->admin);
+
+        $this->putJson("/api/medicos/{$this->medico->id}/horarios", ['horarios' => [
+            ['dia_semana' => 'SABADO', 'hora_inicio' => '08:00', 'hora_fin' => '12:00'],
+            ['dia_semana' => 'MARTES', 'hora_inicio' => '15:00', 'hora_fin' => '18:30'],
+        ]])
+            ->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('data.0.dia_semana', 'MARTES')
+            ->assertJsonPath('data.1.dia_semana', 'SABADO');
+
+        $this->assertDatabaseMissing('horario_medico', ['id_medico' => $this->medico->id, 'dia_semana' => 'LUNES']);
+    }
+
     public function test_la_recepcionista_no_configura_horarios(): void
     {
         Sanctum::actingAs($this->recepcion);

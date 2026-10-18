@@ -8,3 +8,19 @@
   padding-left: 40px;
   list-style: none;
 }
+
+/*
+ * La lista de sugerencias ocupa el ancho del campo (la ECT la dibuja más ancha
+ * y se salía de la pantalla). El desplazamiento es el de la propia ECT
+ * (`.overflowBox`); solo se baja su alto. Otro `overflow` aquí daba dos barras.
+ */
+.ctw-window .ectComponent .popupMode .popupModeResults {
+  left: 0;
+  right: 0;
+  min-width: 0;
+}
+
+/* La ECT pone `max-height: 480px` en línea; por eso el !important. */
+.ctw-window .overflowBox {
+  max-height: 20rem !important;
+}

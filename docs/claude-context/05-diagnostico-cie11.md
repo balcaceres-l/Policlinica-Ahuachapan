@@ -20,6 +20,16 @@ la **CIE-11**, con su nombre oficial en español y su código.
   se guardan en caché 30 días (`GET /api/cie11/jerarquia?uri=`).
 - **No hay base propia de diagnósticos.** La tabla `catalogo_cie10` se eliminó. Los
   diagnósticos anteriores con código CIE-10 quedan como texto libre.
+- **Lista simplificada (decidido con Katherinne el 2026-10-17):** cada sugerencia muestra solo
+  código y nombre (`simplifiedMode`, `disableHierarchy`, sin teclado virtual). Se quitaron
+  la poscoordinación (+), los capítulos relacionados de embarazo (J) y perinatal (K), los
+  detalles y el visor de la jerarquía. El sistema guarda un solo código por diagnóstico y
+  esos controles confundían. Para un caso de embarazo o de recién nacido, el médico lo
+  escribe ("hipertensión embarazo") y le sale la categoría de ese capítulo. La OMS sí
+  sugiere algunos códigos ya combinados (ej. "gastritis aguda" = `DA42.Z&XT5R`), y se
+  guardan tal cual.
+- **Cierre de la lista:** al elegir, con Escape, con la × o con un clic fuera del campo.
+  Vuelve al escribir. Ocupa el ancho del campo y se desplaza por dentro (`styles/ect.css`).
 
 ## Por qué así
 
@@ -99,10 +109,15 @@ O agregar esas dos líneas al `php.ini`. En un VPS Linux no hace falta.
 
 - Con Vite, el paquete llega como `default = { Settings, Handler }`, no como `ECT`.
 - Con `autoBind: false` hay que llamar `Handler.bind(iNo)` cuando el campo ya existe.
-  `bind` termina su inicio por su cuenta y sin avisar: lo escrito antes de eso se
-  relanza con `Handler.search` (ver `relanzarLoEscrito`). Además se precarga al abrir la
-  consulta.
+  `bind` termina su inicio por su cuenta: cuando acaba, le pone al campo la clase
+  `apiInitializationCompleted`. Con la base compartida puede tardar más de 20 s.
+- Durante ese inicio la herramienta **deshabilita el campo**: el médico pierde el foco y
+  lo que escribió antes no dispara búsqueda. `relanzarLoEscrito` espera la clase, devuelve
+  el foco si nadie más lo tomó y relanza con un evento `input`. Solo lo hace si el médico
+  escribió en ese campo antes de que estuviera listo: al guardar, el campo se vuelve a
+  montar con el diagnóstico guardado y no debe abrir sugerencias. `Handler.search` en ese
+  momento no buscaba (2026-10-17). Además se precarga al abrir la consulta.
 - En desarrollo React monta dos veces: la limpieza del primer montaje no debe borrar el
   registro del segundo.
-- El desplegable no se cierra al hacer clic fuera: se oculta al elegir o con Escape, y
-  vuelve al escribir.
+- El desplegable no se cierra solo, ni con su propia ×: `BuscadorCie11` lo oculta al
+  elegir, con Escape, al pulsar la × (`.closeicon`) o con un clic fuera, y vuelve al escribir.
