@@ -4,11 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Concerns\RespondsWithJson;
 use App\Http\Controllers\Controller;
-use App\Http\Resources\DiagnosticoResource;
 use App\Http\Resources\PacienteResource;
-use App\Http\Resources\SignosVitalesResource;
 use App\Models\paciente;
 use App\Models\responsable;
+use App\Services\HistorialPaciente;
 use Carbon\Carbon;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
@@ -31,6 +30,7 @@ class PacienteController extends Controller
             'estado' => ['nullable', Rule::in(['ACTIVO', 'FALLECIDO', 'TODOS'])],
             'categoria' => ['nullable', Rule::in(['TODOS', 'ADULTO', 'MENOR'])],
             'buscar' => ['nullable', 'string', 'max:100'],
+            'pendientes' => ['nullable', 'boolean'],
         ]);
 
         $estadoFiltro = $validated['estado'] ?? 'ACTIVO';
@@ -48,6 +48,11 @@ class PacienteController extends Controller
             $query->where('es_menor_edad', false);
         } elseif ($categoriaFiltro === 'MENOR') {
             $query->where('es_menor_edad', true);
+        }
+
+        // Registrados por el médico en una consulta inmediata, sin completar.
+        if ($request->boolean('pendientes')) {
+            $query->where('datos_pendientes', true);
         }
 
         $pacientes = $query->orderByDesc('fecha_registro')->get();
@@ -186,6 +191,8 @@ class PacienteController extends Controller
                         'direccion' => $request->filled('direccion') ? trim((string) $request->direccion) : null,
                         'es_menor_edad' => $esMenor,
                         'estado' => 'ACTIVO',
+                        // Consulta inmediata: lo registra el médico y la recepcionista lo completa.
+                        'datos_pendientes' => $request->user()->rol === 'MEDICO',
                         'id_responsable' => $idResponsable,
                         'id_registrado_por' => $request->user()->id,
                         'fecha_registro' => now(),
@@ -230,6 +237,11 @@ class PacienteController extends Controller
         return DB::transaction(function () use ($request, $paciente) {
             $nombreLimpio = trim((string) $request->nombre_completo);
             $direccionLimpia = $request->filled('direccion') ? trim((string) $request->direccion) : null;
+
+            // La recepcionista revisó y completó el registro hecho por el médico.
+            if ($request->user()->rol === 'RECEPCIONISTA') {
+                $paciente->datos_pendientes = false;
+            }
 
             if ($paciente->es_menor_edad) {
                 // Para menores, validar y actualizar responsable si aplica
@@ -289,102 +301,11 @@ class PacienteController extends Controller
     }
 
     /**
-     * Historial de citas y atenciones del paciente.
-     * Incluye todas las citas del paciente ordenadas cronológicamente,
-     * con signos vitales, consulta médica, examen físico, plan y receta.
+     * Historial de citas y atenciones del paciente, con signos vitales,
+     * consulta, examen físico, diagnósticos, plan, receta y documentos.
      */
-    public function historial(paciente $paciente): JsonResponse
+    public function historial(paciente $paciente, HistorialPaciente $historial): JsonResponse
     {
-        $citas = $paciente->citas()
-            ->with([
-                'medico',
-                'especialidad',
-                'signosVitales.registradoPor',
-                'consulta.especialidad',
-                'consulta.examenesFisicos',
-                'consulta.diagnosticos',
-                'consulta.planManejo',
-                'consulta.receta.detalles',
-            ])
-            ->orderByDesc('fecha')
-            ->orderByDesc('hora_inicio')
-            ->get();
-
-        $resultado = $citas->map(function ($cita) use ($paciente) {
-            $consulta = $cita->consulta;
-
-            $examenesFormateados = $consulta?->examenesFisicos?->map(function ($ef) {
-                return [
-                    'id' => $ef->id_examen,
-                    'region_anatomica' => $ef->region_anatomica,
-                    'hallazgos' => $ef->hallazgos,
-                ];
-            })->values()->all() ?? [];
-
-            $examenTexto = ! empty($examenesFormateados)
-                ? collect($examenesFormateados)
-                    ->map(fn ($e) => ($e['region_anatomica'] ? $e['region_anatomica'].': ' : '').$e['hallazgos'])
-                    ->filter()
-                    ->implode("\n")
-                : null;
-
-            $recetaFormateada = null;
-            if ($consulta?->receta) {
-                $recetaFormateada = [
-                    'id' => $consulta->receta->id_receta,
-                    'observaciones_generales' => $consulta->receta->observaciones_generales,
-                    'detalles' => $consulta->receta->detalles->map(function ($d) {
-                        return [
-                            'id' => $d->id_detalle,
-                            'nombre_medicamento' => $d->nombre_medicamento,
-                            'dosis' => $d->dosis,
-                            'via_administracion' => $d->via_administracion,
-                            'frecuencia' => $d->frecuencia,
-                            'duracion' => $d->duracion,
-                            'indicaciones' => $d->indicaciones,
-                        ];
-                    })->values()->all(),
-                ];
-            }
-
-            $signosFormateados = null;
-            if ($cita->signosVitales) {
-                $signosFormateados = (new SignosVitalesResource($cita->signosVitales))->resolve();
-            }
-
-            return [
-                'id' => $consulta?->id_consulta ?? $cita->id_cita,
-                'paciente_id' => $paciente->id_paciente,
-                'cita_id' => $cita->id_cita,
-                'fecha_hora_inicio' => $consulta?->fecha_hora_inicio?->toDateTimeString() ?? ($cita->fecha?->toDateString().' '.substr((string) $cita->hora_inicio, 0, 5)),
-                'fecha_hora_fin' => $consulta?->fecha_hora_fin?->toDateTimeString(),
-                'medico_id' => $cita->id_medico,
-                'medicoNombre' => $cita->medico?->nombre_completo ?? 'Dr. Médico',
-                'medicoJvpm' => $cita->medico?->jvpm,
-                'especialidad_atencion_id' => $consulta?->id_especialidad_atencion ?? $cita->id_especialidad,
-                'especialidadNombre' => $consulta?->especialidad?->nombre ?? $cita->especialidad?->nombre,
-                'motivo_consulta' => $consulta?->motivo_consulta,
-                'notas_adicionales' => $consulta?->notas_adicionales,
-                'examen_fisico' => $examenTexto,
-                'examenes_fisicos' => $examenesFormateados,
-                'diagnosticos' => $consulta
-                    ? DiagnosticoResource::collection($consulta->diagnosticos)->resolve()
-                    : [],
-                'plan_manejo' => $consulta?->planManejo ? [
-                    'id' => $consulta->planManejo->id_plan,
-                    'consulta_id' => $consulta->id_consulta,
-                    'descripcion' => $consulta->planManejo->descripcion,
-                    'indicaciones' => $consulta->planManejo->indicaciones ?? $consulta->planManejo->descripcion,
-                ] : null,
-                'receta' => $recetaFormateada,
-                'signos_vitales' => $signosFormateados,
-                'cita_estado' => $cita->estado,
-                'tipo_cita' => $cita->tipo_cita,
-                'precio' => $consulta?->precio,
-                'total' => $consulta?->total,
-            ];
-        });
-
-        return $this->success($resultado);
+        return $this->success($historial->de($paciente));
     }
 }

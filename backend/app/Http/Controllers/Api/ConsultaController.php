@@ -9,6 +9,8 @@ use App\Http\Resources\ConsultaResource;
 use App\Http\Resources\EspecialidadResource;
 use App\Models\cita;
 use App\Models\consulta;
+use App\Models\paciente;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -73,6 +75,9 @@ class ConsultaController extends Controller
                 'diagnosticos',
                 'planManejo',
                 'receta.detalles',
+                'constancias.medico',
+                'referencias.medico',
+                'referencias.medicoDestino',
             ])))->resolve(),
         );
     }
@@ -97,25 +102,14 @@ class ConsultaController extends Controller
             return $this->failure('Esta cita ya tiene una consulta abierta.', 409);
         }
 
-        $asignadas = $medico->especialidades()->where('estado', 'ACTIVA')->pluck('especialidades.id');
-
         $validado = $request->validate([
             'especialidad_atencion_id' => ['nullable', 'uuid'],
             'motivo_consulta' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $especialidadId = $validado['especialidad_atencion_id'] ?? null;
-
-        if ($especialidadId === null && $asignadas->count() === 1) {
-            $especialidadId = $asignadas->first();
-        }
-
-        if ($especialidadId !== null && ! $asignadas->contains($especialidadId)) {
-            return $this->failure('Esa especialidad no está asignada al médico.', 422);
-        }
-
-        if ($especialidadId === null && $asignadas->count() > 1) {
-            return $this->failure('Debes indicar con qué especialidad atiendes la consulta.', 422);
+        $especialidadId = $this->especialidadDeAtencion($medico, $validado['especialidad_atencion_id'] ?? null);
+        if ($especialidadId instanceof JsonResponse) {
+            return $especialidadId;
         }
 
         $consulta = DB::transaction(function () use ($cita, $medico, $especialidadId, $validado) {
@@ -132,6 +126,94 @@ class ConsultaController extends Controller
             return $consulta;
         });
 
+        return $this->consultaIniciada($consulta);
+    }
+
+    /**
+     * Consulta inmediata: el médico atiende a un paciente sin cita previa. Se
+     * crea una cita SIN_CITA para ahora mismo (sin validar horario ni
+     * disponibilidad, como una emergencia) y se abre su consulta.
+     */
+    public function inmediata(Request $request): JsonResponse
+    {
+        $medico = $request->user();
+
+        $validado = $request->validate([
+            'paciente_id' => ['required', 'uuid', 'exists:paciente,id_paciente'],
+            'especialidad_atencion_id' => ['nullable', 'uuid'],
+            'motivo_consulta' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $paciente = paciente::find($validado['paciente_id']);
+        if ($paciente->estado !== 'ACTIVO') {
+            return $this->failure('El paciente no está activo.', 422);
+        }
+
+        $especialidadId = $this->especialidadDeAtencion($medico, $validado['especialidad_atencion_id'] ?? null);
+        if ($especialidadId instanceof JsonResponse) {
+            return $especialidadId;
+        }
+
+        $consulta = DB::transaction(function () use ($medico, $paciente, $especialidadId, $validado) {
+            $ahora = now();
+            $fin = $ahora->copy()->addMinutes(20);
+
+            $siguiente = (int) cita::where('id_medico', $medico->id)
+                ->whereDate('fecha', $ahora->toDateString())
+                ->max('orden_atencion');
+
+            $cita = cita::create([
+                'id_paciente' => $paciente->id_paciente,
+                'id_medico' => $medico->id,
+                'id_especialidad' => $especialidadId,
+                'fecha' => $ahora->toDateString(),
+                'hora_inicio' => $ahora->format('H:i'),
+                // Cerca de medianoche no se pasa al día siguiente.
+                'hora_fin' => $fin->isSameDay($ahora) ? $fin->format('H:i') : '23:59',
+                'tipo_cita' => 'SIN_CITA',
+                'estado' => 'EN_ATENCION',
+                'hora_llegada' => $ahora,
+                'orden_atencion' => $siguiente + 1,
+                'id_creado_por' => $medico->id,
+            ]);
+
+            return consulta::create([
+                'id_cita' => $cita->id_cita,
+                'id_medico' => $medico->id,
+                'id_especialidad_atencion' => $especialidadId,
+                'fecha_hora_inicio' => $ahora,
+                'motivo_consulta' => $validado['motivo_consulta'] ?? null,
+            ]);
+        });
+
+        return $this->consultaIniciada($consulta);
+    }
+
+    /**
+     * HU-39 — especialidad con la que el médico atiende. Si solo tiene una
+     * asignada se toma esa; si tiene varias debe indicarla.
+     */
+    private function especialidadDeAtencion(User $medico, ?string $especialidadId): string|null|JsonResponse
+    {
+        $asignadas = $medico->especialidades()->where('estado', 'ACTIVA')->pluck('especialidades.id');
+
+        if ($especialidadId === null && $asignadas->count() === 1) {
+            $especialidadId = $asignadas->first();
+        }
+
+        if ($especialidadId !== null && ! $asignadas->contains($especialidadId)) {
+            return $this->failure('Esa especialidad no está asignada al médico.', 422);
+        }
+
+        if ($especialidadId === null && $asignadas->count() > 1) {
+            return $this->failure('Debes indicar con qué especialidad atiendes la consulta.', 422);
+        }
+
+        return $especialidadId;
+    }
+
+    private function consultaIniciada(consulta $consulta): JsonResponse
+    {
         return $this->success(
             (new ConsultaResource($consulta->load([
                 'medico',
@@ -142,6 +224,9 @@ class ConsultaController extends Controller
                 'diagnosticos',
                 'planManejo',
                 'receta.detalles',
+                'constancias.medico',
+                'referencias.medico',
+                'referencias.medicoDestino',
             ])))->resolve(),
             'Consulta iniciada correctamente.',
             201,
@@ -300,6 +385,9 @@ class ConsultaController extends Controller
                 'diagnosticos',
                 'planManejo',
                 'receta.detalles',
+                'constancias.medico',
+                'referencias.medico',
+                'referencias.medicoDestino',
             ])))->resolve(),
             'Consulta actualizada correctamente.',
         );
@@ -363,6 +451,9 @@ class ConsultaController extends Controller
                 'diagnosticos',
                 'planManejo',
                 'receta.detalles',
+                'constancias.medico',
+                'referencias.medico',
+                'referencias.medicoDestino',
             ])))->resolve(),
             'Consulta finalizada correctamente.',
         );

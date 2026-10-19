@@ -5,18 +5,27 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Concerns\RespondsWithJson;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\HorarioMedicoResource;
+use App\Models\cita;
 use App\Models\horario_medico;
 use App\Models\User;
+use App\Services\AgendaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
+/**
+ * HU-34 — horarios de los médicos. El administrador configura el de cualquiera;
+ * el médico, solo el suyo y sin dejar citas agendadas fuera (esas las
+ * reagenda recepción).
+ */
 class HorarioMedicoController extends Controller
 {
     use RespondsWithJson;
 
     private const DIAS = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
+
+    public function __construct(private readonly AgendaService $agenda) {}
 
     public function index(Request $request, User $medico): JsonResponse
     {
@@ -42,6 +51,9 @@ class HorarioMedicoController extends Controller
         if ($medico->rol !== 'MEDICO') {
             return $this->failure('El usuario indicado no es médico.', 422);
         }
+        if ($rechazo = $this->soloSuHorario($request, $medico->id)) {
+            return $rechazo;
+        }
 
         $validado = $request->validate([
             'dia_semana' => ['required', Rule::in(self::DIAS)],
@@ -64,6 +76,10 @@ class HorarioMedicoController extends Controller
 
     public function update(Request $request, horario_medico $horario): JsonResponse
     {
+        if ($rechazo = $this->soloSuHorario($request, $horario->id_medico)) {
+            return $rechazo;
+        }
+
         $validado = $request->validate([
             'dia_semana' => ['required', Rule::in(self::DIAS)],
             'hora_inicio' => ['required', 'date_format:H:i'],
@@ -74,6 +90,12 @@ class HorarioMedicoController extends Controller
             return $this->failure('El tramo se solapa con otro horario del mismo día.', 422);
         }
 
+        $tramos = $this->tramosDe($horario->id_medico, $horario->id_horario);
+        $tramos[] = $validado;
+        if ($rechazo = $this->rechazarSiDejaCitasFuera($request, $horario->id_medico, $tramos)) {
+            return $rechazo;
+        }
+
         $horario->update($validado);
 
         return $this->success(
@@ -82,8 +104,17 @@ class HorarioMedicoController extends Controller
         );
     }
 
-    public function destroy(horario_medico $horario): JsonResponse
+    public function destroy(Request $request, horario_medico $horario): JsonResponse
     {
+        if ($rechazo = $this->soloSuHorario($request, $horario->id_medico)) {
+            return $rechazo;
+        }
+
+        $tramos = $this->tramosDe($horario->id_medico, $horario->id_horario);
+        if ($rechazo = $this->rechazarSiDejaCitasFuera($request, $horario->id_medico, $tramos)) {
+            return $rechazo;
+        }
+
         $horario->delete();
 
         return $this->success(null, 'Horario eliminado correctamente.');
@@ -98,6 +129,9 @@ class HorarioMedicoController extends Controller
         if ($medico->rol !== 'MEDICO') {
             return $this->failure('El usuario indicado no es médico.', 422);
         }
+        if ($rechazo = $this->soloSuHorario($request, $medico->id)) {
+            return $rechazo;
+        }
 
         $validado = $request->validate([
             'horarios' => ['present', 'array'],
@@ -110,6 +144,10 @@ class HorarioMedicoController extends Controller
             return $this->failure("Hay tramos solapados el día {$dia}.", 422);
         }
 
+        if ($rechazo = $this->rechazarSiDejaCitasFuera($request, $medico->id, $validado['horarios'])) {
+            return $rechazo;
+        }
+
         DB::transaction(function () use ($medico, $validado) {
             horario_medico::where('id_medico', $medico->id)->delete();
 
@@ -119,6 +157,65 @@ class HorarioMedicoController extends Controller
         });
 
         return $this->index($request, $medico);
+    }
+
+    /** El médico solo puede tocar su propio horario. */
+    private function soloSuHorario(Request $request, string $medicoId): ?JsonResponse
+    {
+        $usuario = $request->user();
+
+        return $usuario->rol === 'MEDICO' && $usuario->id !== $medicoId
+            ? $this->failure('Solo puedes modificar tu propio horario.', 403)
+            : null;
+    }
+
+    /**
+     * El médico no puede dejar citas agendadas fuera de su horario: esas las
+     * reagenda recepción, que es quien contacta a los pacientes. El
+     * administrador sí puede (HU-34: las citas ya confirmadas se respetan).
+     *
+     * @param  array<int, array<string, string>>  $tramosNuevos
+     */
+    private function rechazarSiDejaCitasFuera(Request $request, string $medicoId, array $tramosNuevos): ?JsonResponse
+    {
+        if ($request->user()->rol !== 'MEDICO') {
+            return null;
+        }
+
+        $fuera = $this->agenda->citasFueraDeHorario($medicoId, $tramosNuevos);
+        if ($fuera->isEmpty()) {
+            return null;
+        }
+
+        $ejemplos = $fuera->take(3)
+            ->map(fn (cita $c) => $c->fecha->format('d/m').' '.substr((string) $c->hora_inicio, 0, 5)
+                .' ('.$c->paciente?->nombre_completo.')')
+            ->implode(', ');
+        $mas = $fuera->count() > 3 ? ' y '.($fuera->count() - 3).' más' : '';
+
+        return $this->failure(
+            "Ese cambio deja fuera de tu horario {$fuera->count()} cita(s) agendada(s): {$ejemplos}{$mas}. "
+            .'Pide a recepción que las reagende y vuelve a intentarlo.',
+            422,
+        );
+    }
+
+    /**
+     * Tramos actuales del médico, sin el indicado.
+     *
+     * @return array<int, array<string, string>>
+     */
+    private function tramosDe(string $medicoId, ?string $sinIncluir = null): array
+    {
+        return horario_medico::where('id_medico', $medicoId)
+            ->when($sinIncluir, fn ($q) => $q->where('id_horario', '!=', $sinIncluir))
+            ->get()
+            ->map(fn (horario_medico $h) => [
+                'dia_semana' => $h->dia_semana,
+                'hora_inicio' => substr((string) $h->hora_inicio, 0, 5),
+                'hora_fin' => substr((string) $h->hora_fin, 0, 5),
+            ])
+            ->all();
     }
 
     /** @param array<string, string> $tramo */

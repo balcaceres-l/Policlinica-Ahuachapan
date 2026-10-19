@@ -14,7 +14,8 @@ interface HorarioModalProps {
   isOpen: boolean;
   medicoId: string;
   medicoNombre?: string;
-  medicoCargo?: string;
+  /** N.º JVPM del médico; se muestra junto a su nombre. */
+  medicoJvpm?: string | null;
   horarios: HorarioMedico[];
   diaInicialEnfocado?: DiaSemana | null;
   onClose: () => void;
@@ -89,7 +90,7 @@ export function HorarioModal({
   isOpen,
   medicoId,
   medicoNombre,
-  medicoCargo,
+  medicoJvpm,
   horarios,
   diaInicialEnfocado,
   onClose,
@@ -466,7 +467,7 @@ export function HorarioModal({
       title="Configurar Horario Semanal"
       subtitle={
         medicoNombre
-          ? `Gestión integral de días y turnos de atención para ${medicoNombre}${medicoCargo ? ` (${medicoCargo})` : ''}`
+          ? `Gestión integral de días y turnos de atención para ${medicoNombre}${medicoJvpm ? ` (JVPM ${medicoJvpm})` : ''}`
           : 'Define los días laborales y turnos de atención del médico.'
       }
       size="xl"

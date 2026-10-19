@@ -11,7 +11,7 @@ import type { Column } from '@/components/ui/DataTable';
 import { useHorariosDeMedico } from '@/hooks/horario/useHorarios';
 import { useMedicos } from '@/hooks/usuario/useUsuarios';
 import { DIA_LABEL, formatearHora } from '@/lib/constants/dias';
-import { cn, getIniciales, normalizar } from '@/lib/utils';
+import { cn, getIniciales, jvpmDe, normalizar } from '@/lib/utils';
 import type { HorarioMedico } from '@/types/horario.types';
 
 /** '15:00'–'18:30' -> 3.5 h */
@@ -42,7 +42,7 @@ export function HorariosPage() {
     return medicos.filter(
       (medico) =>
         normalizar(medico.nombreCompleto).includes(termino) ||
-        normalizar(medico.cargo).includes(termino),
+        normalizar(medico.jvpm ?? '').includes(termino),
     );
   }, [medicos, busqueda]);
 
@@ -172,7 +172,7 @@ export function HorariosPage() {
                       <p className="truncate text-sm font-semibold text-ink">
                         {medico.nombreCompleto}
                       </p>
-                      <p className="truncate text-xs text-muted">{medico.cargo}</p>
+                      <p className="truncate text-xs text-muted">{jvpmDe(medico)}</p>
                     </div>
                     {medico.estado === 'INACTIVO' && (
                       <i className="ri-forbid-line text-sm text-danger" title="Usuario inactivo" />
@@ -202,7 +202,7 @@ export function HorariosPage() {
                   <p className="truncate text-lg font-bold text-ink">
                     {medicoSeleccionado.nombreCompleto}
                   </p>
-                  <p className="truncate text-sm text-muted">{medicoSeleccionado.cargo}</p>
+                  <p className="truncate text-sm text-muted">{jvpmDe(medicoSeleccionado)}</p>
                 </div>
                 <Button icon="ri-calendar-schedule-line" onClick={abrirAlta}>
                   Configurar Horario Semanal
@@ -243,7 +243,7 @@ export function HorariosPage() {
           isOpen={modalAbierto}
           medicoId={medicoSeleccionado.id}
           medicoNombre={medicoSeleccionado.nombreCompleto}
-          medicoCargo={medicoSeleccionado.cargo}
+          medicoJvpm={medicoSeleccionado.jvpm}
           horarios={horarios}
           diaInicialEnfocado={horarioEnEdicion?.dia_semana}
           onClose={() => setModalAbierto(false)}

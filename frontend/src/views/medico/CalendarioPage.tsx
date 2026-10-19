@@ -351,6 +351,9 @@ export function CalendarioPage() {
                           {cita.tipo_cita === 'SOBRECUPO' && (
                             <Badge variant="warning">{TIPO_CITA_LABEL[cita.tipo_cita]}</Badge>
                           )}
+                          {cita.tipo_cita === 'SIN_CITA' && (
+                            <Badge variant="info">{TIPO_CITA_LABEL[cita.tipo_cita]}</Badge>
+                          )}
                         </div>
 
                         <p className="mt-1 text-xs text-muted">

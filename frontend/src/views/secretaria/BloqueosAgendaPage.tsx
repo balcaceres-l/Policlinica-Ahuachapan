@@ -11,7 +11,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useBloqueos, useEliminarBloqueo } from '@/hooks/bloqueo/useBloqueos';
 import { useMedicos } from '@/hooks/usuario/useUsuarios';
 import { extraerMensajeError } from '@/lib/apiError';
-import { cn } from '@/lib/utils';
+import { cn, jvpmDe } from '@/lib/utils';
 import type { BloqueoAgenda, TipoBloqueo } from '@/types/bloqueo.types';
 
 type Vista = 'VIGENTES' | 'HISTORIAL';
@@ -275,7 +275,7 @@ export function BloqueosAgendaPage() {
             <option value="TODOS">Todos los Médicos ({medicos.length})</option>
             {medicos.map((m) => (
               <option key={m.id} value={m.id}>
-                {m.nombreCompleto} — {m.cargo}
+                {m.nombreCompleto}{m.jvpm ? ` — ${jvpmDe(m)}` : ''}
               </option>
             ))}
           </select>

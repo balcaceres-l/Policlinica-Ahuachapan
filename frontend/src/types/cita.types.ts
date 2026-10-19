@@ -1,4 +1,5 @@
-export type TipoCita = 'REGULAR' | 'EMERGENCIA' | 'SOBRECUPO';
+/** SIN_CITA: consulta inmediata, el médico atiende sin cita previa. */
+export type TipoCita = 'REGULAR' | 'EMERGENCIA' | 'SOBRECUPO' | 'SIN_CITA';
 
 export type EstadoCita =
   | 'AGENDADA'
@@ -108,4 +109,13 @@ export const TIPO_CITA_LABEL: Record<TipoCita, string> = {
   REGULAR: 'Regular',
   EMERGENCIA: 'Emergencia',
   SOBRECUPO: 'Sobrecupo',
+  SIN_CITA: 'Sin cita previa',
+};
+
+/** Colores de la etiqueta de tipo de cita en las tablas. */
+export const TIPO_CITA_CLASE: Record<TipoCita, string> = {
+  REGULAR: 'bg-brand-50 text-brand-700',
+  EMERGENCIA: 'bg-danger-soft text-danger',
+  SOBRECUPO: 'bg-warning-soft text-warning',
+  SIN_CITA: 'bg-info-soft text-info',
 };

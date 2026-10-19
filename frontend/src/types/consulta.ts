@@ -1,3 +1,4 @@
+import type { ConstanciaMedica, ReferenciaMedica } from '@/types/documento.types';
 import type { DiagnosticoConsulta } from '@/types/historial.types';
 
 export interface ExamenFisico {
@@ -39,7 +40,6 @@ export interface ConsultaDetalle {
   medico_id: string;
   medicoNombre?: string;
   medicoTelefono?: string;
-  medicoCargo?: string;
   /** Número de junta del médico; lo imprime la receta. */
   medicoJvpm?: string | null;
   especialidad_atencion_id?: string | null;
@@ -79,4 +79,7 @@ export interface ConsultaDetalle {
   diagnosticos?: DiagnosticoConsulta[];
   plan_manejo?: PlanManejo | null;
   receta?: RecetaMedica | null;
+  /** HU-31, HU-32 — documentos emitidos en esta consulta. */
+  constancias?: ConstanciaMedica[];
+  referencias?: ReferenciaMedica[];
 }

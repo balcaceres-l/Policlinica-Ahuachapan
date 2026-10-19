@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import Badge from '@/components/ui/Badge';
 import { useCatalogoEspecialidades } from '@/hooks/especialidad/useEspecialidades';
 import { useMedicos } from '@/hooks/usuario/useUsuarios';
-import { getIniciales, normalizar } from '@/lib/utils';
+import { getIniciales, jvpmDe, normalizar } from '@/lib/utils';
 import type { Usuario } from '@/types/user.types';
 
 /** Referencia estable: un `[]` inline cambiaría en cada render. */
@@ -45,8 +45,7 @@ export function SelectorMedicoCascada({
     if (medicoId && especialidadSeleccionada === 'TODAS') {
       const esp = catalogo.find(
         (e) =>
-          e.medicos.some((m) => m.id === medicoId) ||
-          medicos.find((m) => m.id === medicoId)?.cargo?.toLowerCase() === e.nombre.toLowerCase(),
+          e.medicos.some((m) => m.id === medicoId),
       );
       if (esp) {
         setEspecialidadSeleccionada(esp.id);
@@ -79,8 +78,7 @@ export function SelectorMedicoCascada({
 
     return medicos.filter(
       (m) =>
-        esp.medicos.some((em) => em.id === m.id) ||
-        m.cargo?.toLowerCase() === esp.nombre.toLowerCase(),
+        esp.medicos.some((em) => em.id === m.id),
     );
   }, [medicos, especialidadSeleccionada, catalogo]);
 
@@ -92,7 +90,7 @@ export function SelectorMedicoCascada({
     return medicosPorEspecialidad.filter(
       (m) =>
         normalizar(m.nombreCompleto).includes(termino) ||
-        normalizar(m.cargo).includes(termino) ||
+        normalizar(m.jvpm ?? '').includes(termino) ||
         normalizar(m.usuario).includes(termino),
     );
   }, [medicosPorEspecialidad, busqueda]);
@@ -101,8 +99,7 @@ export function SelectorMedicoCascada({
     // Buscar su especialidad
     const esp = catalogo.find(
       (e) =>
-        e.medicos.some((item) => item.id === m.id) ||
-        e.nombre.toLowerCase() === m.cargo?.toLowerCase(),
+        e.medicos.some((item) => item.id === m.id),
     );
 
     if (esp && especialidadSeleccionada === 'TODAS') {
@@ -121,8 +118,7 @@ export function SelectorMedicoCascada({
     if (espId !== 'TODAS' && medicoSeleccionado) {
       const esp = catalogo.find((e) => e.id === espId);
       const pertenece = esp
-        ? esp.medicos.some((m) => m.id === medicoSeleccionado.id) ||
-          medicoSeleccionado.cargo?.toLowerCase() === esp.nombre.toLowerCase()
+        ? esp.medicos.some((m) => m.id === medicoSeleccionado.id)
         : false;
 
       if (!pertenece) {
@@ -170,8 +166,7 @@ export function SelectorMedicoCascada({
                 (m) =>
                   catalogo
                     .find((c) => c.id === esp.id)
-                    ?.medicos.some((em) => em.id === m.id) ||
-                  m.cargo?.toLowerCase() === esp.nombre.toLowerCase(),
+                    ?.medicos.some((em) => em.id === m.id),
               );
               return (
                 <option key={esp.id} value={esp.id}>
@@ -202,7 +197,7 @@ export function SelectorMedicoCascada({
                 </p>
                 <div className="flex items-center gap-2 text-xs text-muted">
                   <Badge variant="info" className="py-0.5 text-[10px]">
-                    {medicoSeleccionado.cargo || 'Especialista'}
+                    {jvpmDe(medicoSeleccionado) || 'Médico'}
                   </Badge>
                   {medicoSeleccionado.telefono && (
                     <span>Tel: {medicoSeleccionado.telefono}</span>
@@ -282,7 +277,7 @@ export function SelectorMedicoCascada({
                             {m.nombreCompleto}
                           </p>
                           <p className="truncate text-[11px] text-muted">
-                            {m.cargo} {m.telefono ? `· ${m.telefono}` : ''}
+                            {[jvpmDe(m), m.telefono].filter(Boolean).join(' · ')}
                           </p>
                         </div>
                       </div>

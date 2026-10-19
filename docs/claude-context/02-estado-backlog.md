@@ -98,12 +98,51 @@ compartida (lotes 6 y 7, 2026-10-14). La migración `2026_10_17_100000` (paso a 
 Contrato de datos: `types/historial.types.ts`, `types/laboratorio.types.ts`,
 `types/cie11.types.ts`. Endpoints: `docs/API.md`.
 
+## Sprint 3 — Recetas y documentos médicos (en `sprint3-kath`, sin commit todavía)
+
+Se hace el sprint completo, no solo la HU asignada (pedido el 2026-10-18). Detalle de diseño en
+`06-documentos-medicos.md`.
+
+| Jira | HU | Estado |
+|---|---|---|
+| SCRUM-126 | HU-29 Creación de receta | ✅ Ya cumplía los criterios 73 y 74 (sección 5 de `ConsultaPage.tsx`, tabla `receta_medica` ligada a la consulta y visible en el expediente). Sin cambios de lógica. |
+| SCRUM-127 | HU-45 Catálogo de medicamentos | ✅ Cerrada como **texto libre** (decisión del equipo, 2026-10-18): el médico escribe cada medicamento en la receta. Cumple el criterio 76 (texto libre sin impedimento). El criterio 75 (seleccionar de un listado estandarizado) se descartó a propósito; no hay tabla ni catálogo de fármacos. |
+| SCRUM-128 | HU-30 Receta imprimible | ✅ PDF en el backend con la identidad de la policlínica (`resources/views/documentos/receta.blade.php`). En la consulta, "Exportar / Imprimir PDF" guarda y abre el PDF. |
+| SCRUM-129 | HU-31 Constancia médica | ✅ Tabla `constancia_medica`, `components/documento/ConstanciaModal.tsx`, sección 6 de la consulta. |
+| SCRUM-130 | HU-32 Referencia médica | ✅ Tabla `referencia_medica`, `components/documento/ReferenciaModal.tsx`. Interna: el PDF lleva el expediente completo. Externa: solo lo escrito. Sin bandeja de recibidas (decidido 2026-10-18). |
+| SCRUM-131 | HU-33 PDF e impresión | ✅ Módulo único `App\Services\DocumentoPdf` (dompdf) y `components/documento/VisorDocumentoModal.tsx` con "Imprimir" y "Exportar a PDF", para médico y recepcionista (expediente → "Documentos emitidos"). |
+
+Migraciones `2026_10_18_100000`, `110000` y `110100` corridas en la compartida el 2026-10-18
+(solo agregan una columna y dos tablas).
+
 ## Pendiente acordado fuera de las HU (2026-10-17)
 
-- **Horario y bloqueos propios del médico** (módulo del médico): editar su propio horario y
-  bloquear su agenda **solo si no hay citas agendadas** en ese rango. Si hay citas, el bloqueo
-  lo hace la recepcionista, porque tiene que contactar a los pacientes. Va después de cerrar
-  la CIE-11 y junto con el Sprint 3.
+- ✅ **Horario y bloqueos propios del médico** (2026-10-18, sin commit todavía): en "Mi horario"
+  (`views/medico/MiHorarioPage.tsx`) el médico edita su horario semanal (`HorarioModal`),
+  bloquea su agenda (`BloqueoAgendaModal` con `medicoFijoId`) y quita sus bloqueos futuros.
+  Solo puede hacerlo **si no hay citas agendadas** en ese lapso; si las hay, lo hace la
+  recepcionista, porque tiene que contactar a los pacientes. Un cambio de horario que deja
+  citas regulares pendientes fuera del horario nuevo no se guarda (decidido 2026-10-18). El
+  administrador sí puede (HU-34). Reglas en `HorarioMedicoController`,
+  `BloqueoAgendaController` y `AgendaService::citasFueraDeHorario`; pruebas en
+  `AgendaPropiaMedicoTest`.
+- ✅ **Consulta inmediata** (2026-10-18, sin commit todavía): botón en "Mi agenda" del médico
+  (`views/medico/CitasPage.tsx`, `components/medico/ConsultaInmediataModal.tsx`) para atender
+  sin cita previa. Busca al paciente o lo registra con el mismo formulario de recepción
+  (`NuevoPacienteModal`). `POST /medico/consulta-inmediata` crea una cita `SIN_CITA` a la hora
+  actual, sin validar horario ni disponibilidad, y abre la consulta. El paciente que registra el
+  médico queda con `paciente.datos_pendientes`; recepción lo ve en el directorio y la marca se
+  quita cuando ella guarda el registro. Migración `2026_10_18_100000` corrida en la compartida.
+
+## Ajustes pedidos después del Sprint 3 (2026-10-19, sin commit todavía)
+
+- **Usuarios sin cargo:** el formulario de crear y editar usuario ya no pide el cargo y la
+  columna `users.cargo` se elimina (migración `2026_10_19_100000`). En los médicos repetía o
+  contradecía sus especialidades; en el resto era solo descriptivo. Donde salía bajo el nombre del
+  médico ahora se muestra su **N.º JVPM** (`jvpmDe()` en `lib/utils.ts`), y las búsquedas son por
+  nombre o JVPM. El selector de médico por especialidad ya usaba la asociación médico–especialidad.
+  **La migración en la compartida se corre al mezclar el PR**: el código de `development` todavía
+  envía `cargo` al crear usuarios.
 
 ## Cómo actualizar este archivo
 

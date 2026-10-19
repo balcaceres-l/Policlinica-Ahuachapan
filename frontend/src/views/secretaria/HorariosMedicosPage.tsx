@@ -5,7 +5,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import SearchBar from '@/components/ui/SearchBar';
 import { useCatalogoEspecialidades } from '@/hooks/especialidad/useEspecialidades';
 import { DIA_LABEL, DIAS_SEMANA, formatearHora } from '@/lib/constants/dias';
-import { cn, normalizar } from '@/lib/utils';
+import { cn, jvpmDe, normalizar } from '@/lib/utils';
 import type { EspecialidadConMedicos } from '@/types/especialidad.types';
 import type { Usuario } from '@/types/user.types';
 
@@ -115,7 +115,7 @@ export function HorariosMedicosPage() {
                   className="flex w-full cursor-pointer items-center justify-between px-3 py-2.5 text-left text-sm hover:bg-brand-50"
                 >
                   <span className="font-medium text-ink">{medico.nombreCompleto}</span>
-                  <span className="text-xs text-muted">{medico.cargo}</span>
+                  <span className="text-xs text-muted">{jvpmDe(medico)}</span>
                 </button>
               ))}
             </div>
@@ -158,7 +158,7 @@ export function HorariosMedicosPage() {
               <header className="mb-4 flex items-start justify-between gap-3 border-b border-line pb-4">
                 <div>
                   <h2 className="font-bold text-ink">{medico.nombreCompleto}</h2>
-                  <p className="mt-1 text-xs text-muted">{medico.cargo}</p>
+                  <p className="mt-1 text-xs text-muted">{jvpmDe(medico)}</p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {obtenerEspecialidadesDelMedico(catalogo, medico.id).map((nombre) => (
                       <span key={nombre} className="rounded-field bg-info-soft px-2 py-0.5 text-xs font-semibold text-info">

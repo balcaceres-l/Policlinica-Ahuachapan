@@ -128,7 +128,7 @@ export function NuevoUsuarioModal({ isOpen, onClose }: NuevoUsuarioModalProps) {
           )}
         </div>
 
-        <div className="mb-4 grid gap-4 sm:grid-cols-2">
+        <div className="mb-4">
           <div>
             <label htmlFor="rol" className="mb-1.5 block text-sm font-medium text-ink">
               Rol
@@ -148,21 +148,6 @@ export function NuevoUsuarioModal({ isOpen, onClose }: NuevoUsuarioModalProps) {
             {errors.rol && <p className="mt-1.5 text-xs text-danger">{errors.rol.message}</p>}
           </div>
 
-          <div>
-            <label htmlFor="cargo" className="mb-1.5 block text-sm font-medium text-ink">
-              Cargo
-            </label>
-            <input
-              id="cargo"
-              type="text"
-              disabled={isSubmitting}
-              aria-invalid={Boolean(errors.cargo)}
-              className={CLASE_CAMPO}
-              placeholder="Ginecología"
-              {...register('cargo')}
-            />
-            {errors.cargo && <p className="mt-1.5 text-xs text-danger">{errors.cargo.message}</p>}
-          </div>
         </div>
 
         <CampoJuntaVigilancia

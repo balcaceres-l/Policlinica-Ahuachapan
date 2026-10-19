@@ -14,6 +14,11 @@ interface BloqueoAgendaModalProps {
   onClose: () => void;
   /** Se llama con el bloqueo creado y las citas que quedaron dentro de él. */
   onCreado?: (resultado: BloqueoCreado) => void;
+  /**
+   * El médico bloquea su propia agenda: no se elige médico. El backend lo
+   * rechaza si hay citas agendadas en ese lapso (esos los bloquea recepción).
+   */
+  medicoFijoId?: string;
 }
 
 const CLASE_INPUT =
@@ -21,8 +26,9 @@ const CLASE_INPUT =
   'transition-colors placeholder:text-muted focus:border-brand-600 focus:ring-4 ' +
   'focus:ring-brand-600/15 disabled:opacity-60';
 
-export function BloqueoAgendaModal({ isOpen, onClose, onCreado }: BloqueoAgendaModalProps) {
-  const [medicoId, setMedicoId] = useState<string | ''>('');
+export function BloqueoAgendaModal({ isOpen, onClose, onCreado, medicoFijoId }: BloqueoAgendaModalProps) {
+  const [medicoElegido, setMedicoId] = useState<string | ''>('');
+  const medicoId = medicoFijoId ?? medicoElegido;
   const [fecha, setFecha] = useState('');
   const [tipoBloqueo, setTipoBloqueo] = useState<TipoBloqueo>('COMPLETO');
   const [horaInicio, setHoraInicio] = useState('08:00');
@@ -97,8 +103,12 @@ export function BloqueoAgendaModal({ isOpen, onClose, onCreado }: BloqueoAgendaM
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Registrar Bloqueo de Agenda"
-      subtitle="Inhabilita la asignación de citas para un médico: el día completo o solo un rango de horas."
+      title={medicoFijoId ? 'Bloquear mi agenda' : 'Registrar Bloqueo de Agenda'}
+      subtitle={
+        medicoFijoId
+          ? 'Solo si no tienes citas agendadas en ese lapso; si las tienes, pídelo a recepción.'
+          : 'Inhabilita la asignación de citas para un médico: el día completo o solo un rango de horas.'
+      }
       size="md"
       footer={
         <>
@@ -124,11 +134,13 @@ export function BloqueoAgendaModal({ isOpen, onClose, onCreado }: BloqueoAgendaM
         )}
 
         {/* Selector de Médico con Filtro en Cascada y Autocompletado */}
-        <SelectorMedicoCascada
-          medicoId={medicoId}
-          onSelectMedico={(mId) => setMedicoId(mId)}
-          label="Médico para Bloqueo de Agenda"
-        />
+        {!medicoFijoId && (
+          <SelectorMedicoCascada
+            medicoId={medicoId}
+            onSelectMedico={(mId) => setMedicoId(mId)}
+            label="Médico para Bloqueo de Agenda"
+          />
+        )}
 
         <div>
           <label className="mb-1 block text-xs font-semibold text-ink">

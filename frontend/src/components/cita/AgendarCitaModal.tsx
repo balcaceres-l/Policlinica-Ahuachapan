@@ -9,7 +9,7 @@ import Modal from '@/components/ui/Modal';
 import { useAuth } from '@/hooks/auth/useAuth';
 import { useAgendarCita } from '@/hooks/cita/useCitas';
 import { useEspecialidadesDeMedico } from '@/hooks/especialidad/useEspecialidades';
-import { getIniciales, obtenerFechaLocal, obtenerHoraLocal } from '@/lib/utils';
+import { getIniciales, jvpmDe, obtenerFechaLocal, obtenerHoraLocal } from '@/lib/utils';
 import type { TipoCita } from '@/types/cita.types';
 
 interface AgendarCitaModalProps {
@@ -217,7 +217,7 @@ export function AgendarCitaModal({
                       {usuario?.nombreCompleto}
                     </p>
                     <p className="truncate text-xs text-muted">
-                      {usuario?.cargo || 'Médico Especialista'}
+                      {jvpmDe(usuario) || 'Médico'}
                     </p>
                   </div>
                 </div>

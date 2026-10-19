@@ -5,11 +5,15 @@ import Modal from '@/components/ui/Modal';
 import { useCrearPaciente } from '@/hooks/paciente/usePacientes';
 import { extraerMensajeError } from '@/lib/apiError';
 import { contieneLetrasOCaracteresEspeciales, formatearDui, formatearTelefono, obtenerFechaLocal } from '@/lib/utils';
-import type { TipoDocumento } from '@/types/paciente.types';
+import type { Paciente, TipoDocumento } from '@/types/paciente.types';
 
 interface NuevoPacienteModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Recibe el paciente recién registrado (consulta inmediata lo usa para atenderlo). */
+  onCreado?: (paciente: Paciente) => void;
+  /** Texto bajo el título; la consulta inmediata explica que recepción completará el registro. */
+  subtitulo?: string;
 }
 
 const CLASE_INPUT =
@@ -17,7 +21,7 @@ const CLASE_INPUT =
   'transition-colors placeholder:text-muted focus:border-brand-600 focus:ring-4 ' +
   'focus:ring-brand-600/15 disabled:opacity-60';
 
-export function NuevoPacienteModal({ isOpen, onClose }: NuevoPacienteModalProps) {
+export function NuevoPacienteModal({ isOpen, onClose, onCreado, subtitulo }: NuevoPacienteModalProps) {
   const [nombreCompleto, setNombreCompleto] = useState('');
   const [fechaNacimiento, setFechaNacimiento] = useState('');
   const [tipoDocumento, setTipoDocumento] = useState<TipoDocumento>('DUI');
@@ -133,7 +137,7 @@ export function NuevoPacienteModal({ isOpen, onClose }: NuevoPacienteModalProps)
     }
 
     try {
-      await crearMutation.mutateAsync({
+      const creado = await crearMutation.mutateAsync({
         nombre_completo: nombreLimpio,
         fecha_nacimiento: fechaNacimiento,
         tipo_documento: esMenorEdad ? undefined : tipoDocumento,
@@ -150,6 +154,7 @@ export function NuevoPacienteModal({ isOpen, onClose }: NuevoPacienteModalProps)
 
       toast.success('Paciente registrado y expediente generado exitosamente.');
       onClose();
+      onCreado?.(creado);
       // Reset
       setNombreCompleto('');
       setFechaNacimiento('');
@@ -173,7 +178,7 @@ export function NuevoPacienteModal({ isOpen, onClose }: NuevoPacienteModalProps)
       isOpen={isOpen}
       onClose={onClose}
       title="Nuevo Registro de Paciente"
-      subtitle="Genera el expediente clínico e ingresa la información del paciente."
+      subtitle={subtitulo ?? 'Genera el expediente clínico e ingresa la información del paciente.'}
       size="md"
       footer={
         <>

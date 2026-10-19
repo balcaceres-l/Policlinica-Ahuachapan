@@ -74,17 +74,53 @@ class PacienteTest extends TestCase
             ->assertJsonPath('data.esMenorEdad', false);
     }
 
-    public function test_medico_no_puede_registrar_pacientes(): void
+    /** Consulta inmediata: el médico registra y la recepcionista completa después. */
+    public function test_el_medico_registra_paciente_y_queda_con_datos_pendientes(): void
     {
         $payload = [
-            'nombre_completo' => 'Intento Medico Paciente',
+            'nombre_completo' => 'Paciente Sin Cita',
             'fecha_nacimiento' => '1990-01-01',
             'dui' => '01234567-8',
         ];
 
-        $this->actingAs($this->medico)
+        $id = $this->actingAs($this->medico)
             ->postJson('/api/pacientes', $payload)
-            ->assertStatus(403);
+            ->assertStatus(201)
+            ->assertJsonPath('data.datosPendientes', true)
+            ->json('data.id');
+
+        $this->actingAs($this->recepcion)
+            ->getJson('/api/pacientes?pendientes=1')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $id);
+
+        // La recepcionista termina de llenar el registro y deja de estar pendiente.
+        $this->actingAs($this->recepcion)
+            ->putJson("/api/pacientes/{$id}", [
+                'nombre_completo' => 'Paciente Sin Cita',
+                'telefono' => '7111-2222',
+                'direccion' => 'Ahuachapán',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.datosPendientes', false);
+
+        $this->actingAs($this->recepcion)
+            ->getJson('/api/pacientes?pendientes=1')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+    }
+
+    public function test_lo_que_registra_la_recepcionista_no_queda_pendiente(): void
+    {
+        $this->actingAs($this->recepcion)
+            ->postJson('/api/pacientes', [
+                'nombre_completo' => 'Paciente de Recepcion',
+                'fecha_nacimiento' => '1990-01-01',
+                'dui' => '01234567-8',
+            ])
+            ->assertStatus(201)
+            ->assertJsonPath('data.datosPendientes', false);
     }
 
     public function test_administrador_no_puede_registrar_pacientes(): void

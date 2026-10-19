@@ -134,7 +134,6 @@ class CambiarPasswordTest extends TestCase
         $this->putJson("/api/usuarios/{$objetivo->id}", [
             'nombre_completo' => $objetivo->nombre_completo,
             'usuario' => $objetivo->usuario,
-            'cargo' => $objetivo->cargo,
             'rol' => $objetivo->rol,
             'telefono' => $objetivo->telefono,
             'password' => 'inyectada12345',

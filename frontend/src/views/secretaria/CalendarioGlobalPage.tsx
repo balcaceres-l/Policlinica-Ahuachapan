@@ -9,7 +9,7 @@ import { useCitas } from '@/hooks/cita/useCitas';
 import { useMedicos } from '@/hooks/usuario/useUsuarios';
 import { lapsoDeBloqueo } from '@/lib/bloqueo';
 import { ESTADO_CITA_LABEL, TIPO_CITA_LABEL, type EstadoCita } from '@/types/cita.types';
-import { getIniciales } from '@/lib/utils';
+import { getIniciales, jvpmDe } from '@/lib/utils';
 
 type ModoVista = 'dia' | 'semana' | 'mes';
 
@@ -255,7 +255,7 @@ export function CalendarioGlobalPage() {
             <option value="TODOS">Todos los Médicos ({medicos.length})</option>
             {medicos.map((m) => (
               <option key={m.id} value={m.id}>
-                {m.nombreCompleto} ({m.cargo})
+                {m.nombreCompleto}{m.jvpm ? ` (${jvpmDe(m)})` : ''}
               </option>
             ))}
           </select>
@@ -300,7 +300,7 @@ export function CalendarioGlobalPage() {
                             <p className="truncate text-xs font-bold text-ink">
                               {medico.nombreCompleto}
                             </p>
-                            <p className="truncate text-[11px] text-muted">{medico.cargo}</p>
+                            <p className="truncate text-[11px] text-muted">{jvpmDe(medico)}</p>
                           </div>
                         </div>
                         <button

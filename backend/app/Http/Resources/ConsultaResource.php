@@ -15,7 +15,6 @@ class ConsultaResource extends JsonResource
             'medico_id' => $this->id_medico,
             'medicoNombre' => $this->whenLoaded('medico', fn () => $this->medico->nombre_completo),
             'medicoTelefono' => $this->whenLoaded('medico', fn () => $this->medico->telefono),
-            'medicoCargo' => $this->whenLoaded('medico', fn () => $this->medico->cargo),
             'medicoJvpm' => $this->whenLoaded('medico', fn () => $this->medico->jvpm),
             'especialidad_atencion_id' => $this->id_especialidad_atencion,
             'especialidadNombre' => $this->whenLoaded(
@@ -50,6 +49,9 @@ class ConsultaResource extends JsonResource
             'diagnosticos' => DiagnosticoResource::collection($this->whenLoaded('diagnosticos')),
             'plan_manejo' => $this->whenLoaded('planManejo', fn () => $this->planManejo ? (new PlanManejoResource($this->planManejo))->resolve() : null),
             'receta' => $this->whenLoaded('receta', fn () => $this->receta ? (new RecetaMedicaResource($this->receta))->resolve() : null),
+            // HU-31, HU-32 — documentos ya emitidos desde esta consulta.
+            'constancias' => ConstanciaMedicaResource::collection($this->whenLoaded('constancias')),
+            'referencias' => ReferenciaMedicaResource::collection($this->whenLoaded('referencias')),
         ];
     }
 }

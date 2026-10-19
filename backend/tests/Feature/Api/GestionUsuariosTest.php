@@ -33,7 +33,6 @@ class GestionUsuariosTest extends TestCase
         return array_merge([
             'nombre_completo' => $usuario->nombre_completo,
             'usuario' => $usuario->usuario,
-            'cargo' => $usuario->cargo,
             'rol' => $usuario->rol,
             'telefono' => $usuario->telefono,
         ], $sobrescribir);
@@ -42,18 +41,17 @@ class GestionUsuariosTest extends TestCase
     public function test_administrador_puede_editar_los_datos_de_un_usuario(): void
     {
         Sanctum::actingAs($this->admin);
-        $medico = User::factory()->create(['rol' => 'MEDICO', 'cargo' => 'Pediatría']);
+        $medico = User::factory()->create(['rol' => 'MEDICO']);
 
         $this->putJson("/api/usuarios/{$medico->id}", $this->datosDe($medico, [
             'nombre_completo' => 'Dra. Carla Sofía Peña',
-            'cargo' => 'Dermatología',
             'telefono' => '2443-1022',
         ]))
             ->assertOk()
             ->assertJsonPath('data.nombreCompleto', 'Dra. Carla Sofía Peña')
-            ->assertJsonPath('data.cargo', 'Dermatología');
+            ->assertJsonMissingPath('data.cargo');
 
-        $this->assertSame('Dermatología', $medico->refresh()->cargo);
+        $this->assertSame('2443-1022', $medico->refresh()->telefono);
     }
 
     public function test_editar_permite_conservar_el_mismo_usuario(): void
@@ -61,9 +59,22 @@ class GestionUsuariosTest extends TestCase
         Sanctum::actingAs($this->admin);
         $medico = User::factory()->create(['usuario' => 'medico@policlinica.com']);
 
-        $this->putJson("/api/usuarios/{$medico->id}", $this->datosDe($medico, [
-            'cargo' => 'Medicina Interna',
-        ]))->assertOk();
+        $this->putJson("/api/usuarios/{$medico->id}", $this->datosDe($medico))->assertOk();
+    }
+
+    /** El cargo se eliminó (2026-10-19): ya no se pide ni se guarda. */
+    public function test_crear_usuario_ya_no_pide_cargo(): void
+    {
+        Sanctum::actingAs($this->admin);
+
+        $this->postJson('/api/usuarios', [
+            'nombre_completo' => 'Marta Elena Guevara',
+            'usuario' => 'mguevara2@policlinica.com',
+            'rol' => 'RECEPCIONISTA',
+            'password' => 'Clave-Segura-2026',
+        ])
+            ->assertCreated()
+            ->assertJsonMissingPath('data.cargo');
     }
 
     public function test_no_permite_reutilizar_el_usuario_de_otra_cuenta(): void

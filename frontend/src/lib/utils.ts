@@ -96,3 +96,10 @@ export const calcularEdad = (fechaNacimiento?: string | Date | null): number | n
 };
 
 
+
+/**
+ * Subtítulo de un médico bajo su nombre: su N.º de la Junta de Vigilancia
+ * (JVPM). Vacío si no lo tiene (o si no es médico).
+ */
+export const jvpmDe = (usuario?: { jvpm?: string | null } | null): string =>
+  usuario?.jvpm ? `JVPM ${usuario.jvpm}` : '';

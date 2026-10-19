@@ -20,7 +20,6 @@ class JuntaVigilanciaTest extends TestCase
         return array_merge([
             'nombre_completo' => 'Dra. Ana Lucía Menjívar',
             'usuario' => 'amenjivar@policlinica.com',
-            'cargo' => 'Pediatría',
             'rol' => 'MEDICO',
             'password' => 'Clave-Segura-2026',
         ], $extra);
@@ -70,7 +69,6 @@ class JuntaVigilanciaTest extends TestCase
         $datos = [
             'nombre_completo' => $medico->nombre_completo,
             'usuario' => $medico->usuario,
-            'cargo' => $medico->cargo,
             'rol' => 'MEDICO',
         ];
 

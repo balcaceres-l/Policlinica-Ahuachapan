@@ -11,6 +11,7 @@ export const getPacientes = async (filtros?: FiltrosPacienteQuery | string): Pro
     if (filtros.buscar?.trim()) params.buscar = filtros.buscar.trim();
     if (filtros.estado) params.estado = filtros.estado;
     if (filtros.categoria && filtros.categoria !== 'TODOS') params.categoria = filtros.categoria;
+    if (filtros.pendientes) params.pendientes = '1';
   }
 
   const { data } = await api.get<ApiResponse<Paciente[]>>('/pacientes', { params });

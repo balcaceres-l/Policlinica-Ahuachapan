@@ -8,7 +8,7 @@ import {
   useIniciarConsulta,
   useSalaEspera,
 } from '@/hooks/medico/useConsultas';
-import type { Cita } from '@/types/cita.types';
+import { TIPO_CITA_CLASE, TIPO_CITA_LABEL, type Cita } from '@/types/cita.types';
 
 type Filtro = 'espera' | 'consulta' | 'atendido';
 
@@ -300,15 +300,9 @@ export default function SalaEsperaPage() {
 
                     <td className="p-4">
                       <span
-                        className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase ${
-                          cita.tipo_cita === 'EMERGENCIA'
-                            ? 'bg-danger-soft text-danger'
-                            : cita.tipo_cita === 'SOBRECUPO'
-                              ? 'bg-warning-soft text-warning'
-                              : 'bg-brand-50 text-brand-700'
-                        }`}
+                        className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase ${TIPO_CITA_CLASE[cita.tipo_cita]}`}
                       >
-                        {cita.tipo_cita}
+                        {TIPO_CITA_LABEL[cita.tipo_cita]}
                       </span>
                     </td>
 

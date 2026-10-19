@@ -51,7 +51,6 @@ export function EditarUsuarioModal({ usuario, onClose }: EditarUsuarioModalProps
     reset({
       nombre_completo: usuario.nombreCompleto,
       usuario: usuario.usuario,
-      cargo: usuario.cargo,
       rol: usuario.rol,
       telefono: usuario.telefono ?? '',
       jvpm: usuario.jvpm ?? '',
@@ -138,7 +137,7 @@ export function EditarUsuarioModal({ usuario, onClose }: EditarUsuarioModalProps
           )}
         </div>
 
-        <div className="mb-4 grid gap-4 sm:grid-cols-2">
+        <div className="mb-4">
           <div>
             <label htmlFor="editar_rol" className="mb-1.5 block text-sm font-medium text-ink">
               Rol
@@ -158,20 +157,6 @@ export function EditarUsuarioModal({ usuario, onClose }: EditarUsuarioModalProps
             {errors.rol && <p className="mt-1.5 text-xs text-danger">{errors.rol.message}</p>}
           </div>
 
-          <div>
-            <label htmlFor="editar_cargo" className="mb-1.5 block text-sm font-medium text-ink">
-              Cargo
-            </label>
-            <input
-              id="editar_cargo"
-              type="text"
-              disabled={isSubmitting}
-              aria-invalid={Boolean(errors.cargo)}
-              className={CLASE_CAMPO}
-              {...register('cargo')}
-            />
-            {errors.cargo && <p className="mt-1.5 text-xs text-danger">{errors.cargo.message}</p>}
-          </div>
         </div>
 
         {rol && (
