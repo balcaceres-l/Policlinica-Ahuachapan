@@ -1,8 +1,8 @@
 import { useState } from 'react';
+import ListaDocumentos from '@/components/documento/ListaDocumentos';
+import VisorDocumentoModal from '@/components/documento/VisorDocumentoModal';
 import Badge from '@/components/ui/Badge';
-import RecetaPreviewModal from '@/components/medico/RecetaPreviewModal';
-import { generarHtmlReceta } from '@/lib/recetaPdf';
-import { calcularEdad } from '@/lib/utils';
+import { rutaPdf } from '@/services/documento/documento.service';
 import type { ConsultaHistorial } from '@/types/historial.types';
 import type { EstadoCita, TipoCita } from '@/types/cita.types';
 
@@ -48,6 +48,7 @@ const TIPOS_MAP: Record<TipoCita, { label: string; variant: 'danger' | 'warning'
   EMERGENCIA: { label: 'Emergencia', variant: 'danger' },
   SOBRECUPO: { label: 'Sobrecupo', variant: 'warning' },
   REGULAR: { label: 'Consulta regular', variant: 'default' },
+  SIN_CITA: { label: 'Sin cita previa', variant: 'default' },
 };
 
 const ETIQUETA_SECCION = 'text-xs font-bold uppercase tracking-wide text-muted flex items-center gap-1.5';
@@ -326,6 +327,23 @@ export function ConsultaHistorialCard({ consulta, pacienteInfo }: ConsultaHistor
         </section>
       )}
 
+      {/* HU-31, HU-32, HU-33 — constancias y referencias emitidas en la consulta. */}
+      {((consulta.constancias?.length ?? 0) > 0 || (consulta.referencias?.length ?? 0) > 0) && (
+        <section className="mt-4">
+          <h3 className={`${ETIQUETA_SECCION} mb-2`}>
+            <i className="ri-file-copy-2-line text-sm" />
+            Documentos emitidos
+          </h3>
+          <ListaDocumentos
+            consultaId={consulta.id}
+            tieneReceta={false}
+            constancias={consulta.constancias ?? []}
+            referencias={consulta.referencias ?? []}
+            expediente={pacienteInfo?.numero_expediente}
+          />
+        </section>
+      )}
+
       {/* Notas adicionales */}
       {consulta.notas_adicionales && (
         <div className="mt-3 rounded-field border border-amber-200 bg-amber-50/50 p-2.5 text-xs text-amber-900">
@@ -381,38 +399,13 @@ export function ConsultaHistorialCard({ consulta, pacienteInfo }: ConsultaHistor
           </div>
         )}
 
-      {consulta.receta && (
-        <RecetaPreviewModal
-          isOpen={modalReceta}
-          onClose={() => setModalReceta(false)}
-          html={generarHtmlReceta({
-            medico: {
-              nombre: consulta.medicoNombre,
-              especialidad: consulta.especialidadNombre ?? undefined,
-              jvpm: consulta.medicoJvpm,
-            },
-            paciente: {
-              nombre: pacienteInfo?.nombre,
-              expediente: pacienteInfo?.numero_expediente,
-              edad: pacienteInfo?.fecha_nacimiento ? calcularEdad(pacienteInfo.fecha_nacimiento) : null,
-              dui: pacienteInfo?.dui,
-              telefono: pacienteInfo?.telefono,
-            },
-            fecha: consulta.fecha_hora_inicio,
-            medicamentos: (consulta.receta.detalles ?? []).map((d) => ({
-              nombre_medicamento: d.nombre_medicamento,
-              dosis: d.dosis,
-              via_administracion: d.via_administracion,
-              frecuencia: d.frecuencia,
-              duracion: d.duracion,
-              indicaciones: d.indicaciones,
-            })),
-            observaciones_generales: consulta.receta.observaciones_generales,
-          })}
-          pacienteNombre={pacienteInfo?.nombre}
-          numeroExpediente={pacienteInfo?.numero_expediente}
-        />
-      )}
+      {/* HU-30 / HU-33 — la receta se genera en PDF en el backend. */}
+      <VisorDocumentoModal
+        ruta={modalReceta ? rutaPdf.receta(consulta.id) : null}
+        titulo="Receta médica"
+        nombreArchivo={`receta-${pacienteInfo?.numero_expediente ?? consulta.id}`}
+        onClose={() => setModalReceta(false)}
+      />
     </article>
   );
 }

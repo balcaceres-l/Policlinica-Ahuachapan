@@ -80,6 +80,18 @@ class consulta extends Model
         return $this->hasOne(receta_medica::class, 'id_consulta', 'id_consulta');
     }
 
+    /** HU-31 */
+    public function constancias(): HasMany
+    {
+        return $this->hasMany(constancia_medica::class, 'id_consulta', 'id_consulta');
+    }
+
+    /** HU-32 */
+    public function referencias(): HasMany
+    {
+        return $this->hasMany(referencia_medica::class, 'id_consulta', 'id_consulta');
+    }
+
     public function estaAbierta(): bool
     {
         return $this->fecha_hora_fin === null;

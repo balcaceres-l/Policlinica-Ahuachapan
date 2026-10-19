@@ -47,8 +47,11 @@ class cita extends Model
     /** Estados que siguen ocupando un bloque en la agenda. */
     public const ESTADOS_VIGENTES = ['AGENDADA', 'EN_ESPERA', 'EN_ATENCION', 'ATENDIDA'];
 
-    /** Tipos que pueden solaparse a propósito con una cita regular. */
-    public const TIPOS_SIN_VALIDACION = ['EMERGENCIA', 'SOBRECUPO'];
+    /**
+     * Tipos que pueden solaparse a propósito con una cita regular. SIN_CITA es
+     * la que crea el médico al atender sin cita previa (consulta inmediata).
+     */
+    public const TIPOS_SIN_VALIDACION = ['EMERGENCIA', 'SOBRECUPO', 'SIN_CITA'];
 
     public function paciente(): BelongsTo
     {

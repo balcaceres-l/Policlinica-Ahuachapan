@@ -14,11 +14,6 @@ export const editarUsuarioSchema = z.object({
     .min(1, 'El usuario es obligatorio.')
     .email('Debe ser un correo válido.')
     .max(150, 'No puede superar los 150 caracteres.'),
-  cargo: z
-    .string()
-    .trim()
-    .min(1, 'El cargo es obligatorio.')
-    .max(100, 'No puede superar los 100 caracteres.'),
   rol: z.enum(['ADMINISTRADOR', 'MEDICO', 'RECEPCIONISTA'], {
     message: 'Selecciona un rol.',
   }),
@@ -48,7 +43,6 @@ export type UsuarioFormValues = z.infer<typeof usuarioSchema>;
 export const usuarioFormDefaults: UsuarioFormValues = {
   nombre_completo: '',
   usuario: '',
-  cargo: '',
   rol: 'MEDICO',
   telefono: '',
   jvpm: '',

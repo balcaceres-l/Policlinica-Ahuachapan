@@ -8,8 +8,6 @@ export interface Usuario {
   nombreCompleto: string;
   /** Usuario de acceso / correo institucional */
   usuario: string;
-  /** Cargo o especialidad principal — subtítulo bajo el nombre */
-  cargo: string;
   rol: RolUsuario;
   estado: EstadoUsuario;
   telefono?: string;
@@ -26,7 +24,6 @@ export interface Usuario {
 export interface EditarUsuario {
   nombre_completo: string;
   usuario: string;
-  cargo: string;
   rol: RolUsuario;
   telefono?: string;
   jvpm?: string | null;

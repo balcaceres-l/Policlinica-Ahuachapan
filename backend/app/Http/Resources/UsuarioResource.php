@@ -13,7 +13,6 @@ class UsuarioResource extends JsonResource
             'id' => $this->id,
             'nombreCompleto' => $this->nombre_completo,
             'usuario' => $this->usuario,
-            'cargo' => $this->cargo,
             'rol' => $this->rol,
             'estado' => $this->estado,
             'telefono' => $this->telefono,

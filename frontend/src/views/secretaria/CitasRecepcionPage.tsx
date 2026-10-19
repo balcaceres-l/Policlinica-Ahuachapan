@@ -20,6 +20,7 @@ import { bloqueoDeCita, lapsoDeBloqueo } from '@/lib/bloqueo';
 import { cn, normalizar } from '@/lib/utils';
 import {
   ESTADO_CITA_LABEL,
+  TIPO_CITA_CLASE,
   TIPO_CITA_LABEL,
   type Cita,
   type EstadoCita,
@@ -172,13 +173,7 @@ export function CitasRecepcionPage() {
       header: 'Tipo',
       render: (cita) => (
         <span
-          className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase ${
-            cita.tipo_cita === 'EMERGENCIA'
-              ? 'bg-danger-soft text-danger'
-              : cita.tipo_cita === 'SOBRECUPO'
-                ? 'bg-warning-soft text-warning'
-                : 'bg-brand-50 text-brand-700'
-          }`}
+          className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase ${TIPO_CITA_CLASE[cita.tipo_cita]}`}
         >
           {TIPO_CITA_LABEL[cita.tipo_cita]}
         </span>
@@ -405,6 +400,7 @@ export function CitasRecepcionPage() {
           <option value="REGULAR">Regular</option>
           <option value="EMERGENCIA">Emergencia</option>
           <option value="SOBRECUPO">Sobrecupo</option>
+          <option value="SIN_CITA">Sin cita previa</option>
         </select>
 
         {/* Filtro por Estado */}

@@ -30,6 +30,7 @@ export interface PlanManejo {
 }
 
 import type { EstadoCita, SignosVitales, TipoCita } from './cita.types';
+import type { ConstanciaMedica, ReferenciaMedica } from './documento.types';
 
 /** Una consulta ya atendida o cita registrada, con lo que se registró en ella. */
 export interface ConsultaHistorial {
@@ -67,6 +68,9 @@ export interface ConsultaHistorial {
       indicaciones?: string | null;
     }>;
   } | null;
+  /** HU-31, HU-32 — documentos emitidos en esta consulta. */
+  constancias?: ConstanciaMedica[];
+  referencias?: ReferenciaMedica[];
   signos_vitales?: SignosVitales | null;
   cita_estado?: EstadoCita;
   tipo_cita?: TipoCita;

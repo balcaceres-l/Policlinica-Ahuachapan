@@ -7,6 +7,7 @@ import {
   getEspecialidadesDisponibles,
   getSalaEspera,
   iniciarConsulta,
+  iniciarConsultaInmediata,
   type FinalizarConsultaPayload,
   type GuardarConsultaPayload,
 } from '@/services/medico/consulta.service';
@@ -57,6 +58,19 @@ export const useIniciarConsulta = () => {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: consultaKeys.salaEspera });
       void queryClient.invalidateQueries({ queryKey: ['citas'] });
+    },
+  });
+};
+
+/** Consulta inmediata: atender a un paciente sin cita previa. */
+export const useConsultaInmediata = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: iniciarConsultaInmediata,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: consultaKeys.salaEspera });
+      void queryClient.invalidateQueries({ queryKey: ['citas'] });
+      void queryClient.invalidateQueries({ queryKey: historialKeys.all });
     },
   });
 };

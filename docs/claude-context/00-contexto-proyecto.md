@@ -59,8 +59,9 @@ equipo de backend trabaja esto por separado. Lo que hoy existe:
   examen físico, plan de manejo, receta (`receta_medica`, `detalle_receta`),
   diagnósticos (`diagnostico`, con código CIE-11 de la OMS consultada en vivo) y resultados
   de laboratorio (`resultado_laboratorio`). Detalle en `docs/API.md`.
-- **Todavía NO existen** (ni tabla ni endpoint): catálogo de medicamentos,
-  constancias y referencias médicas.
+- **Actualizado (2026-10-18, Sprint 3):** constancias (`constancia_medica`) y referencias
+  (`referencia_medica`), con PDF generado en el backend. Ver `06-documentos-medicos.md`.
+- **No existe catálogo de medicamentos**, por decisión: la receta es texto libre (HU-45).
 
 ## Estructura de carpetas del frontend
 
@@ -100,8 +101,9 @@ registrar ruta en `App.tsx`.
 - Numeración de expediente: **iniciales + correlativo + año** (`XX00-20XX`).
 - Se permiten **citas de emergencia/sobrecupo** que ignoran la validación
   estándar de disponibilidad, incluso el mismo día.
-- Diagnósticos y medicamentos: **catálogos estandarizados + texto libre**
-  de respaldo.
+- Diagnósticos: **CIE-11 de la OMS + texto libre** de respaldo (ver `05`).
+  Medicamentos: **texto libre** escrito por el médico; el catálogo estandarizado se descartó
+  por decisión del equipo (2026-10-18).
 - **Datos de responsable obligatorios** para menores de edad.
 - Alertas de **tiempo de consulta excedido** y **retraso del paciente
   >20 min** (sin cerrar la consulta automáticamente).

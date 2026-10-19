@@ -10,7 +10,10 @@ import CronometroConsulta from '@/components/medico/CronometroConsulta';
 import DiagnosticosConsulta from '@/components/medico/DiagnosticosConsulta';
 import { nuevoDiagnosticoLocal, type DiagnosticoLocal } from '@/lib/diagnostico';
 import HistorialClinicoCompleto from '@/components/expediente/HistorialClinicoCompleto';
-import RecetaPreviewModal from '@/components/medico/RecetaPreviewModal';
+import ConstanciaModal from '@/components/documento/ConstanciaModal';
+import ListaDocumentos from '@/components/documento/ListaDocumentos';
+import ReferenciaModal from '@/components/documento/ReferenciaModal';
+import VisorDocumentoModal from '@/components/documento/VisorDocumentoModal';
 import { useGuardarSignosVitales } from '@/hooks/cita/useCitas';
 import {
   consultaKeys,
@@ -19,8 +22,7 @@ import {
   useFinalizarConsulta,
 } from '@/hooks/medico/useConsultas';
 import { precargarEct } from '@/lib/ect';
-import { generarHtmlReceta } from '@/lib/recetaPdf';
-import { calcularEdad } from '@/lib/utils';
+import { rutaPdf } from '@/services/documento/documento.service';
 import type { GuardarConsultaPayload } from '@/services/medico/consulta.service';
 
 
@@ -99,8 +101,16 @@ export default function ConsultaPage() {
   // Receta médica
   const [recetaObservaciones, setRecetaObservaciones] = useState('');
   const [recetaDetalles, setRecetaDetalles] = useState<DetalleRecetaLocal[]>([]);
-  const [previewRecetaOpen, setPreviewRecetaOpen] = useState(false);
-  const [previewRecetaHtml, setPreviewRecetaHtml] = useState('');
+
+  // HU-30 a HU-33 — documentos médicos: vista previa en PDF y formularios.
+  const [documentoAbierto, setDocumentoAbierto] = useState<{
+    ruta: string;
+    titulo: string;
+    archivo: string;
+  } | null>(null);
+  const [constanciaAbierta, setConstanciaAbierta] = useState(false);
+  const [referenciaAbierta, setReferenciaAbierta] = useState(false);
+  const [preparandoReceta, setPreparandoReceta] = useState(false);
 
   // Signos vitales (Triaje clínico)
   const [signosForm, setSignosForm] = useState({
@@ -328,50 +338,38 @@ export default function ConsultaPage() {
     setRecetaDetalles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Previsualización y exportación de receta a PDF
-  const handlePrevisualizarReceta = () => {
+  /**
+   * HU-30 / HU-33 — el PDF de la receta lo genera el backend con lo guardado,
+   * así que en una consulta abierta primero se guarda el progreso.
+   */
+  const handlePrevisualizarReceta = async () => {
     const medicamentosValidos = recetaDetalles.filter(
       (m) => m.nombre_medicamento && m.nombre_medicamento.trim() !== '',
     );
 
-    if (medicamentosValidos.length === 0 && !recetaObservaciones.trim()) {
-      toast.error('Agrega al menos un medicamento o indicación a la receta para exportar.');
+    if (medicamentosValidos.length === 0) {
+      toast.error('Agrega al menos un medicamento a la receta para imprimirla.');
       return;
     }
 
-    const edadCalculada = consulta.paciente?.fecha_nacimiento
-      ? calcularEdad(consulta.paciente.fecha_nacimiento)
-      : null;
+    if (activa) {
+      setPreparandoReceta(true);
+      try {
+        await actualizarMutation.mutateAsync({ id, payload: construirPayload() });
+      } catch (err) {
+        const axiosErr = err as { response?: { data?: { message?: string } } };
+        toast.error(axiosErr?.response?.data?.message || 'No se pudo guardar la receta antes de imprimirla.');
+        return;
+      } finally {
+        setPreparandoReceta(false);
+      }
+    }
 
-    const html = generarHtmlReceta({
-      medico: {
-        nombre: consulta.medicoNombre,
-        especialidad: consulta.especialidadNombre ?? undefined,
-        telefono: consulta.medicoTelefono ?? undefined,
-        cargo: consulta.medicoCargo ?? undefined,
-        jvpm: consulta.medicoJvpm,
-      },
-      paciente: {
-        nombre: consulta.paciente?.nombre,
-        expediente: consulta.paciente?.expediente,
-        edad: edadCalculada,
-        dui: consulta.paciente?.dui,
-        telefono: consulta.paciente?.telefono,
-      },
-      fecha: consulta.fecha_hora_inicio || new Date(),
-      medicamentos: recetaDetalles.map((m) => ({
-        nombre_medicamento: m.nombre_medicamento,
-        dosis: m.dosis,
-        via_administracion: m.via_administracion,
-        frecuencia: m.frecuencia,
-        duracion: m.duracion,
-        indicaciones: m.indicaciones,
-      })),
-      observaciones_generales: recetaObservaciones,
+    setDocumentoAbierto({
+      ruta: rutaPdf.receta(id),
+      titulo: 'Receta médica',
+      archivo: `receta-${consulta.paciente?.expediente ?? id}`,
     });
-
-    setPreviewRecetaHtml(html);
-    setPreviewRecetaOpen(true);
   };
 
   // Guardar signos vitales desde la consulta
@@ -1212,7 +1210,8 @@ export default function ConsultaPage() {
                   variant="secondary"
                   icon="ri-printer-line"
                   onClick={handlePrevisualizarReceta}
-                  title="Previsualizar e imprimir o exportar receta a PDF"
+                  loading={preparandoReceta}
+                  title="Guarda la receta y la abre para imprimirla o exportarla a PDF"
                 >
                   Exportar / Imprimir PDF
                 </Button>
@@ -1400,6 +1399,54 @@ export default function ConsultaPage() {
             </div>
           </section>
 
+          {/* SECCIÓN 6: Documentos médicos (HU-31, HU-32, HU-33) */}
+          <section className="rounded-card border border-line bg-surface p-6 shadow-card space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
+              <div className="flex items-center gap-2">
+                <span className="flex size-7 items-center justify-center rounded-full bg-brand-50 text-xs font-bold text-brand-700">
+                  6
+                </span>
+                <div>
+                  <h2 className="text-base font-bold text-ink">Documentos médicos</h2>
+                  <p className="text-xs text-muted">
+                    Constancias y referencias para imprimir o entregar en PDF
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  icon="ri-file-text-line"
+                  onClick={() => setConstanciaAbierta(true)}
+                >
+                  Constancia
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  icon="ri-share-forward-line"
+                  onClick={() => setReferenciaAbierta(true)}
+                >
+                  Referencia
+                </Button>
+              </div>
+            </div>
+
+            {(consulta.constancias?.length ?? 0) + (consulta.referencias?.length ?? 0) === 0 ? (
+              <p className="text-xs text-muted">Aún no has emitido documentos en esta consulta.</p>
+            ) : (
+              <ListaDocumentos
+                consultaId={id}
+                tieneReceta={false}
+                constancias={consulta.constancias ?? []}
+                referencias={consulta.referencias ?? []}
+                expediente={consulta.paciente?.expediente}
+              />
+            )}
+          </section>
+
           {/* Acciones finales */}
           {activa && (
             <div className="flex flex-wrap items-center justify-between gap-4 rounded-card border border-line bg-surface p-5 shadow-card">
@@ -1496,13 +1543,42 @@ export default function ConsultaPage() {
         </div>
       </Modal>
 
-      {/* Modal de exportación / impresión de receta médica a PDF */}
-      <RecetaPreviewModal
-        isOpen={previewRecetaOpen}
-        onClose={() => setPreviewRecetaOpen(false)}
-        html={previewRecetaHtml}
+      {/* HU-30 a HU-33 — documentos médicos */}
+      <VisorDocumentoModal
+        ruta={documentoAbierto?.ruta ?? null}
+        titulo={documentoAbierto?.titulo ?? ''}
+        nombreArchivo={documentoAbierto?.archivo ?? 'documento'}
+        onClose={() => setDocumentoAbierto(null)}
+      />
+
+      <ConstanciaModal
+        isOpen={constanciaAbierta}
+        consultaId={id}
         pacienteNombre={consulta.paciente?.nombre}
-        numeroExpediente={consulta.paciente?.expediente}
+        onClose={() => setConstanciaAbierta(false)}
+        onCreada={(constancia) => {
+          setConstanciaAbierta(false);
+          setDocumentoAbierto({
+            ruta: rutaPdf.constancia(constancia.id),
+            titulo: 'Constancia médica',
+            archivo: `constancia-${consulta.paciente?.expediente ?? id}`,
+          });
+        }}
+      />
+
+      <ReferenciaModal
+        isOpen={referenciaAbierta}
+        consultaId={id}
+        pacienteNombre={consulta.paciente?.nombre}
+        onClose={() => setReferenciaAbierta(false)}
+        onCreada={(referencia) => {
+          setReferenciaAbierta(false);
+          setDocumentoAbierto({
+            ruta: rutaPdf.referencia(referencia.id),
+            titulo: referencia.tipo === 'INTERNA' ? 'Referencia médica interna' : 'Referencia médica externa',
+            archivo: `referencia-${consulta.paciente?.expediente ?? id}`,
+          });
+        }}
       />
     </div>
   );

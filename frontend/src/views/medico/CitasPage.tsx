@@ -1,7 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import FilaAtencion from '@/components/cita/FilaAtencion';
+import ConsultaInmediataModal from '@/components/medico/ConsultaInmediataModal';
+import NuevoPacienteModal from '@/components/paciente/NuevoPacienteModal';
 import Badge from '@/components/ui/Badge';
+import Button from '@/components/ui/Button';
 import DataTable, { type Column } from '@/components/ui/DataTable';
 import SearchBar from '@/components/ui/SearchBar';
 import { useCitas } from '@/hooks/cita/useCitas';
@@ -17,6 +20,12 @@ export function CitasPage() {
 
   const [busqueda, setBusqueda] = useState('');
   const [fecha, setFecha] = useState(hoy);
+
+  // Consulta inmediata: atender sin cita previa; si el paciente es nuevo se
+  // registra con el mismo formulario de recepción y vuelve ya seleccionado.
+  const [inmediataAbierta, setInmediataAbierta] = useState(false);
+  const [registrandoPaciente, setRegistrandoPaciente] = useState(false);
+  const [pacienteRegistradoId, setPacienteRegistradoId] = useState<string | undefined>();
 
   // El backend ya limita al médico autenticado a su propia agenda.
   const { data: citas = [], isLoading } = useCitas({ fecha });
@@ -146,11 +155,24 @@ export function CitasPage() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-ink">Mi agenda</h1>
-        <p className="mt-1 text-sm text-muted">
-          Pacientes del día y orden de atención según su llegada.
-        </p>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-ink">Mi agenda</h1>
+          <p className="mt-1 text-sm text-muted">
+            Pacientes del día y orden de atención según su llegada.
+          </p>
+        </div>
+        <Button
+          icon="ri-flashlight-line"
+          onClick={() => {
+            setPacienteRegistradoId(undefined);
+            setInmediataAbierta(true);
+          }}
+          disabled={Boolean(citaEnAtencion)}
+          title={citaEnAtencion ? 'Termina o pausa la consulta en curso antes de iniciar otra.' : undefined}
+        >
+          Consulta inmediata
+        </Button>
       </div>
 
       {/* Banner destacado si hay una consulta activa / pausada para retomar */}
@@ -227,6 +249,26 @@ export function CitasPage() {
         emptyIcon="ri-calendar-line"
         emptyTitle="Sin citas para esta fecha"
         emptyMessage="Las citas que recepción agende en tu agenda aparecerán aquí."
+      />
+
+      <ConsultaInmediataModal
+        isOpen={inmediataAbierta}
+        onClose={() => setInmediataAbierta(false)}
+        pacienteInicialId={pacienteRegistradoId}
+        onRegistrarNuevo={() => {
+          setInmediataAbierta(false);
+          setRegistrandoPaciente(true);
+        }}
+      />
+
+      <NuevoPacienteModal
+        isOpen={registrandoPaciente}
+        subtitulo="Llena los datos obligatorios; recepción completará el registro después."
+        onClose={() => {
+          setRegistrandoPaciente(false);
+          setInmediataAbierta(true);
+        }}
+        onCreado={(paciente) => setPacienteRegistradoId(paciente.id)}
       />
     </div>
   );

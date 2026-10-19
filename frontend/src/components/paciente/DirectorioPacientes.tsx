@@ -22,16 +22,23 @@ export function DirectorioPacientes() {
   const [categoriaFiltro, setCategoriaFiltro] = useState<'TODOS' | 'ADULTO' | 'MENOR'>('TODOS');
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoPaciente>('ACTIVO');
   const [fechaRegistroFiltro, setFechaRegistroFiltro] = useState('');
+  const [soloPendientes, setSoloPendientes] = useState(false);
 
   const [modalNuevo, setModalNuevo] = useState(false);
   const [pacienteParaEditar, setPacienteParaEditar] = useState<Paciente | null>(null);
   const [pacienteParaFallecido, setPacienteParaFallecido] = useState<Paciente | null>(null);
+
+  // Consulta inmediata: registros hechos por médicos que recepción debe completar.
+  const { data: pendientes = [] } = usePacientes({ estado: 'TODOS', pendientes: true });
+  // Sin pendientes el aviso desaparece, y con él el filtro.
+  const filtrarPendientes = soloPendientes && pendientes.length > 0;
 
   // Llamada al hook con el filtro de estado y búsqueda
   const { data: pacientes = [], isLoading } = usePacientes({
     buscar: busqueda,
     estado: estadoFiltro,
     categoria: categoriaFiltro,
+    pendientes: filtrarPendientes,
   });
 
   const pacientesFiltrados = useMemo(() => {
@@ -65,6 +72,14 @@ export function DirectorioPacientes() {
           <div>
             <p className="font-semibold text-ink">{p.nombre_completo}</p>
             <p className="text-xs text-muted">Nacimiento: {p.fecha_nacimiento}</p>
+            {p.datos_pendientes && (
+              <span
+                className="mt-1 inline-block"
+                title="Lo registró un médico al atenderlo sin cita. Recepción debe completar su registro."
+              >
+                <Badge variant="warning">Datos pendientes</Badge>
+              </span>
+            )}
           </div>
         </div>
       ),
@@ -211,6 +226,20 @@ export function DirectorioPacientes() {
           </Button>
         )}
       </div>
+
+      {esRecepcionista && pendientes.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-card border border-warning/30 bg-warning-soft p-4 text-sm text-ink">
+          <p>
+            <i className="ri-error-warning-line mr-1.5 align-middle text-warning" />
+            {pendientes.length === 1
+              ? 'Hay 1 paciente registrado por un médico que espera que completes sus datos.'
+              : `Hay ${pendientes.length} pacientes registrados por médicos que esperan que completes sus datos.`}
+          </p>
+          <Button variant="secondary" onClick={() => setSoloPendientes(!filtrarPendientes)}>
+            {filtrarPendientes ? 'Ver todos' : 'Ver pendientes'}
+          </Button>
+        </div>
+      )}
 
       {/* Barra de Filtros */}
       <div className="mb-4 flex flex-wrap items-center gap-3 rounded-card border border-line bg-surface p-4 shadow-card">

@@ -143,6 +143,58 @@ class AgendaService
         }
     }
 
+    /**
+     * Citas pendientes del médico, de hoy en adelante, que su horario actual
+     * cubre y el horario propuesto dejaría fuera. Solo las regulares: las
+     * emergencias, sobrecupos y consultas sin cita no dependen del horario.
+     *
+     * @param  array<int, array{dia_semana: string, hora_inicio: string, hora_fin: string}>  $tramosNuevos
+     * @return Collection<int, cita>
+     */
+    public function citasFueraDeHorario(string $medicoId, array $tramosNuevos): Collection
+    {
+        $actuales = horario_medico::where('id_medico', $medicoId)
+            ->get()
+            ->map(fn (horario_medico $h) => [
+                'dia_semana' => $h->dia_semana,
+                'hora_inicio' => substr((string) $h->hora_inicio, 0, 5),
+                'hora_fin' => substr((string) $h->hora_fin, 0, 5),
+            ])
+            ->all();
+
+        return cita::with('paciente')
+            ->where('id_medico', $medicoId)
+            ->whereDate('fecha', '>=', now()->toDateString())
+            ->whereIn('estado', ['AGENDADA', 'EN_ESPERA'])
+            ->where('tipo_cita', 'REGULAR')
+            ->orderBy('fecha')
+            ->orderBy('hora_inicio')
+            ->get()
+            ->filter(function (cita $c) use ($actuales, $tramosNuevos) {
+                $dia = $this->diaSemanaDe($c->fecha->toDateString());
+                $inicio = substr((string) $c->hora_inicio, 0, 5);
+                $fin = substr((string) $c->hora_fin, 0, 5);
+
+                return $this->tramosCubren($actuales, $dia, $inicio, $fin)
+                    && ! $this->tramosCubren($tramosNuevos, $dia, $inicio, $fin);
+            })
+            ->values();
+    }
+
+    /** @param  array<int, array{dia_semana: string, hora_inicio: string, hora_fin: string}>  $tramos */
+    private function tramosCubren(array $tramos, string $dia, string $inicio, string $fin): bool
+    {
+        foreach ($tramos as $tramo) {
+            if ($tramo['dia_semana'] === $dia
+                && $inicio >= substr($tramo['hora_inicio'], 0, 5)
+                && $fin <= substr($tramo['hora_fin'], 0, 5)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /** @return array<int, horario_medico> */
     public function horariosDe(string $medicoId, string $fecha): array
     {

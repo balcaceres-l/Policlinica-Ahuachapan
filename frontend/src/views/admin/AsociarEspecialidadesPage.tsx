@@ -11,7 +11,7 @@ import {
   useQuitarEspecialidad,
 } from '@/hooks/especialidad/useEspecialidades';
 import { useMedicos } from '@/hooks/usuario/useUsuarios';
-import { cn, getIniciales, normalizar } from '@/lib/utils';
+import { cn, getIniciales, jvpmDe, normalizar } from '@/lib/utils';
 
 export function AsociarEspecialidadesPage() {
   const [busqueda, setBusqueda] = useState('');
@@ -36,7 +36,7 @@ export function AsociarEspecialidadesPage() {
     return medicos.filter(
       (medico) =>
         normalizar(medico.nombreCompleto).includes(termino) ||
-        normalizar(medico.cargo).includes(termino),
+        normalizar(medico.jvpm ?? '').includes(termino),
     );
   }, [medicos, busqueda]);
 
@@ -117,7 +117,7 @@ export function AsociarEspecialidadesPage() {
                       <p className="truncate text-sm font-semibold text-ink">
                         {medico.nombreCompleto}
                       </p>
-                      <p className="truncate text-xs text-muted">{medico.cargo}</p>
+                      <p className="truncate text-xs text-muted">{jvpmDe(medico)}</p>
                     </div>
                     {medico.estado === 'INACTIVO' && (
                       <i className="ri-forbid-line text-sm text-danger" title="Usuario inactivo" />

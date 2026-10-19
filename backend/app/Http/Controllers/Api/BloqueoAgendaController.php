@@ -70,13 +70,27 @@ class BloqueoAgendaController extends Controller
             return $this->failure('El usuario indicado no es médico.', 422);
         }
 
+        $esMedico = $request->user()->rol === 'MEDICO';
+        if ($esMedico && $request->user()->id !== $medico->id) {
+            return $this->failure('Solo puedes bloquear tu propia agenda.', 403);
+        }
+
         $horaInicio = $validado['hora_inicio'] ?? null;
         $horaFin = $validado['hora_fin'] ?? null;
         $esParcial = $horaInicio !== null;
 
+        $datos = [
+            'id_medico' => $validado['medico_id'],
+            'fecha' => $validado['fecha'],
+            'hora_inicio' => $horaInicio,
+            'hora_fin' => $horaFin,
+            'motivo' => $validado['motivo'] ?? null,
+            'id_creado_por' => $request->user()->id,
+        ];
+
         // Serializar por médico evita que dos bloqueos simultáneos pasen la
         // comprobación de traslape y se guarden ambos.
-        [$bloqueo, $choque] = DB::transaction(function () use ($validado, $horaInicio, $horaFin, $esParcial, $request) {
+        [$bloqueo, $choque, $conCitas] = DB::transaction(function () use ($validado, $horaInicio, $horaFin, $esParcial, $esMedico, $datos) {
             User::where('id', $validado['medico_id'])->lockForUpdate()->first();
 
             $choque = bloqueo_agenda::where('id_medico', $validado['medico_id'])
@@ -87,21 +101,33 @@ class BloqueoAgendaController extends Controller
                     : true);
 
             if ($choque !== null) {
-                return [null, $choque];
+                return [null, $choque, null];
             }
 
-            return [bloqueo_agenda::create([
-                'id_medico' => $validado['medico_id'],
-                'fecha' => $validado['fecha'],
-                'hora_inicio' => $horaInicio,
-                'hora_fin' => $horaFin,
-                'motivo' => $validado['motivo'] ?? null,
-                'id_creado_por' => $request->user()->id,
-            ])->refresh(), null];
+            // El médico no bloquea sobre citas agendadas: recepción tiene que
+            // avisar a esos pacientes, así que ese bloqueo lo hace ella.
+            if ($esMedico) {
+                $citas = $this->agenda->citasAfectadas(new bloqueo_agenda($datos));
+                if ($citas->isNotEmpty()) {
+                    return [null, null, $citas];
+                }
+            }
+
+            return [bloqueo_agenda::create($datos)->refresh(), null, null];
         });
 
         if ($choque !== null) {
             return $this->failure($this->mensajeDeChoque($choque, $esParcial), 409);
+        }
+
+        if ($conCitas !== null) {
+            $horas = $conCitas->map(fn ($c) => substr((string) $c->hora_inicio, 0, 5))->implode(', ');
+
+            return $this->failure(
+                "Tienes {$conCitas->count()} cita(s) agendada(s) en ese lapso ({$horas}). "
+                .'Pide a recepción que haga el bloqueo, porque debe avisar a esos pacientes.',
+                422,
+            );
         }
 
         $afectadas = $this->agenda->citasAfectadas($bloqueo)->load(['paciente', 'medico']);
@@ -141,8 +167,13 @@ class BloqueoAgendaController extends Controller
         ], count($citas).' cita(s) corrida(s).');
     }
 
-    public function destroy(bloqueo_agenda $bloqueo): JsonResponse
+    public function destroy(Request $request, bloqueo_agenda $bloqueo): JsonResponse
     {
+        $usuario = $request->user();
+        if ($usuario->rol === 'MEDICO' && $usuario->id !== $bloqueo->id_medico) {
+            return $this->failure('Solo puedes quitar los bloqueos de tu propia agenda.', 403);
+        }
+
         // Un bloqueo que ya pasó es el registro de que el médico faltó.
         if ($bloqueo->fecha->lt(today())) {
             return $this->failure(

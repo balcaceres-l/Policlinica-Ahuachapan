@@ -43,6 +43,8 @@ class PacienteResource extends JsonResource
             'es_menor_edad' => (bool) $this->es_menor_edad,
             'esMenorEdad' => (bool) $this->es_menor_edad,
             'estado' => $this->estado ?? 'ACTIVO',
+            'datos_pendientes' => (bool) $this->datos_pendientes,
+            'datosPendientes' => (bool) $this->datos_pendientes,
             'id_responsable' => $this->id_responsable,
             'responsable_nombre' => $this->responsable?->nombre_completo,
             'responsableNombre' => $this->responsable?->nombre_completo,

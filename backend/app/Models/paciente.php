@@ -33,6 +33,7 @@ class paciente extends Model
         'direccion',
         'es_menor_edad',
         'estado',
+        'datos_pendientes',
         'id_responsable',
         'id_registrado_por',
         'fecha_registro',
@@ -44,6 +45,7 @@ class paciente extends Model
         'telefono' => SafeEncrypted::class,
         'direccion' => SafeEncrypted::class,
         'es_menor_edad' => 'boolean',
+        'datos_pendientes' => 'boolean',
         'fecha_nacimiento' => 'date',
         'fecha_registro' => 'datetime',
     ];

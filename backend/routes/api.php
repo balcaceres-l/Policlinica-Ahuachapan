@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Cie11Controller;
 use App\Http\Controllers\Api\Cie11ProxyController;
 use App\Http\Controllers\Api\CitaController;
 use App\Http\Controllers\Api\ConsultaController;
+use App\Http\Controllers\Api\DocumentoMedicoController;
 use App\Http\Controllers\Api\EspecialidadController;
 use App\Http\Controllers\Api\HorarioMedicoController;
 use App\Http\Controllers\Api\MedicoEspecialidadController;
@@ -42,12 +43,22 @@ Route::middleware('auth:sanctum')->group(function () {
             '/medicos/{medico}/especialidades/{especialidad}',
             [MedicoEspecialidadController::class, 'destroy'],
         );
+    });
 
-        // HU-34 — los horarios los configura el administrador.
+    // HU-34 — horarios: el administrador configura el de cualquier médico; el
+    // médico, solo el suyo y sin dejar citas agendadas fuera (ver el controlador).
+    Route::middleware('role:ADMINISTRADOR,MEDICO')->group(function () {
         Route::post('/medicos/{medico}/horarios', [HorarioMedicoController::class, 'store']);
         Route::put('/medicos/{medico}/horarios', [HorarioMedicoController::class, 'sincronizar']);
         Route::put('/horarios/{horario}', [HorarioMedicoController::class, 'update']);
         Route::delete('/horarios/{horario}', [HorarioMedicoController::class, 'destroy']);
+    });
+
+    // HU-35 — bloqueo de agenda. El médico bloquea la suya solo si no hay citas
+    // agendadas en ese lapso; si las hay, lo hace recepción (ver el controlador).
+    Route::middleware('role:ADMINISTRADOR,RECEPCIONISTA,MEDICO')->group(function () {
+        Route::post('/bloqueos', [BloqueoAgendaController::class, 'store']);
+        Route::delete('/bloqueos/{bloqueo}', [BloqueoAgendaController::class, 'destroy']);
     });
 
     // Consulta de especialidades asignadas a un médico
@@ -63,9 +74,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/catalogo/especialidades', [CatalogoEspecialidadController::class, 'index']);
         Route::get('/medicos', [UsuarioController::class, 'medicos']);
 
-        // HU-35 — bloqueo de agenda por ausencia del médico.
-        Route::post('/bloqueos', [BloqueoAgendaController::class, 'store']);
-        Route::delete('/bloqueos/{bloqueo}', [BloqueoAgendaController::class, 'destroy']);
         // Citas que quedaron dentro de un bloqueo: listarlas y correrlas tras él.
         Route::get('/bloqueos/{bloqueo}/citas-afectadas', [BloqueoAgendaController::class, 'citasAfectadas']);
         Route::patch('/bloqueos/{bloqueo}/correr-citas', [BloqueoAgendaController::class, 'correrCitas']);
@@ -94,14 +102,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/citas/{cita}/signos-vitales', [SignosVitalesController::class, 'store']);
 
     // Pacientes — consulta para personal clínico y recepción.
-    // Registrar paciente es exclusivo de RECEPCIONISTA; edición y marcar fallecido es de RECEPCIONISTA y MEDICO.
+    // Registrar, editar y marcar fallecido es de RECEPCIONISTA y MEDICO. El médico
+    // registra en la consulta inmediata y el paciente queda con datos pendientes.
     Route::get('/pacientes', [PacienteController::class, 'index']);
     Route::get('/pacientes/{paciente}', [PacienteController::class, 'show']);
     Route::get('/pacientes/{paciente}/historial', [PacienteController::class, 'historial']);
-    Route::middleware('role:RECEPCIONISTA')->group(function () {
-        Route::post('/pacientes', [PacienteController::class, 'store']);
-    });
     Route::middleware('role:RECEPCIONISTA,MEDICO')->group(function () {
+        Route::post('/pacientes', [PacienteController::class, 'store']);
         Route::put('/pacientes/{paciente}', [PacienteController::class, 'update']);
         Route::delete('/pacientes/{paciente}', [PacienteController::class, 'destroy']);
     });
@@ -133,8 +140,22 @@ Route::middleware('auth:sanctum')->group(function () {
         );
         Route::get('/medico/sala-espera', [ConsultaController::class, 'salaEspera']);
         Route::post('/citas/{cita}/consulta', [ConsultaController::class, 'store']);
+        // Consulta inmediata: atender sin cita previa.
+        Route::post('/medico/consulta-inmediata', [ConsultaController::class, 'inmediata']);
         Route::get('/consultas/{consulta}', [ConsultaController::class, 'show']);
         Route::put('/consultas/{consulta}', [ConsultaController::class, 'update']);
         Route::patch('/consultas/{consulta}/finalizar', [ConsultaController::class, 'finalizar']);
+
+        // HU-31, HU-32 — constancia y referencia desde la consulta.
+        Route::post('/consultas/{consulta}/constancias', [DocumentoMedicoController::class, 'crearConstancia']);
+        Route::post('/consultas/{consulta}/referencias', [DocumentoMedicoController::class, 'crearReferencia']);
+        Route::get('/referencias/medicos-destino', [DocumentoMedicoController::class, 'medicosDestino']);
+    });
+
+    // HU-33 — médico y recepcionista imprimen o descargan los documentos en PDF.
+    Route::middleware('role:MEDICO,RECEPCIONISTA')->group(function () {
+        Route::get('/consultas/{consulta}/receta/pdf', [DocumentoMedicoController::class, 'pdfReceta']);
+        Route::get('/constancias/{constancia}/pdf', [DocumentoMedicoController::class, 'pdfConstancia']);
+        Route::get('/referencias/{referencia}/pdf', [DocumentoMedicoController::class, 'pdfReferencia']);
     });
 });

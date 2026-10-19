@@ -13,6 +13,8 @@ export interface Paciente {
   direccion?: string | null;
   es_menor_edad: boolean;
   estado?: 'ACTIVO' | 'FALLECIDO';
+  /** Lo registró el médico en una consulta inmediata; la recepcionista debe completarlo. */
+  datos_pendientes?: boolean;
   id_responsable?: string | null;
   responsable_nombre?: string | null;
   responsable_tipo_documento?: TipoDocumento | null;
@@ -41,6 +43,8 @@ export interface FiltrosPacienteQuery {
   buscar?: string;
   estado?: EstadoPaciente;
   categoria?: 'TODOS' | 'ADULTO' | 'MENOR';
+  /** Solo los registrados por el médico que faltan completar. */
+  pendientes?: boolean;
 }
 
 export interface EditarPaciente {

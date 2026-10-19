@@ -18,7 +18,6 @@ class RegistroUsuarioTest extends TestCase
         return array_merge([
             'nombre_completo' => 'Dra. Ana Lucía Menjívar',
             'usuario' => 'amenjivar@policlinica.com',
-            'cargo' => 'Clínica de Úlceras',
             'rol' => 'MEDICO',
             'telefono' => '2443-1024',
             'password' => 'claveSegura123',

@@ -32,12 +32,15 @@ Cambiar la contraseña revoca las demás sesiones y conserva la actual.
 | Método | Ruta | HU | Cuerpo |
 |---|---|---|---|
 | `GET` | `/usuarios` | HU-06 | query: `rol`, `estado`, `buscar` |
-| `POST` | `/usuarios` | HU-03 | `nombre_completo`, `usuario`, `cargo`, `rol`, `telefono?`, `jvpm?`, `jvpe?`, `password` |
+| `POST` | `/usuarios` | HU-03 | `nombre_completo`, `usuario`, `rol`, `telefono?`, `jvpm?`, `jvpe?`, `password` |
 | `GET` | `/usuarios/{id}` | — | — |
 | `PUT` | `/usuarios/{id}` | HU-04 | igual que POST, **sin** `password` |
 | `PATCH` | `/usuarios/{id}/estado` | HU-05 | `estado` |
 
 Los tres filtros del listado son opcionales y combinables. Sin paginación, ordenado por nombre.
+
+El campo `cargo` se eliminó el 2026-10-19 (migración `2026_10_19_100000`): ya no se pide ni se
+devuelve. Bajo el nombre del médico las pantallas muestran su N.º JVPM.
 
 - `PUT` no acepta `password`: cambiarla es autoservicio.
 - Desactivar revoca los tokens del usuario.
@@ -99,7 +102,7 @@ Omite médicos inactivos y `cantidadMedicos` cuenta solo activos — a diferenci
 
 | Método | Ruta | Acceso | Query / Cuerpo |
 |---|---|---|---|
-| `GET` | `/pacientes` | Autenticado | query: `buscar`, `estado` (`ACTIVO` [default], `FALLECIDO`, `TODOS`), `categoria` (`TODOS`, `ADULTO`, `MENOR`) |
+| `GET` | `/pacientes` | Autenticado | query: `buscar`, `estado` (`ACTIVO` [default], `FALLECIDO`, `TODOS`), `categoria` (`TODOS`, `ADULTO`, `MENOR`), `pendientes=1` (solo los que registró un médico y recepción no ha completado) |
 | `POST` | `/pacientes` | `RECEPCIONISTA`, `MEDICO` | `nombre_completo`, `fecha_nacimiento`, `direccion?`, si mayor: `dui` (DUI/pasaporte obligatorio), `telefono?`; si menor: datos de responsable (`responsable_nombre`, `responsable_documento`, `responsable_telefono`, `responsable_parentesco`) |
 | `GET` | `/pacientes/{id}` | Autenticado | — |
 | `PUT` | `/pacientes/{id}` | `RECEPCIONISTA`, `MEDICO` | `nombre_completo`, `direccion?`, si mayor: `telefono?`; si menor: `responsable_nombre`, `responsable_telefono`, `responsable_parentesco`. Nota: `dui`, `fecha_nacimiento` y `numero_expediente` son estrictamente inmutables. |
@@ -109,11 +112,17 @@ Omite médicos inactivos y `cantidadMedicos` cuenta solo activos — a diferenci
 - Administrador recibe `403` si intenta registrar, editar o eliminar pacientes.
 - Para menores de edad, no se solicita documento ni teléfono propio; se exigen los del responsable (guardando el DUI o pasaporte en `responsable.dui`).
 - El número de expediente `XX00-YYYY` se genera automáticamente.
+- **Consulta inmediata:** el paciente que registra un `MEDICO` queda con `datos_pendientes: true`;
+  pasa a `false` cuando una `RECEPCIONISTA` guarda su registro (`PUT`).
 - **Edición de datos**: `dui`/pasaporte y `fecha_nacimiento` permanecen inmutables para resguardar la identidad legal y el expediente del paciente.
 
 ---
 
-## Bloqueos de agenda (HU-35) — roles `ADMINISTRADOR` y `RECEPCIONISTA`
+## Bloqueos de agenda (HU-35) — roles `ADMINISTRADOR`, `RECEPCIONISTA` y `MEDICO`
+
+El `MEDICO` solo crea y elimina bloqueos **de su propia agenda** (`403` si no) y solo si no hay
+citas `AGENDADA`/`EN_ESPERA` en ese lapso (`422`; esos los hace recepción, que avisa a los
+pacientes). `citas-afectadas` y `correr-citas` siguen siendo de `ADMINISTRADOR` y `RECEPCIONISTA`.
 
 Un bloqueo es de **día completo** (sin horas) o **parcial** (`hora_inicio` y `hora_fin`). Un médico puede
 tener varios bloqueos parciales el mismo día, pero no traslapados. Los bloqueos nunca cancelan ni mueven
@@ -147,6 +156,40 @@ citas por sí solos: las que quedan dentro se devuelven para que recepción las 
 | `PATCH` | `/medicos/{id}/agenda/desplazar`| `RECEPCIONISTA`, `ADMINISTRADOR`, `MEDICO` | `fecha`, `minutos`, `desde_hora?`. Corre citas pendientes por atraso del médico. |
 | `GET` | `/citas/{id}/signos-vitales` | Autenticado | Obtiene signos vitales (triaje). |
 | `PUT` | `/citas/{id}/signos-vitales` | `RECEPCIONISTA`, `MEDICO` | Registra/actualiza signos vitales del paciente para la cita. |
+| `POST` | `/medico/consulta-inmediata` | `MEDICO` | `paciente_id`, `especialidad_atencion_id?` (obligatoria si tiene varias), `motivo_consulta?`. Atender **sin cita previa**: crea una cita `SIN_CITA` a la hora actual (sin validar horario ni disponibilidad) y abre su consulta. `422` si el paciente no está activo. |
+
+- `tipo_cita` puede ser además `SIN_CITA`: solo la crea la consulta inmediata, no se agenda con `POST /citas`.
+
+### Horarios (HU-34) — roles `ADMINISTRADOR` y `MEDICO`
+
+| Método | Ruta | Detalle |
+|---|---|---|
+| `GET` | `/medicos/{id}/horarios` | Autenticado (el médico solo el suyo) |
+| `PUT` | `/medicos/{id}/horarios` | Reemplaza la semana completa: `horarios: [{ dia_semana, hora_inicio, hora_fin }]` |
+| `POST` | `/medicos/{id}/horarios` | Agrega un tramo |
+| `PUT` / `DELETE` | `/horarios/{id}` | Edita o quita un tramo |
+
+El `MEDICO` solo toca **su propio horario** (`403`) y no puede dejar fuera citas regulares
+`AGENDADA`/`EN_ESPERA` de hoy en adelante (`422`, con las citas en el mensaje). El
+`ADMINISTRADOR` sí puede.
+
+---
+
+## Documentos médicos (HU-30, HU-31, HU-32, HU-33)
+
+| Método | Ruta | Acceso | Query / Cuerpo |
+|---|---|---|---|
+| `POST` | `/consultas/{id}/constancias` | `MEDICO` que atendió | `motivo` (5–2000). |
+| `POST` | `/consultas/{id}/referencias` | `MEDICO` que atendió | `tipo` (`INTERNA`/`EXTERNA`), `motivo`, `especialidad_destino?`. Interna: `medico_destino_id` (médico activo, no uno mismo), `resumen_clinico?`. Externa: `destino` y `resumen_clinico` obligatorios. |
+| `GET` | `/referencias/medicos-destino` | `MEDICO` | Médicos activos (menos uno mismo) con sus especialidades. |
+| `GET` | `/consultas/{id}/receta/pdf` | `MEDICO`, `RECEPCIONISTA` | PDF de la receta; `404` si no tiene medicamentos. |
+| `GET` | `/constancias/{id}/pdf` | `MEDICO`, `RECEPCIONISTA` | PDF de la constancia. |
+| `GET` | `/referencias/{id}/pdf` | `MEDICO`, `RECEPCIONISTA` | PDF de la referencia. Interna: incluye el expediente completo. Externa: solo lo escrito. |
+
+- Los PDF se abren en el navegador (`inline`); con `?descargar=1` llegan como adjunto.
+- Los genera el backend con dompdf y una sola plantilla (`resources/views/documentos/`); la
+  identidad de la policlínica está en `config/clinica.php` (`documentos`) y se cambia en el `.env`.
+- `GET /consultas/{id}` y `GET /pacientes/{id}/historial` devuelven `constancias` y `referencias`.
 
 ---
 
@@ -204,7 +247,6 @@ Detalle, seguridad y configuración en `docs/claude-context/05-diagnostico-cie11
   "id": 1,
   "nombreCompleto": "Dra. Elena Ramírez Alfaro",
   "usuario": "eramirez@policlinica.com",
-  "cargo": "Ginecología",
   "rol": "ADMINISTRADOR|MEDICO|RECEPCIONISTA",
   "estado": "ACTIVO|INACTIVO",
   "telefono": "2443-1020",
@@ -247,5 +289,5 @@ Los mensajes de validación llegan en español.
 
 ## Aún sin implementar
 
-Catálogo de medicamentos (HU-45), constancias (HU-31) y referencias médicas (HU-32):
-no tienen tabla ni endpoint.
+No hay catálogo de medicamentos: por decisión del equipo (2026-10-18), HU-45 se resuelve con
+texto libre en `receta.detalles[].nombre_medicamento`.

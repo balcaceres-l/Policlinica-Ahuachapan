@@ -55,7 +55,8 @@ cuando se retome EP-03.
 
 Verificado contra criterios: **cumple todos.** Filtra correctamente por rol
 Médico (vía `useMedicos()`), permite múltiples especialidades por médico,
-búsqueda por nombre/cargo funcional. Sin hallazgos.
+búsqueda por nombre/cargo funcional. Sin hallazgos. (El cargo se eliminó el 2026-10-19; la
+búsqueda ahora es por nombre o N.º JVPM.)
 
 ---
 
@@ -111,8 +112,12 @@ Auditoría de las 18 HU del Sprint 2 contra sus criterios y el código de `devel
   `users.jvpm`; si el médico no lo tiene, la línea se omite.
 
 Pendientes que no son de código:
-- `recetaPdf.ts` trae fijos la dirección, el teléfono y el correo de la policlínica.
-  Hay que confirmarlos con el cliente.
+- La dirección, el teléfono y el correo de la policlínica siguen sin confirmar con el cliente.
+  Desde el 2026-10-18 los documentos los toman de `config/clinica.php` (`documentos`) y se
+  cambian con `CLINICA_DIRECCION`, `CLINICA_TELEFONO` y `CLINICA_CORREO` en el `.env`
+  (`recetaPdf.ts` se eliminó: la receta ahora se genera en el backend).
+- `composer audit` (2026-10-18) reporta avisos de seguridad en `league/commonmark` y
+  `symfony/http-foundation`, que ya estaban antes del Sprint 3. Conviene actualizarlos.
 - El lint del frontend reporta 7 problemas previos a estos cambios (`AgendarCitaModal`,
   `IndicadorDisponibilidad`, `SignosVitalesModal`, `EspecialidadModal`,
   `EditarPacienteModal`).

@@ -20,9 +20,9 @@ class ConsultaTest extends TestCase
 
     private paciente $paciente;
 
-    private especialidad $ginecologia;
+    private Especialidad $ginecologia;
 
-    private especialidad $interna;
+    private Especialidad $interna;
 
     protected function setUp(): void
     {
@@ -214,6 +214,74 @@ class ConsultaTest extends TestCase
         Sanctum::actingAs(User::factory()->create(['rol' => 'RECEPCIONISTA', 'estado' => 'ACTIVO']));
 
         $this->postJson("/api/citas/{$this->crearCita()->id_cita}/consulta")->assertForbidden();
+    }
+
+    // ---- Consulta inmediata (sin cita previa) ----
+
+    public function test_consulta_inmediata_crea_una_cita_sin_cita_y_abre_la_consulta(): void
+    {
+        $this->medico->especialidades()->sync([$this->ginecologia->id]);
+        Sanctum::actingAs($this->medico);
+
+        // El médico no tiene horario configurado: igual puede atender.
+        $id = $this->postJson('/api/medico/consulta-inmediata', [
+            'paciente_id' => $this->paciente->id_paciente,
+            'motivo_consulta' => 'Dolor abdominal',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.especialidad_atencion_id', $this->ginecologia->id)
+            ->json('data.id');
+
+        $consulta = consulta::find($id);
+        $this->assertSame('Dolor abdominal', $consulta->motivo_consulta);
+        $this->assertSame('SIN_CITA', $consulta->cita->tipo_cita);
+        $this->assertSame('EN_ATENCION', $consulta->cita->estado);
+        $this->assertSame(now()->toDateString(), $consulta->cita->fecha->toDateString());
+        $this->assertSame($this->medico->id, $consulta->cita->id_creado_por);
+        $this->assertNotNull($consulta->cita->hora_llegada);
+    }
+
+    public function test_consulta_inmediata_aparece_en_la_sala_de_espera_del_dia(): void
+    {
+        $this->medico->especialidades()->sync([$this->ginecologia->id]);
+        Sanctum::actingAs($this->medico);
+
+        $this->postJson('/api/medico/consulta-inmediata', ['paciente_id' => $this->paciente->id_paciente])
+            ->assertCreated();
+
+        $this->getJson('/api/medico/sala-espera')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.tipo_cita', 'SIN_CITA');
+    }
+
+    public function test_consulta_inmediata_con_varias_especialidades_exige_elegir_una(): void
+    {
+        $this->medico->especialidades()->sync([$this->ginecologia->id, $this->interna->id]);
+        Sanctum::actingAs($this->medico);
+
+        $this->postJson('/api/medico/consulta-inmediata', ['paciente_id' => $this->paciente->id_paciente])
+            ->assertStatus(422);
+        $this->assertSame(0, cita::count());
+    }
+
+    public function test_consulta_inmediata_rechaza_un_paciente_fallecido(): void
+    {
+        $this->medico->especialidades()->sync([$this->ginecologia->id]);
+        $this->paciente->update(['estado' => 'FALLECIDO']);
+        Sanctum::actingAs($this->medico);
+
+        $this->postJson('/api/medico/consulta-inmediata', ['paciente_id' => $this->paciente->id_paciente])
+            ->assertStatus(422);
+        $this->assertSame(0, cita::count());
+    }
+
+    public function test_la_recepcionista_no_hace_consultas_inmediatas(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['rol' => 'RECEPCIONISTA', 'estado' => 'ACTIVO']));
+
+        $this->postJson('/api/medico/consulta-inmediata', ['paciente_id' => $this->paciente->id_paciente])
+            ->assertForbidden();
     }
 
     public function test_una_consulta_abierta_reporta_los_minutos_transcurridos(): void

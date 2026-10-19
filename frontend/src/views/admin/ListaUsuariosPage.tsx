@@ -16,7 +16,7 @@ import {
   ROL_BADGE,
   ROL_LABEL,
 } from '@/lib/constants/roles';
-import { cn, normalizar } from '@/lib/utils';
+import { cn, jvpmDe, normalizar } from '@/lib/utils';
 import type { EstadoUsuario, RolUsuario, Usuario } from '@/types/user.types';
 
 const POR_PAGINA = 5;
@@ -76,7 +76,7 @@ export function ListaUsuariosPage() {
       render: (usuario) => (
         <div>
           <p className="font-semibold text-ink">{usuario.nombreCompleto}</p>
-          <p className="text-xs text-muted">{usuario.cargo}</p>
+          {usuario.jvpm && <p className="text-xs text-muted">{jvpmDe(usuario)}</p>}
         </div>
       ),
     },

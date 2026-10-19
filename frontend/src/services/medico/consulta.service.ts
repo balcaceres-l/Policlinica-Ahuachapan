@@ -69,6 +69,23 @@ export const iniciarConsulta = async (
   return data.data;
 };
 
+export interface ConsultaInmediataPayload {
+  paciente_id: string;
+  especialidad_atencion_id?: string;
+  motivo_consulta?: string;
+}
+
+/**
+ * Consulta inmediata: atiende a un paciente sin cita previa. El backend crea
+ * una cita SIN_CITA para ahora mismo y abre su consulta.
+ */
+export const iniciarConsultaInmediata = async (
+  payload: ConsultaInmediataPayload,
+): Promise<ConsultaDetalle> => {
+  const { data } = await api.post<ApiResponse<ConsultaDetalle>>('/medico/consulta-inmediata', payload);
+  return data.data;
+};
+
 /** Obtiene el detalle completo de una consulta médica. */
 export const getConsulta = async (consultaId: string): Promise<ConsultaDetalle> => {
   const { data } = await api.get<ApiResponse<ConsultaDetalle>>(`/consultas/${consultaId}`);

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
+import { useAuth } from '@/hooks/auth/useAuth';
 import { useActualizarPaciente } from '@/hooks/paciente/usePacientes';
 import { extraerMensajeError } from '@/lib/apiError';
 import { contieneLetrasOCaracteresEspeciales, formatearTelefono } from '@/lib/utils';
@@ -23,6 +24,7 @@ const CLASE_INPUT_DISABLED =
   'cursor-not-allowed select-none font-medium';
 
 export function EditarPacienteModal({ paciente, isOpen, onClose }: EditarPacienteModalProps) {
+  const { usuario } = useAuth();
   const [nombreCompleto, setNombreCompleto] = useState('');
   const [telefono, setTelefono] = useState('');
   const [direccion, setDireccion] = useState('');
@@ -135,6 +137,14 @@ export function EditarPacienteModal({ paciente, isOpen, onClose }: EditarPacient
           <div className="rounded-field border border-danger/30 bg-danger-soft p-3 text-xs text-danger">
             <i className="ri-error-warning-line mr-1 text-sm align-middle" />
             {error}
+          </div>
+        )}
+
+        {paciente?.datos_pendientes && usuario?.rol === 'RECEPCIONISTA' && (
+          <div className="rounded-field border border-warning/30 bg-warning-soft p-3 text-xs text-ink">
+            <i className="ri-error-warning-line mr-1 text-sm align-middle text-warning" />
+            Un médico registró a este paciente al atenderlo sin cita. Revisa y completa su teléfono y
+            dirección; al guardar, el registro queda completo.
           </div>
         )}
 

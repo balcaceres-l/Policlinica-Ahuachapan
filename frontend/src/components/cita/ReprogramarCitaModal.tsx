@@ -7,7 +7,7 @@ import { useCatalogoEspecialidades } from '@/hooks/especialidad/useEspecialidade
 import { useReprogramarCita } from '@/hooks/cita/useCitas';
 import { extraerMensajeError } from '@/lib/apiError';
 import { useMedicos } from '@/hooks/usuario/useUsuarios';
-import { obtenerFechaLocal, obtenerHoraLocal } from '@/lib/utils';
+import { jvpmDe, obtenerFechaLocal, obtenerHoraLocal } from '@/lib/utils';
 import type { Cita } from '@/types/cita.types';
 
 interface ReprogramarCitaModalProps {
@@ -173,7 +173,7 @@ function FormularioReprogramar({ cita, onClose }: FormularioProps) {
                     )
                     .map((m) => (
                       <option key={m.id} value={m.id}>
-                        {m.nombreCompleto} {m.cargo ? `· ${m.cargo}` : ''}{' '}
+                        {m.nombreCompleto} {m.jvpm ? `· ${jvpmDe(m)}` : ''}{' '}
                         {m.id === cita.medico_id ? '(Médico actual)' : ''}
                       </option>
                     ))}
@@ -184,7 +184,7 @@ function FormularioReprogramar({ cita, onClose }: FormularioProps) {
                 .filter((m) => m.estado === 'ACTIVO')
                 .map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.nombreCompleto} {m.cargo ? `· ${m.cargo}` : ''}{' '}
+                    {m.nombreCompleto} {m.jvpm ? `· ${jvpmDe(m)}` : ''}{' '}
                     {m.id === cita.medico_id ? '(Médico actual)' : ''}
                   </option>
                 ))

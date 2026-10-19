@@ -115,7 +115,6 @@ class UsuarioController extends Controller
                 'max:150',
                 Rule::unique('users', 'usuario')->ignore($user),
             ],
-            'cargo' => ['required', 'string', 'max:100'],
             'rol' => ['required', Rule::in(['ADMINISTRADOR', 'MEDICO', 'RECEPCIONISTA'])],
             'estado' => ['sometimes', Rule::in(['ACTIVO', 'INACTIVO'])],
             'telefono' => ['nullable', 'string', 'max:25'],

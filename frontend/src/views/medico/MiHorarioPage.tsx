@@ -1,15 +1,20 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import BloqueoAgendaModal from '@/components/bloqueo/BloqueoAgendaModal';
+import HorarioModal from '@/components/horario/HorarioModal';
 import Badge from '@/components/ui/Badge';
+import Button from '@/components/ui/Button';
 import EmptyState from '@/components/ui/EmptyState';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useAuth } from '@/hooks/auth/useAuth';
-import { useBloqueos } from '@/hooks/bloqueo/useBloqueos';
+import { useBloqueos, useEliminarBloqueo } from '@/hooks/bloqueo/useBloqueos';
 import { useEspecialidadesDeMedico } from '@/hooks/especialidad/useEspecialidades';
 import { useHorariosDeMedico } from '@/hooks/horario/useHorarios';
+import { extraerMensajeError } from '@/lib/apiError';
 import { lapsoDeBloqueo } from '@/lib/bloqueo';
 import { DIA_LABEL, DIAS_SEMANA, formatearHora } from '@/lib/constants/dias';
-import { getIniciales } from '@/lib/utils';
+import { getIniciales, jvpmDe, obtenerFechaLocal } from '@/lib/utils';
 import type { HorarioMedico } from '@/types/horario.types';
 
 export function MiHorarioPage() {
@@ -20,6 +25,22 @@ export function MiHorarioPage() {
   const { data: especialidades = [], isLoading: cargandoEspecialidades } =
     useEspecialidadesDeMedico(medicoId);
   const { data: bloqueos = [], isLoading: cargandoBloqueos } = useBloqueos();
+
+  // El médico edita su horario y bloquea su agenda; el backend lo rechaza si
+  // eso deja citas agendadas fuera (esas las gestiona recepción).
+  const [editandoHorario, setEditandoHorario] = useState(false);
+  const [bloqueando, setBloqueando] = useState(false);
+  const eliminarBloqueo = useEliminarBloqueo();
+  const hoy = obtenerFechaLocal();
+
+  const quitarBloqueo = async (id: string) => {
+    try {
+      await eliminarBloqueo.mutateAsync(id);
+      toast.success('Bloqueo eliminado.');
+    } catch (err) {
+      toast.error(extraerMensajeError(err, 'No se pudo eliminar el bloqueo.'));
+    }
+  };
 
   // Calcular horas trabajadas en un tramo 'HH:mm'
   const calcularHorasTramo = (inicio: string, fin: string): number => {
@@ -67,16 +88,24 @@ export function MiHorarioPage() {
       {/* Encabezado y Accesos Rápidos */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-ink">Mi Horario de Atención</h1>
-            <Badge variant="royal">Asignado por Administración</Badge>
-          </div>
+          <h1 className="text-2xl font-bold text-ink">Mi Horario de Atención</h1>
           <p className="mt-1 text-sm text-muted">
-            Consulta los turnos y jornadas laborales configuradas para tu atención clínica en la policlínica.
+            Consulta y ajusta tus turnos de atención y tus ausencias.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          <Button icon="ri-edit-2-line" onClick={() => setEditandoHorario(true)} disabled={!medicoId}>
+            Editar mi horario
+          </Button>
+          <Button
+            variant="secondary"
+            icon="ri-calendar-close-line"
+            onClick={() => setBloqueando(true)}
+            disabled={!medicoId}
+          >
+            Bloquear mi agenda
+          </Button>
           <Link
             to="/medico/calendario"
             className="inline-flex items-center gap-1.5 rounded-field border border-line bg-surface px-3.5 py-2 text-xs font-semibold text-brand-700 shadow-xs transition-colors hover:bg-brand-50"
@@ -111,8 +140,7 @@ export function MiHorarioPage() {
                     <Badge variant="success">Activo</Badge>
                   </div>
                   <p className="mt-0.5 text-xs text-muted">
-                    {usuario?.cargo || 'Médico Especialista'}
-                    {usuario?.telefono ? ` · Tel: ${usuario.telefono}` : ''}
+                    {[jvpmDe(usuario), usuario?.telefono ? `Tel: ${usuario.telefono}` : ''].filter(Boolean).join(' · ')}
                   </p>
 
                   {/* Especialidades asignadas */}
@@ -136,11 +164,10 @@ export function MiHorarioPage() {
             <div className="mt-4 flex items-start gap-3 rounded-field border border-blue-100 bg-blue-50/60 p-3.5 text-xs text-blue-900">
               <i className="ri-information-line text-base text-blue-600 shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold">Horario institucional administrado</p>
+                <p className="font-semibold">Tú puedes ajustar tu horario y tus ausencias</p>
                 <p className="mt-0.5 text-blue-800">
-                  Tus horarios son asignados de acuerdo a la planificación médica de la policlínica.
-                  Para solicitar reprogramaciones de turnos, ajustes de jornada o permisos especiales,
-                  favor comunicarlo con la administración de la clínica.
+                  Siempre que no tengas citas agendadas en ese lapso. Si las tienes, pídelo a
+                  recepción: ella avisa a los pacientes y reagenda sus citas.
                 </p>
               </div>
             </div>
@@ -194,7 +221,7 @@ export function MiHorarioPage() {
                 <EmptyState
                   icon="ri-calendar-close-line"
                   title="Sin horarios asignados"
-                  message="La administración aún no ha configurado horarios de atención para tu cuenta médica."
+                  message="Aún no tienes horarios de atención. Configúralos con «Editar mi horario»."
                 />
               </div>
             ) : (
@@ -283,11 +310,41 @@ export function MiHorarioPage() {
                     <p className="text-muted">
                       <span className="font-semibold text-ink">Motivo:</span> {b.motivo || 'Sin motivo detallado'}
                     </p>
+                    {/* Los de fechas pasadas son historial y no se quitan. */}
+                    {b.fecha >= hoy && (
+                      <button
+                        type="button"
+                        onClick={() => quitarBloqueo(b.id)}
+                        disabled={eliminarBloqueo.isPending}
+                        className="mt-2 inline-flex cursor-pointer items-center gap-1 text-xs font-semibold text-danger hover:underline disabled:opacity-60"
+                      >
+                        <i className="ri-delete-bin-line" />
+                        Quitar bloqueo
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
             )}
           </section>
+        </>
+      )}
+
+      {medicoId && (
+        <>
+          <HorarioModal
+            isOpen={editandoHorario}
+            medicoId={medicoId}
+            medicoNombre={usuario?.nombreCompleto}
+            medicoJvpm={usuario?.jvpm}
+            horarios={horarios}
+            onClose={() => setEditandoHorario(false)}
+          />
+          <BloqueoAgendaModal
+            isOpen={bloqueando}
+            medicoFijoId={medicoId}
+            onClose={() => setBloqueando(false)}
+          />
         </>
       )}
     </div>
