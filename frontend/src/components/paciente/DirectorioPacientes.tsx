@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import ConfirmarFallecidoModal from '@/components/paciente/ConfirmarFallecidoModal';
 import EditarPacienteModal from '@/components/paciente/EditarPacienteModal';
 import NuevoPacienteModal from '@/components/paciente/NuevoPacienteModal';
@@ -9,20 +9,47 @@ import DataTable, { type Column } from '@/components/ui/DataTable';
 import SearchBar from '@/components/ui/SearchBar';
 import { useAuth } from '@/hooks/auth/useAuth';
 import { usePacientes } from '@/hooks/paciente/usePacientes';
-import { getIniciales } from '@/lib/utils';
 import type { EstadoPaciente, Paciente } from '@/types/paciente.types';
 
 export function DirectorioPacientes() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { usuario } = useAuth();
   const esMedico = usuario?.rol === 'MEDICO';
   const esRecepcionista = usuario?.rol === 'RECEPCIONISTA';
 
-  const [busqueda, setBusqueda] = useState('');
-  const [categoriaFiltro, setCategoriaFiltro] = useState<'TODOS' | 'ADULTO' | 'MENOR'>('TODOS');
-  const [estadoFiltro, setEstadoFiltro] = useState<EstadoPaciente>('ACTIVO');
-  const [fechaRegistroFiltro, setFechaRegistroFiltro] = useState('');
-  const [soloPendientes, setSoloPendientes] = useState(false);
+  // Los filtros viven en la URL: al abrir un expediente y volver, el directorio queda como estaba.
+  const [params, setParams] = useSearchParams();
+  const busqueda = params.get('q') ?? '';
+  const categoriaParam = params.get('categoria');
+  const categoriaFiltro: 'TODOS' | 'ADULTO' | 'MENOR' =
+    categoriaParam === 'ADULTO' || categoriaParam === 'MENOR' ? categoriaParam : 'TODOS';
+  const estadoParam = params.get('estado');
+  const estadoFiltro: EstadoPaciente =
+    estadoParam === 'FALLECIDO' || estadoParam === 'TODOS' ? estadoParam : 'ACTIVO';
+  const fechaRegistroFiltro = params.get('registro') ?? '';
+  const soloPendientes = params.get('pendientes') === '1';
+
+  const cambiarParams = (cambios: Record<string, string | null>) => {
+    setParams(
+      (previos) => {
+        const nuevos = new URLSearchParams(previos);
+        Object.entries(cambios).forEach(([clave, valor]) => {
+          if (valor === null || valor === '') nuevos.delete(clave);
+          else nuevos.set(clave, valor);
+        });
+        return nuevos;
+      },
+      { replace: true },
+    );
+  };
+  const setBusqueda = (valor: string) => cambiarParams({ q: valor });
+  const setCategoriaFiltro = (valor: string) =>
+    cambiarParams({ categoria: valor === 'TODOS' ? null : valor });
+  const setEstadoFiltro = (valor: string) =>
+    cambiarParams({ estado: valor === 'ACTIVO' ? null : valor });
+  const setFechaRegistroFiltro = (valor: string) => cambiarParams({ registro: valor });
+  const setSoloPendientes = (valor: boolean) => cambiarParams({ pendientes: valor ? '1' : null });
 
   const [modalNuevo, setModalNuevo] = useState(false);
   const [pacienteParaEditar, setPacienteParaEditar] = useState<Paciente | null>(null);
@@ -49,14 +76,24 @@ export function DirectorioPacientes() {
     });
   }, [pacientes, fechaRegistroFiltro]);
 
+  // Dos motivos para completar: lo registró un médico, o ya es adulto y falta su documento.
+  const sinDocumento = pendientes.filter((p) => p.documento_pendiente).length;
+  const deMedicos = pendientes.length - sinDocumento;
+  const textoPendientes = [
+    sinDocumento > 0 &&
+      `${sinDocumento} ${sinDocumento === 1 ? 'paciente cumplió' : 'pacientes cumplieron'} 18 años: falta su documento`,
+    deMedicos > 0 &&
+      `${deMedicos} ${deMedicos === 1 ? 'paciente registrado' : 'pacientes registrados'} por un médico: completar sus datos`,
+  ]
+    .filter(Boolean)
+    .join('  ·  ');
+
   const columns: Column<Paciente>[] = [
     {
       key: 'expediente',
       header: 'Expediente',
-      className: 'w-32',
       render: (p) => (
-        <span className="inline-flex items-center gap-1.5 rounded-field bg-brand-50 px-2.5 py-1 text-xs font-bold text-brand-700">
-          <i className="ri-folder-user-line" />
+        <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-field bg-brand-50 px-2.5 py-1 text-xs font-bold text-brand-700">
           {p.numero_expediente}
         </span>
       ),
@@ -66,19 +103,33 @@ export function DirectorioPacientes() {
       header: 'Nombre del Paciente',
       render: (p) => (
         <div className="flex items-center gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-bold text-brand-700">
-            {getIniciales(p.nombre_completo)}
-          </span>
           <div>
-            <p className="font-semibold text-ink">{p.nombre_completo}</p>
+            <p className="font-semibold text-ink">
+              {p.nombre_completo}
+              {/* Lo normal es estar activo: solo se marca al fallecido (el filtro de estado sigue arriba). */}
+              {p.estado === 'FALLECIDO' && (
+                <Badge variant="danger" className="ml-2 align-middle">
+                  Fallecido
+                </Badge>
+              )}
+            </p>
             <p className="text-xs text-muted">Nacimiento: {p.fecha_nacimiento}</p>
-            {p.datos_pendientes && (
+            {p.documento_pendiente ? (
               <span
                 className="mt-1 inline-block"
-                title="Lo registró un médico al atenderlo sin cita. Recepción debe completar su registro."
+                title="Se registró de menor y ya cumplió 18 años. Edita el paciente para agregar su documento de identidad."
               >
-                <Badge variant="warning">Datos pendientes</Badge>
+                <Badge variant="warning">Documento pendiente</Badge>
               </span>
+            ) : (
+              p.datos_pendientes && (
+                <span
+                  className="mt-1 inline-block"
+                  title="Lo registró un médico al atenderlo sin cita. Recepción debe completar su registro."
+                >
+                  <Badge variant="warning">Datos pendientes</Badge>
+                </span>
+              )
             )}
           </div>
         </div>
@@ -87,12 +138,11 @@ export function DirectorioPacientes() {
     {
       key: 'dui',
       header: 'Documento',
-      className: 'w-36',
       render: (p) => {
         if (!p.dui) {
           return (
             <span className="text-xs text-muted italic">
-              {p.es_menor_edad ? '— (Menor de edad)' : 'Sin documento'}
+              Sin documento
             </span>
           );
         }
@@ -109,13 +159,12 @@ export function DirectorioPacientes() {
     {
       key: 'telefono',
       header: 'Teléfono',
-      className: 'w-28 text-muted',
+      className: 'whitespace-nowrap text-muted',
       render: (p) => p.telefono ?? '—',
     },
     {
       key: 'categoria',
       header: 'Categoría',
-      className: 'w-28',
       render: (p) => (
         <Badge variant={p.es_menor_edad ? 'warning' : 'default'}>
           {p.es_menor_edad ? 'Menor de edad' : 'Adulto'}
@@ -123,18 +172,8 @@ export function DirectorioPacientes() {
       ),
     },
     {
-      key: 'estado',
-      header: 'Estado',
-      className: 'w-24',
-      render: (p) => (
-        <Badge variant={p.estado === 'FALLECIDO' ? 'danger' : 'success'}>
-          {p.estado === 'FALLECIDO' ? 'Fallecido' : 'Activo'}
-        </Badge>
-      ),
-    },
-    {
       key: 'responsable',
-      header: 'Responsable (Menores)',
+      header: 'Responsable',
       render: (p) =>
         p.es_menor_edad && p.responsable_nombre ? (
           <div>
@@ -152,14 +191,14 @@ export function DirectorioPacientes() {
     },
     {
       key: 'registro',
-      header: 'Fecha Registro',
-      className: 'w-28 text-xs text-muted',
+      header: 'Registro',
+      className: 'whitespace-nowrap text-xs text-muted',
       render: (p) => p.fecha_registro,
     },
     {
       key: 'acciones',
       header: 'Acciones',
-      className: 'w-32 text-right',
+      className: 'w-px whitespace-nowrap text-right',
       render: (p) => (
         <div className="flex items-center justify-end gap-1.5">
           {(esMedico || esRecepcionista) && (
@@ -167,14 +206,17 @@ export function DirectorioPacientes() {
               type="button"
               onClick={() => {
                 const ruta = esRecepcionista
-                  ? `/secretaria/expediente/${p.id}`
+                  ? `/secretaria/pacientes/${p.id}`
                   : `/medico/expediente/${p.id}`;
-                navigate(ruta);
+                navigate(ruta, {
+                  state: { origen: { ruta: `${location.pathname}${location.search}` } },
+                });
               }}
               title="Ver expediente clínico y consultas"
-              className="flex size-8 cursor-pointer items-center justify-center rounded-field border border-line text-brand-600 transition-colors hover:bg-brand-50 hover:text-brand-700"
+              className="flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-field border border-line px-2.5 text-xs font-semibold text-brand-600 transition-colors hover:bg-brand-50 hover:text-brand-700"
             >
               <i className="ri-folder-open-line text-base" />
+              Expediente
             </button>
           )}
 
@@ -211,7 +253,7 @@ export function DirectorioPacientes() {
   ];
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto max-w-[96rem]">
       {/* Encabezado */}
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -231,9 +273,7 @@ export function DirectorioPacientes() {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-card border border-warning/30 bg-warning-soft p-4 text-sm text-ink">
           <p>
             <i className="ri-error-warning-line mr-1.5 align-middle text-warning" />
-            {pendientes.length === 1
-              ? 'Hay 1 paciente registrado por un médico que espera que completes sus datos.'
-              : `Hay ${pendientes.length} pacientes registrados por médicos que esperan que completes sus datos.`}
+            {textoPendientes}
           </p>
           <Button variant="secondary" onClick={() => setSoloPendientes(!filtrarPendientes)}>
             {filtrarPendientes ? 'Ver todos' : 'Ver pendientes'}
@@ -254,9 +294,7 @@ export function DirectorioPacientes() {
         <div>
           <select
             value={categoriaFiltro}
-            onChange={(e) =>
-              setCategoriaFiltro(e.target.value as 'TODOS' | 'ADULTO' | 'MENOR')
-            }
+            onChange={(e) => setCategoriaFiltro(e.target.value)}
             className="h-10 rounded-field border border-line bg-surface px-3 text-xs font-medium text-ink outline-none focus:border-brand-600"
           >
             <option value="TODOS">Todas las Categorías</option>
@@ -269,10 +307,10 @@ export function DirectorioPacientes() {
         <div>
           <select
             value={estadoFiltro}
-            onChange={(e) => setEstadoFiltro(e.target.value as EstadoPaciente)}
+            onChange={(e) => setEstadoFiltro(e.target.value)}
             className="h-10 rounded-field border border-line bg-surface px-3 text-xs font-semibold text-ink outline-none focus:border-brand-600"
           >
-            <option value="ACTIVO">Solo Activos (Por defecto)</option>
+            <option value="ACTIVO">Solo Activos</option>
             <option value="FALLECIDO">Solo Fallecidos</option>
             <option value="TODOS">Todos los Pacientes</option>
           </select>
@@ -304,6 +342,7 @@ export function DirectorioPacientes() {
       <DataTable
         columns={columns}
         data={pacientesFiltrados}
+        compact
         keyExtractor={(p) => p.id}
         isLoading={isLoading}
         emptyIcon="ri-user-heart-line"

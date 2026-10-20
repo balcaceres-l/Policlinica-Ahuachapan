@@ -137,19 +137,8 @@ export function SelectorMedicoCascada({
     <div className="space-y-3" ref={contenedorRef}>
       {/* 1. Filtro en Cascada: Especialidad Clínica */}
       <div>
-        <label className="mb-1 flex items-center justify-between text-xs font-semibold text-ink">
-          <span>
-            1. Filtrar por Especialidad <span className="font-normal text-muted">(Cascada)</span>
-          </span>
-          {especialidadSeleccionada !== 'TODAS' && (
-            <button
-              type="button"
-              onClick={() => handleCambiarEspecialidad('TODAS')}
-              className="text-[11px] font-semibold text-brand-600 hover:underline"
-            >
-              Ver todas
-            </button>
-          )}
+        <label className="mb-1 block text-xs font-semibold text-ink">
+          1. Filtrar por Especialidad
         </label>
         <div className="relative">
           <select
@@ -159,7 +148,7 @@ export function SelectorMedicoCascada({
             className="h-11 w-full rounded-field border border-line bg-surface px-3 text-sm font-medium text-ink outline-none transition-colors focus:border-brand-600 focus:ring-4 focus:ring-brand-600/15 disabled:opacity-60"
           >
             <option value="TODAS">
-              ✨ Todas las especialidades ({medicos.length} médicos disponibles)
+              Todas las especialidades ({medicos.length} médicos)
             </option>
             {especialidades.map((esp) => {
               const medicosEsp = medicos.filter(
@@ -281,9 +270,12 @@ export function SelectorMedicoCascada({
                           </p>
                         </div>
                       </div>
-                      <Badge dot variant={m.estado === 'ACTIVO' ? 'success' : 'danger'}>
-                        {m.estado === 'ACTIVO' ? 'Disponible' : 'No disponible'}
-                      </Badge>
+                      {/* Solo se avisa lo excepcional: un médico activo no necesita etiqueta. */}
+                      {m.estado !== 'ACTIVO' && (
+                        <Badge dot variant="danger">
+                          Inactivo
+                        </Badge>
+                      )}
                     </button>
                   ))
                 )}

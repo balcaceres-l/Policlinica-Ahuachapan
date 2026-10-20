@@ -14,13 +14,19 @@ import { extraerMensajeError } from '@/lib/apiError';
 import { cn, jvpmDe } from '@/lib/utils';
 import type { BloqueoAgenda, TipoBloqueo } from '@/types/bloqueo.types';
 
-type Vista = 'VIGENTES' | 'HISTORIAL';
+type Vista = 'HOY' | 'PROXIMOS' | 'HISTORIAL';
 
 /** Días que se muestran de entrada; el resto se pide con "Mostrar más". */
 const DIAS_POR_PAGINA = 15;
 
 const fechaLocal = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+/** Suma días a una fecha "YYYY-MM-DD" sin pasar por UTC. */
+const sumarDias = (iso: string, dias: number): string => {
+  const [anio, mes, dia] = iso.split('-').map(Number);
+  return fechaLocal(new Date(anio, mes - 1, dia + dias));
+};
 
 /** "2026-09-21" -> "Lunes, 21 de septiembre de 2026" sin pasar por UTC. */
 const fechaLarga = (iso: string): string => {
@@ -105,7 +111,7 @@ function FilaBloqueo({ bloqueo, esPasado, eliminando, onEliminar, onGestionar }:
 export function BloqueosAgendaPage() {
   const hoy = useMemo(() => fechaLocal(), []);
 
-  const [vista, setVista] = useState<Vista>('VIGENTES');
+  const [vista, setVista] = useState<Vista>('HOY');
   const [medicoFiltro, setMedicoFiltro] = useState<string | 'TODOS'>('TODOS');
   const [tipoFiltro, setTipoFiltro] = useState<TipoBloqueo | 'TODOS'>('TODOS');
   const [desde, setDesde] = useState('');
@@ -124,27 +130,45 @@ export function BloqueosAgendaPage() {
 
   const cambiarVista = (nueva: Vista) => {
     setVista(nueva);
+    // El rango de fechas es de cada pestaña: al cambiar no se arrastra a la otra.
+    setDesde('');
+    setHasta('');
     setDiasVisibles(DIAS_POR_PAGINA);
   };
 
-  const vigentes = useMemo(() => bloqueos.filter((b) => b.fecha >= hoy), [bloqueos, hoy]);
-  const historial = useMemo(() => bloqueos.filter((b) => b.fecha < hoy), [bloqueos, hoy]);
+  const inicioMes = `${hoy.slice(0, 8)}01`;
+  const hayRango = desde !== '' || hasta !== '';
+
+  const deHoy = useMemo(() => bloqueos.filter((b) => b.fecha === hoy), [bloqueos, hoy]);
+  const proximos = useMemo(() => bloqueos.filter((b) => b.fecha > hoy), [bloqueos, hoy]);
+  // Historial: solo lo que ya pasó. Sin fechas elegidas, es el de este mes; con fechas, el rango.
+  const historial = useMemo(
+    () =>
+      bloqueos.filter(
+        (b) =>
+          b.fecha < hoy &&
+          (hayRango ? (!desde || b.fecha >= desde) && (!hasta || b.fecha <= hasta) : b.fecha >= inicioMes),
+      ),
+    [bloqueos, hoy, hayRango, desde, hasta, inicioMes],
+  );
+  const vigentes = useMemo(() => [...deHoy, ...proximos], [deHoy, proximos]);
 
   const citasPorGestionar = useMemo(
     () => vigentes.reduce((total, b) => total + (b.citas_afectadas_total ?? 0), 0),
     [vigentes],
   );
 
-  // Días con sus bloqueos: vigentes del más próximo al más lejano; historial del más reciente al más antiguo.
+  // Días con sus bloqueos: próximos del más cercano al más lejano; historial del más reciente al más antiguo.
   const dias = useMemo(() => {
-    const base = vista === 'VIGENTES' ? vigentes : historial;
+    // El rango de fechas ya está aplicado en el historial; en próximos se aplica aquí; hoy no lleva rango.
+    const base =
+      vista === 'HOY'
+        ? deHoy
+        : vista === 'PROXIMOS'
+          ? proximos.filter((b) => (!desde || b.fecha >= desde) && (!hasta || b.fecha <= hasta))
+          : historial;
 
-    const filtrados = base.filter(
-      (b) =>
-        (tipoFiltro === 'TODOS' || b.tipo_bloqueo === tipoFiltro) &&
-        (!desde || b.fecha >= desde) &&
-        (!hasta || b.fecha <= hasta),
-    );
+    const filtrados = base.filter((b) => tipoFiltro === 'TODOS' || b.tipo_bloqueo === tipoFiltro);
 
     const porFecha = new Map<string, BloqueoAgenda[]>();
     for (const b of filtrados) {
@@ -152,10 +176,10 @@ export function BloqueosAgendaPage() {
     }
 
     const ordenadas = [...porFecha.entries()].sort(([a], [b]) =>
-      vista === 'VIGENTES' ? a.localeCompare(b) : b.localeCompare(a),
+      vista === 'HISTORIAL' ? b.localeCompare(a) : a.localeCompare(b),
     );
     return ordenadas;
-  }, [vista, vigentes, historial, tipoFiltro, desde, hasta]);
+  }, [vista, deHoy, proximos, historial, tipoFiltro, desde, hasta]);
 
   const hayFiltros = medicoFiltro !== 'TODOS' || tipoFiltro !== 'TODOS' || desde !== '' || hasta !== '';
 
@@ -225,7 +249,9 @@ export function BloqueosAgendaPage() {
           </span>
           <div>
             <p className="text-2xl font-bold text-ink">{historial.length}</p>
-            <p className="text-xs text-muted">Ausencias en el historial</p>
+            <p className="text-xs text-muted">
+              {hayRango ? 'Ausencias en el período elegido' : 'Ausencias del mes (historial)'}
+            </p>
           </div>
         </div>
       </div>
@@ -238,7 +264,8 @@ export function BloqueosAgendaPage() {
       >
         {(
           [
-            ['VIGENTES', 'Vigentes y próximos', vigentes.length],
+            ['HOY', 'Hoy', deHoy.length],
+            ['PROXIMOS', 'Próximos', proximos.length],
             ['HISTORIAL', 'Historial', historial.length],
           ] as const
         ).map(([valor, texto, cantidad]) => (
@@ -294,27 +321,39 @@ export function BloqueosAgendaPage() {
           </select>
         </div>
 
-        <div>
-          <label className="mb-1 block text-xs font-semibold text-muted">Desde:</label>
-          <input
-            type="date"
-            value={desde}
-            max={hasta || undefined}
-            onChange={(e) => setDesde(e.target.value)}
-            className={cn(CLASE_SELECT, 'font-semibold')}
-          />
-        </div>
+        {vista !== 'HOY' && (
+          <>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-muted">Desde:</label>
+              <input
+                type="date"
+                value={desde}
+                min={vista === 'PROXIMOS' ? sumarDias(hoy, 1) : undefined}
+                max={hasta || (vista === 'HISTORIAL' ? sumarDias(hoy, -1) : undefined)}
+                onChange={(e) => {
+                  setDesde(e.target.value);
+                  setDiasVisibles(DIAS_POR_PAGINA);
+                }}
+                className={cn(CLASE_SELECT, 'font-semibold')}
+              />
+            </div>
 
-        <div>
-          <label className="mb-1 block text-xs font-semibold text-muted">Hasta:</label>
-          <input
-            type="date"
-            value={hasta}
-            min={desde || undefined}
-            onChange={(e) => setHasta(e.target.value)}
-            className={cn(CLASE_SELECT, 'font-semibold')}
-          />
-        </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-muted">Hasta:</label>
+              <input
+                type="date"
+                value={hasta}
+                min={desde || (vista === 'PROXIMOS' ? sumarDias(hoy, 1) : undefined)}
+                max={vista === 'HISTORIAL' ? sumarDias(hoy, -1) : undefined}
+                onChange={(e) => {
+                  setHasta(e.target.value);
+                  setDiasVisibles(DIAS_POR_PAGINA);
+                }}
+                className={cn(CLASE_SELECT, 'font-semibold')}
+              />
+            </div>
+          </>
+        )}
 
         {hayFiltros && (
           <Button variant="ghost" size="sm" icon="ri-close-line" onClick={limpiarFiltros}>
@@ -322,6 +361,14 @@ export function BloqueosAgendaPage() {
           </Button>
         )}
       </div>
+
+      {vista === 'HISTORIAL' && !hayRango && (
+        <p className="mb-3 text-xs text-muted">
+          <i className="ri-information-line mr-1 align-middle text-brand-600" />
+          Se muestran las ausencias de este mes que ya pasaron. Para ver otros meses, elige un rango
+          con Desde y Hasta.
+        </p>
+      )}
 
       {/* Lista agrupada por día */}
       {isLoading ? (
@@ -335,8 +382,16 @@ export function BloqueosAgendaPage() {
       ) : dias.length === 0 ? (
         <div className="rounded-card border border-line bg-surface shadow-card">
           <EmptyState
-            icon={vista === 'VIGENTES' ? 'ri-calendar-check-line' : 'ri-history-line'}
-            title={vista === 'VIGENTES' ? 'Sin bloqueos vigentes' : 'Sin ausencias en el historial'}
+            icon={vista === 'HISTORIAL' ? 'ri-history-line' : 'ri-calendar-check-line'}
+            title={
+              vista === 'HOY'
+                ? 'Sin bloqueos para hoy'
+                : vista === 'PROXIMOS'
+                  ? 'Sin bloqueos próximos'
+                  : hayRango
+                    ? 'Sin ausencias en ese período'
+                    : 'Sin ausencias este mes'
+            }
             message="No hay fechas bloqueadas que coincidan con los filtros seleccionados."
           />
         </div>

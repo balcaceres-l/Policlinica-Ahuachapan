@@ -58,6 +58,18 @@ class paciente extends Model
         return $query->where('estado', 'ACTIVO');
     }
 
+    /**
+     * La marca de menor se guarda al registrar, pero quien cumple 18 años deja de serlo:
+     * se pone al día antes de listar o editar para que el filtro, el formulario y el
+     * documento propio reflejen la edad actual.
+     */
+    public static function actualizarMayoriaDeEdad(): void
+    {
+        static::where('es_menor_edad', true)
+            ->whereDate('fecha_nacimiento', '<=', now()->subYears(18)->toDateString())
+            ->update(['es_menor_edad' => false]);
+    }
+
     public function responsable(): BelongsTo
     {
         return $this->belongsTo(responsable::class, 'id_responsable', 'id_responsable');

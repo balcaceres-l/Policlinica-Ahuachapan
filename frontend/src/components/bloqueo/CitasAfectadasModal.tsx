@@ -116,7 +116,9 @@ export function CitasAfectadasModal({ bloqueo, onClose }: CitasAfectadasModalPro
                 pasan a empezar cuando termina el bloqueo, en orden, y solo se corren las citas
                 siguientes que choquen con ellas.
               </li>
-              <li>Si ya no quiere su cita, cancélala.</li>
+              <li>
+                Si el paciente <b>ya no quiere la cita</b>, cancélala.
+              </li>
             </ul>
           </div>
 

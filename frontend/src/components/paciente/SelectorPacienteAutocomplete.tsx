@@ -180,9 +180,7 @@ export function SelectorPacienteAutocomplete({
                         <p className="truncate text-[11px] text-muted">
                           {p.dui
                             ? `${p.tipo_documento === 'PASAPORTE' ? 'Pasaporte' : 'DUI'}: ${p.dui}`
-                            : p.es_menor_edad
-                              ? 'Menor de edad (Sin doc.)'
-                              : 'Sin documento'}
+                            : 'Sin documento'}
                           {p.telefono ? ` · Tel: ${p.telefono}` : ''}
                         </p>
                       </div>

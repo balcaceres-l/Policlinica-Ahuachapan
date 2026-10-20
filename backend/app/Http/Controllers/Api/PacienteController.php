@@ -33,6 +33,8 @@ class PacienteController extends Controller
             'pendientes' => ['nullable', 'boolean'],
         ]);
 
+        paciente::actualizarMayoriaDeEdad();
+
         $estadoFiltro = $validated['estado'] ?? 'ACTIVO';
         $categoriaFiltro = $validated['categoria'] ?? 'TODOS';
         $buscar = $validated['buscar'] ?? null;
@@ -50,9 +52,15 @@ class PacienteController extends Controller
             $query->where('es_menor_edad', true);
         }
 
-        // Registrados por el médico en una consulta inmediata, sin completar.
+        // Por completar: lo registró un médico en una consulta inmediata, o se registró de
+        // menor, ya cumplió 18 años y falta su documento propio.
         if ($request->boolean('pendientes')) {
-            $query->where('datos_pendientes', true);
+            $query->where(function ($q) {
+                $q->where('datos_pendientes', true)
+                    ->orWhere(fn ($q2) => $q2->where('estado', 'ACTIVO')
+                        ->where('es_menor_edad', false)
+                        ->whereNull('dui'));
+            });
         }
 
         $pacientes = $query->orderByDesc('fecha_registro')->get();
@@ -131,6 +139,12 @@ class PacienteController extends Controller
                 }
 
                 $idResponsable = $responsable->id_responsable;
+
+                // Un menor puede tener documento propio (p. ej. pasaporte): es opcional.
+                if ($request->filled('dui')) {
+                    $request->validate(['dui' => ['string', 'min:6', 'max:15']]);
+                    $docPaciente = $this->documentoDelPaciente((string) $request->dui);
+                }
             } else {
                 // Validación para mayor de edad: documento obligatorio (DUI o Pasaporte)
                 $request->validate([
@@ -138,23 +152,7 @@ class PacienteController extends Controller
                     'telefono' => ['nullable', 'string', 'max:15'],
                 ]);
 
-                $docPaciente = trim((string) $request->dui);
-                $esDui = preg_match('/^\d{8}-\d$/', $docPaciente);
-                $esPasaporte = preg_match('/^[A-Za-z0-9]{6,15}$/', $docPaciente);
-
-                if (! $esDui && ! $esPasaporte) {
-                    throw ValidationException::withMessages([
-                        'dui' => ['El documento de identidad debe ser un DUI válido (00000000-0) o Pasaporte (6 a 15 caracteres alfanuméricos).'],
-                    ]);
-                }
-
-                // Verificar unicidad del documento en pacientes
-                $duplicado = paciente::all()->first(fn ($p) => $p->dui === $docPaciente);
-                if ($duplicado) {
-                    throw ValidationException::withMessages([
-                        'dui' => ['Ya existe un paciente registrado con este documento de identidad.'],
-                    ]);
-                }
+                $docPaciente = $this->documentoDelPaciente((string) $request->dui);
 
                 $telPaciente = $request->filled('telefono') ? trim((string) $request->telefono) : null;
             }
@@ -218,6 +216,9 @@ class PacienteController extends Controller
      */
     public function show(paciente $paciente): JsonResponse
     {
+        paciente::actualizarMayoriaDeEdad();
+        $paciente->refresh();
+
         return $this->success(
             (new PacienteResource($paciente->load('responsable')))->resolve()
         );
@@ -225,7 +226,8 @@ class PacienteController extends Controller
 
     /**
      * Actualiza la información del paciente. Exclusivo para RECEPCIONISTA y MEDICO.
-     * DUI/Pasaporte y Fecha de Nacimiento son estrictamente NO editables.
+     * DUI/Pasaporte y Fecha de Nacimiento no se editan; la única excepción es agregar el
+     * documento a quien aún no tiene uno (un menor con pasaporte, o quien ya cumplió 18).
      */
     public function update(Request $request, paciente $paciente): JsonResponse
     {
@@ -234,6 +236,10 @@ class PacienteController extends Controller
             'direccion' => ['nullable', 'string', 'max:250'],
         ]);
 
+        // Si cumplió 18 desde que se registró, se edita ya como adulto.
+        paciente::actualizarMayoriaDeEdad();
+        $paciente->refresh();
+
         return DB::transaction(function () use ($request, $paciente) {
             $nombreLimpio = trim((string) $request->nombre_completo);
             $direccionLimpia = $request->filled('direccion') ? trim((string) $request->direccion) : null;
@@ -241,6 +247,14 @@ class PacienteController extends Controller
             // La recepcionista revisó y completó el registro hecho por el médico.
             if ($request->user()->rol === 'RECEPCIONISTA') {
                 $paciente->datos_pendientes = false;
+            }
+
+            // Quien no tiene documento propio puede agregarlo, una sola vez: un menor con
+            // pasaporte, o quien se registró de menor y ya es adulto. Si ya tiene, no cambia.
+            $documentoNuevo = null;
+            if (! $paciente->dui && $request->filled('dui')) {
+                $request->validate(['dui' => ['string', 'min:6', 'max:15']]);
+                $documentoNuevo = $this->documentoDelPaciente((string) $request->dui);
             }
 
             if ($paciente->es_menor_edad) {
@@ -259,10 +273,11 @@ class PacienteController extends Controller
                     ]);
                 }
 
-                // En menores, DUI y teléfono del paciente siguen siendo null
+                // En menores el teléfono del paciente sigue siendo null
                 $paciente->update([
                     'nombre_completo' => $nombreLimpio,
                     'direccion' => $direccionLimpia,
+                    ...($documentoNuevo ? ['dui' => $documentoNuevo] : []),
                 ]);
             } else {
                 // Para adultos: teléfono editable, DUI y fecha_nacimiento inmutables
@@ -272,11 +287,17 @@ class PacienteController extends Controller
 
                 $telPaciente = $request->filled('telefono') ? trim((string) $request->telefono) : null;
 
-                $paciente->update([
+                $cambios = [
                     'nombre_completo' => $nombreLimpio,
                     'telefono' => $telPaciente,
                     'direccion' => $direccionLimpia,
-                ]);
+                ];
+
+                if ($documentoNuevo) {
+                    $cambios['dui'] = $documentoNuevo;
+                }
+
+                $paciente->update($cambios);
             }
 
             return $this->success(
@@ -307,5 +328,28 @@ class PacienteController extends Controller
     public function historial(paciente $paciente, HistorialPaciente $historial): JsonResponse
     {
         return $this->success($historial->de($paciente));
+    }
+
+    /**
+     * Valida el documento de un paciente (DUI o Pasaporte) y que nadie más lo tenga.
+     * Sirve tanto al registrar como al agregarlo después.
+     */
+    private function documentoDelPaciente(string $documento): string
+    {
+        $doc = trim($documento);
+
+        if (! preg_match('/^\d{8}-\d$/', $doc) && ! preg_match('/^[A-Za-z0-9]{6,15}$/', $doc)) {
+            throw ValidationException::withMessages([
+                'dui' => ['El documento de identidad debe ser un DUI válido (00000000-0) o Pasaporte (6 a 15 caracteres alfanuméricos).'],
+            ]);
+        }
+
+        if (paciente::all()->first(fn ($p) => $p->dui === $doc)) {
+            throw ValidationException::withMessages([
+                'dui' => ['Ya existe un paciente registrado con este documento de identidad.'],
+            ]);
+        }
+
+        return $doc;
     }
 }

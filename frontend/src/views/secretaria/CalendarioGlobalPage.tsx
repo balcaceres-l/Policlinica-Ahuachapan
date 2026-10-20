@@ -335,13 +335,6 @@ export function CalendarioGlobalPage() {
                         <div className="flex h-full flex-col items-center justify-center rounded-field border border-dashed border-line p-6 text-center text-muted">
                           <i className="ri-calendar-check-line text-2xl opacity-40 mb-1" />
                           <p className="text-xs font-medium">Sin citas programadas</p>
-                          <button
-                            type="button"
-                            onClick={() => abrirAgendarParaMedico(medico.id)}
-                            className="mt-2 text-[11px] font-semibold text-brand-600 hover:underline"
-                          >
-                            + Programar cita
-                          </button>
                         </div>
                       ) : (
                         citasMedico.map((cita) => {
@@ -381,6 +374,12 @@ export function CalendarioGlobalPage() {
                               <p className="text-[11px] text-muted">
                                 Exp: {cita.pacienteExpediente}
                               </p>
+                              {cita.especialidadNombre && (
+                                <p className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-brand-700">
+                                  <i className="ri-stethoscope-line" />
+                                  <span className="truncate">{cita.especialidadNombre}</span>
+                                </p>
+                              )}
                               {cita.afectada_por_bloqueo && cita.bloqueo && (
                                 <p
                                   className="mt-1 inline-flex items-center gap-1 rounded bg-warning-soft px-1.5 py-0.5 text-[10px] font-bold text-warning"
@@ -457,6 +456,11 @@ export function CalendarioGlobalPage() {
                           {cita.pacienteNombre}
                         </p>
                         <p className="truncate text-[10px] text-muted">{cita.medicoNombre}</p>
+                        {cita.especialidadNombre && (
+                          <p className="truncate text-[10px] font-medium text-brand-700">
+                            {cita.especialidadNombre}
+                          </p>
+                        )}
                       </div>
                     ))
                   )}

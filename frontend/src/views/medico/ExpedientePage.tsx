@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import HistorialDiagnosticos from '@/components/expediente/HistorialDiagnosticos';
 import LaboratorioCronologico from '@/components/expediente/LaboratorioCronologico';
 import SignosVitalesHistorial from '@/components/expediente/SignosVitalesHistorial';
@@ -32,11 +32,18 @@ const calcularEdad = (fechaNac?: string | null): string => {
   return `${edad} años`;
 };
 
+/** Pantalla desde la que se llegó al expediente (con sus filtros), para que "Volver" regrese ahí. */
+interface OrigenExpediente {
+  ruta: string;
+}
+
 export function ExpedientePage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const origen = (location.state as { origen?: OrigenExpediente } | null)?.origen;
   const { usuario } = useAuth();
   const esRecepcionista = usuario?.rol === 'RECEPCIONISTA';
-  const baseRuta = esRecepcionista ? '/secretaria/expediente' : '/medico/expediente';
+  const baseRuta = esRecepcionista ? '/secretaria/pacientes' : '/medico/expediente';
   const volverRuta = esRecepcionista ? '/secretaria/pacientes' : '/medico/expediente';
 
   // El paciente vive en la URL para poder enlazar su expediente desde otras pantallas.
@@ -46,7 +53,8 @@ export function ExpedientePage() {
   const { data: paciente, isLoading: cargandoPaciente } = usePaciente(pacienteId);
 
   const seleccionarPaciente = (id: string) => {
-    navigate(id ? `${baseRuta}/${id}` : baseRuta);
+    // Se conserva el origen: cambiar de paciente no cambia a dónde se vuelve.
+    navigate(id ? `${baseRuta}/${id}` : baseRuta, { state: location.state });
   };
 
   // Si no hay paciente seleccionado en la URL, mostramos la vista global de pacientes
@@ -65,11 +73,11 @@ export function ExpedientePage() {
       <div>
         <button
           type="button"
-          onClick={() => navigate(volverRuta)}
+          onClick={() => navigate(origen?.ruta ?? volverRuta)}
           className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-brand-700 hover:text-brand-900 transition-colors"
         >
           <i className="ri-arrow-left-line" />
-          Volver al directorio de pacientes
+          Volver
         </button>
       </div>
 

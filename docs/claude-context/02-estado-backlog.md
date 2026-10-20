@@ -144,6 +144,21 @@ Migraciones `2026_10_18_100000`, `110000` y `110100` corridas en la compartida e
   **La migración en la compartida se corre al mezclar el PR**: el código de `development` todavía
   envía `cargo` al crear usuarios.
 
+- **Pantalla "Citas" de recepción** (antes "Citas y agendamiento", `views/secretaria/CitasRecepcionPage.tsx`):
+  se quitó "Nueva Cita" (agendar se hace solo desde el Calendario global). "Médico con atraso" lleva un
+  indicador "!" a su izquierda (`components/ui/InfoTooltip.tsx`). El estado se elige con pestañas con contador
+  (Todas · Sala de espera · En atención · Agendadas · Atendidas · Canceladas) en lugar del bloque "Fila de
+  atención" y del filtro de estado; la pestaña de sala de espera ordena por médico y turno. Los filtros (fecha,
+  médico, tipo, estado, búsqueda y página) viven en la URL (la fecha siempre tiene un día elegido, por defecto hoy; no se puede vaciar) y la tabla pagina de 25 en 25. El selector de médico (`SelectorMedicoCascada`, usado también en agendar y bloquear) ya no muestra "Disponible" en cada médico: solo marca "Inactivo" cuando corresponde. El **turno** se
+  numera por médico y por día, así que `components/cita/TurnoBadge.tsx` lo muestra con las iniciales del médico y,
+  al hacer clic, dice de quién es. El expediente recibe el origen por `location.state` y su botón "Volver"
+  regresa a esa pantalla con los filtros intactos (`views/medico/ExpedientePage.tsx`).
+- **Pacientes:** la categoría (menor/adulto) sale siempre de la fecha de nacimiento: se quitó el selector "¿Es menor de edad?" del registro. Quien se registró de menor y cumple 18 pasa a adulto solo (`paciente::actualizarMayoriaDeEdad()`, se corre al listar, ver y editar); queda sin documento, aparece como **"Documento pendiente"** (entra al aviso y al filtro "Ver pendientes" junto con los "Datos pendientes" de los médicos) y la recepcionista le agrega el documento al editarlo, una sola vez. El **documento propio del menor es opcional** (pasaporte): se puede poner al registrarlo o agregar después al editarlo, una sola vez; el del responsable sigue siendo obligatorio. Dirección va en un campo ancho debajo del teléfono; se quitaron los textos entre paréntesis ("Adulto", "Menor de edad", "Por defecto"). El directorio guarda sus filtros en la URL y el expediente abierto desde ahí o desde Citas tiene un "Volver" que regresa con los filtros.
+- **Menú de recepción:** se quitó "Expedientes clínicos" porque era la misma lista que "Pacientes". El expediente de un paciente se abre desde Pacientes (botón "Expediente") o desde Citas, en `/secretaria/pacientes/:id` con "Pacientes" resaltado en el menú; las rutas viejas `/secretaria/expediente` y `/secretaria/expedientes` redirigen a Pacientes. El menú del médico conserva su "Expedientes clínicos" (es su único listado de pacientes).
+- **Bloqueos de agenda** (`views/secretaria/BloqueosAgendaPage.tsx`): las pestañas son **Hoy** (solo los de hoy, sin filtro de fechas), **Próximos** (de mañana en adelante, con Desde/Hasta) e **Historial** (solo lo que ya pasó; sin fechas muestra únicamente el mes en curso y con Desde/Hasta el rango elegido). El indicador de ausencias dice "del mes" o "en el período elegido" según el caso. Al elegir una especialidad en el selector de médico ya no hay "(Cascada)" ni "Ver todas". Citas afectadas: "Si el paciente ya no quiere la cita, cancélala".
+- **Signos vitales:** se exige al menos una medición, en el formulario y en el backend
+  (`SignosVitalesController`, 422 con `signos_vitales`).
+
 ## Cómo actualizar este archivo
 
 Cuando termines una HU de EP-04, cambia su fila de 🔲 a 🟠 y agrega el

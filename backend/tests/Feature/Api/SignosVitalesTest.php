@@ -139,7 +139,7 @@ class SignosVitalesTest extends TestCase
         $this->assertSame($this->paciente->id_paciente, $signos->cita->id_paciente);
     }
 
-    public function test_todos_los_campos_son_opcionales(): void
+    public function test_una_sola_medicion_es_suficiente(): void
     {
         Sanctum::actingAs($this->recepcion);
 
@@ -147,6 +147,34 @@ class SignosVitalesTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.peso_kg', 68)
             ->assertJsonPath('data.presion_sistolica', null);
+    }
+
+    public function test_exige_al_menos_una_medicion(): void
+    {
+        Sanctum::actingAs($this->recepcion);
+
+        // Vacío, o solo con observaciones, no es un registro de signos vitales.
+        $this->putJson($this->ruta(), [])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('signos_vitales');
+        $this->putJson($this->ruta(), ['observaciones' => 'Sin mediciones'])
+            ->assertStatus(422);
+        $this->putJson($this->ruta(), ['peso_kg' => null, 'talla_cm' => null])
+            ->assertStatus(422);
+        $this->assertSame(0, signos_vitales::count());
+    }
+
+    public function test_no_se_pueden_borrar_todas_las_mediciones_al_corregir(): void
+    {
+        Sanctum::actingAs($this->recepcion);
+        $this->putJson($this->ruta(), ['peso_kg' => 68])->assertCreated();
+
+        // Cambiar solo las observaciones conserva el peso ya guardado.
+        $this->putJson($this->ruta(), ['observaciones' => 'Ayunas'])->assertOk();
+
+        // Dejar todo en blanco no.
+        $this->putJson($this->ruta(), ['peso_kg' => null])->assertStatus(422);
+        $this->assertEquals(68, signos_vitales::first()->peso_kg);
     }
 
     public function test_recupera_los_signos_de_una_cita(): void

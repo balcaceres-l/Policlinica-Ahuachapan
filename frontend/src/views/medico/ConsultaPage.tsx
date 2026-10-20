@@ -21,6 +21,7 @@ import {
   useConsulta,
   useFinalizarConsulta,
 } from '@/hooks/medico/useConsultas';
+import { extraerMensajeError } from '@/lib/apiError';
 import { precargarEct } from '@/lib/ect';
 import { rutaPdf } from '@/services/documento/documento.service';
 import type { GuardarConsultaPayload } from '@/services/medico/consulta.service';
@@ -374,6 +375,22 @@ export default function ConsultaPage() {
 
   // Guardar signos vitales desde la consulta
   const handleGuardarSignos = async () => {
+    // Debe haber al menos una medición; las observaciones solas no cuentan.
+    const hayMedicion = [
+      signosForm.presion_sistolica,
+      signosForm.presion_diastolica,
+      signosForm.frecuencia_cardiaca,
+      signosForm.frecuencia_respiratoria,
+      signosForm.temperatura_c,
+      signosForm.peso_kg,
+      signosForm.talla_cm,
+      signosForm.saturacion_oxigeno,
+    ].some((valor) => String(valor ?? '').trim() !== '');
+    if (!hayMedicion) {
+      toast.error('Registra al menos un signo vital (presión, frecuencia, temperatura, peso, talla o saturación).');
+      return;
+    }
+
     setGuardandoSignos(true);
     try {
       await guardarSignosMutation.mutateAsync({
@@ -405,9 +422,7 @@ export default function ConsultaPage() {
       await queryClient.invalidateQueries({ queryKey: consultaKeys.detalle(id) });
       toast.success('Signos vitales guardados correctamente');
     } catch (err: unknown) {
-      toast.error(
-        err instanceof Error ? err.message : 'Error al guardar signos vitales',
-      );
+      toast.error(extraerMensajeError(err, 'Error al guardar signos vitales'));
     } finally {
       setGuardandoSignos(false);
     }

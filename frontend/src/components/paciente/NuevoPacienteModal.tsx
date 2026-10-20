@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
@@ -21,14 +21,20 @@ const CLASE_INPUT =
   'transition-colors placeholder:text-muted focus:border-brand-600 focus:ring-4 ' +
   'focus:ring-brand-600/15 disabled:opacity-60';
 
+const CLASE_TEXTAREA =
+  'min-h-16 w-full resize-y rounded-field border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none ' +
+  'transition-colors placeholder:text-muted focus:border-brand-600 focus:ring-4 ' +
+  'focus:ring-brand-600/15 disabled:opacity-60';
+
 export function NuevoPacienteModal({ isOpen, onClose, onCreado, subtitulo }: NuevoPacienteModalProps) {
   const [nombreCompleto, setNombreCompleto] = useState('');
   const [fechaNacimiento, setFechaNacimiento] = useState('');
   const [tipoDocumento, setTipoDocumento] = useState<TipoDocumento>('DUI');
   const [dui, setDui] = useState('');
+  // Un menor puede tener pasaporte propio; es opcional y va aparte del documento del adulto.
+  const [pasaporteMenor, setPasaporteMenor] = useState('');
   const [telefono, setTelefono] = useState('');
   const [direccion, setDireccion] = useState('');
-  const [esMenorEdad, setEsMenorEdad] = useState(false);
   const [responsableNombre, setResponsableNombre] = useState('');
   const [responsableTipoDocumento, setResponsableTipoDocumento] = useState<TipoDocumento>('DUI');
   const [responsableDocumento, setResponsableDocumento] = useState('');
@@ -38,19 +44,17 @@ export function NuevoPacienteModal({ isOpen, onClose, onCreado, subtitulo }: Nue
 
   const crearMutation = useCrearPaciente();
 
-  const handleFechaNacimientoChange = (fecha: string) => {
-    setFechaNacimiento(fecha);
-    if (fecha) {
-      const hoy = new Date();
-      const cumple = new Date(fecha);
-      let edad = hoy.getFullYear() - cumple.getFullYear();
-      const m = hoy.getMonth() - cumple.getMonth();
-      if (m < 0 || (m === 0 && hoy.getDate() < cumple.getDate())) {
-        edad--;
-      }
-      setEsMenorEdad(edad < 18);
-    }
-  };
+  // La edad sale de la fecha de nacimiento: no se pregunta aparte.
+  const esMenorEdad = useMemo(() => {
+    if (!fechaNacimiento) return false;
+    const cumple = new Date(`${fechaNacimiento}T00:00:00`);
+    if (Number.isNaN(cumple.getTime())) return false;
+    const hoy = new Date();
+    let edad = hoy.getFullYear() - cumple.getFullYear();
+    const m = hoy.getMonth() - cumple.getMonth();
+    if (m < 0 || (m === 0 && hoy.getDate() < cumple.getDate())) edad--;
+    return edad < 18;
+  }, [fechaNacimiento]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,6 +105,10 @@ export function NuevoPacienteModal({ isOpen, onClose, onCreado, subtitulo }: Nue
         return;
       }
     } else {
+      if (pasaporteMenor && !/^[A-Za-z0-9]{6,15}$/.test(pasaporteMenor)) {
+        setError('El Pasaporte debe contener entre 6 y 15 caracteres alfanuméricos (sin espacios ni símbolos).');
+        return;
+      }
       // Para menor de edad, validar datos del responsable
       if (!responsableNombre.trim()) {
         setError('El nombre del responsable es obligatorio para menores de edad.');
@@ -140,8 +148,8 @@ export function NuevoPacienteModal({ isOpen, onClose, onCreado, subtitulo }: Nue
       const creado = await crearMutation.mutateAsync({
         nombre_completo: nombreLimpio,
         fecha_nacimiento: fechaNacimiento,
-        tipo_documento: esMenorEdad ? undefined : tipoDocumento,
-        dui: esMenorEdad ? null : docLimpio,
+        tipo_documento: esMenorEdad ? (pasaporteMenor ? 'PASAPORTE' : undefined) : tipoDocumento,
+        dui: esMenorEdad ? pasaporteMenor || null : docLimpio,
         telefono: esMenorEdad ? null : (telLimpio || undefined),
         direccion: direccion.trim() || undefined,
         es_menor_edad: esMenorEdad,
@@ -160,9 +168,9 @@ export function NuevoPacienteModal({ isOpen, onClose, onCreado, subtitulo }: Nue
       setFechaNacimiento('');
       setTipoDocumento('DUI');
       setDui('');
+      setPasaporteMenor('');
       setTelefono('');
       setDireccion('');
-      setEsMenorEdad(false);
       setResponsableNombre('');
       setResponsableTipoDocumento('DUI');
       setResponsableDocumento('');
@@ -216,36 +224,40 @@ export function NuevoPacienteModal({ isOpen, onClose, onCreado, subtitulo }: Nue
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-ink">
-              Fecha de Nacimiento <span className="text-danger">*</span>
-            </label>
-            <input
-              type="date"
-              value={fechaNacimiento}
-              onChange={(e) => handleFechaNacimientoChange(e.target.value)}
-              className={CLASE_INPUT}
-            />
-          </div>
-          <div className="pb-2">
-            <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-ink">
-              <input
-                type="checkbox"
-                checked={esMenorEdad}
-                onChange={(e) => setEsMenorEdad(e.target.checked)}
-                className="size-4 rounded text-brand-600 focus:ring-brand-600/30"
-              />
-              ¿Es menor de edad?
-            </label>
-          </div>
+        <div className="sm:w-1/2">
+          <label className="mb-1 block text-xs font-semibold text-ink">
+            Fecha de Nacimiento <span className="text-danger">*</span>
+          </label>
+          <input
+            type="date"
+            value={fechaNacimiento}
+            onChange={(e) => setFechaNacimiento(e.target.value)}
+            className={CLASE_INPUT}
+          />
         </div>
 
-        {/* Si es MENOR de edad: aviso informativo de que no se pide doc ni tel al menor */}
+        {/* Menor de edad: sin teléfono propio; pasaporte opcional; el documento del responsable va abajo. */}
         {esMenorEdad ? (
-          <div className="rounded-card border border-info/30 bg-info-soft/40 p-3 text-xs text-info">
-            <i className="ri-information-line mr-1 text-sm align-middle" />
-            Para pacientes menores de edad <strong>no se solicita teléfono ni documento de identidad propio</strong>; se registran los de su responsable legal.
+          <div className="space-y-3">
+            <div className="rounded-card border border-info/30 bg-info-soft/40 p-3 text-xs text-info">
+              <i className="ri-information-line mr-1 text-sm align-middle" />
+              Para pacientes menores de edad <strong>no se solicita teléfono</strong>; se registra el de su responsable legal.
+            </div>
+            <div className="sm:w-1/2">
+              <label className="mb-1 block text-xs font-semibold text-ink">
+                Pasaporte del paciente (Opcional)
+              </label>
+              <input
+                type="text"
+                value={pasaporteMenor}
+                onChange={(e) =>
+                  setPasaporteMenor(e.target.value.toUpperCase().replace(/[^A-Za-z0-9]/g, ''))
+                }
+                placeholder="Ej: A12345678"
+                maxLength={15}
+                className={CLASE_INPUT}
+              />
+            </div>
           </div>
         ) : (
           /* Si es MAYOR de edad: documento obligatorio (DUI o Pasaporte) y teléfono */
@@ -289,35 +301,36 @@ export function NuevoPacienteModal({ isOpen, onClose, onCreado, subtitulo }: Nue
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-ink">
-                  Teléfono de Contacto (Opcional)
-                </label>
-                <input
-                  type="text"
-                  value={telefono}
-                  onChange={(e) => setTelefono(formatearTelefono(e.target.value))}
-                  placeholder="7000-0000"
-                  maxLength={9}
-                  className={CLASE_INPUT}
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-ink">
-                  Dirección (Opcional)
-                </label>
-                <input
-                  type="text"
-                  value={direccion}
-                  onChange={(e) => setDireccion(e.target.value)}
-                  placeholder="Municipio, departamento"
-                  className={CLASE_INPUT}
-                />
-              </div>
+            <div className="sm:w-1/2">
+              <label className="mb-1 block text-xs font-semibold text-ink">
+                Teléfono de Contacto (Opcional)
+              </label>
+              <input
+                type="text"
+                value={telefono}
+                onChange={(e) => setTelefono(formatearTelefono(e.target.value))}
+                placeholder="7000-0000"
+                maxLength={9}
+                className={CLASE_INPUT}
+              />
             </div>
           </div>
         )}
+
+        {/* Ancho completo y debajo del teléfono: así se ve completa una dirección larga. */}
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-ink">
+            Dirección (Opcional)
+          </label>
+          <textarea
+            value={direccion}
+            onChange={(e) => setDireccion(e.target.value)}
+            placeholder="Municipio, departamento, colonia, calle y número de casa"
+            rows={2}
+            maxLength={250}
+            className={CLASE_TEXTAREA}
+          />
+        </div>
 
         {/* Sección de datos obligatorios del Responsable para menores */}
         {esMenorEdad && (

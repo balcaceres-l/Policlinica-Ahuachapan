@@ -5,7 +5,7 @@ import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { useGuardarHorariosSemanales } from '@/hooks/horario/useHorarios';
 import { extraerMensajeError } from '@/lib/apiError';
-import { DIA_LABEL, DIAS_SEMANA, formatearHora } from '@/lib/constants/dias';
+import { DIA_CORTO, DIA_LABEL, DIAS_SEMANA, formatearHora } from '@/lib/constants/dias';
 import { cn } from '@/lib/utils';
 import type { BloqueHorarioSemanal } from '@/services/horario/horario.service';
 import type { DiaSemana, HorarioMedico } from '@/types/horario.types';
@@ -35,14 +35,6 @@ interface DiaConfigUI {
 type HorarioSemanalState = Record<DiaSemana, DiaConfigUI>;
 
 const DIAS_LABORALES_LV: DiaSemana[] = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES'];
-const DIAS_LABORALES_LS: DiaSemana[] = [
-  'LUNES',
-  'MARTES',
-  'MIERCOLES',
-  'JUEVES',
-  'VIERNES',
-  'SABADO',
-];
 
 /** Calcula horas en número decimal a partir de 'HH:mm' */
 const duracionEnHoras = (inicio: string, fin: string): number => {
@@ -99,6 +91,9 @@ export function HorarioModal({
   const [config, setConfig] = useState<HorarioSemanalState>(() => buildInitialState(horarios));
   const [prevKey, setPrevKey] = useState<string>(`${medicoId}-${isOpen}`);
   const [errorValidacion, setErrorValidacion] = useState<string | null>(null);
+  // Panel "Copiar a…": día de origen abierto y días de destino marcados.
+  const [copiandoDesde, setCopiandoDesde] = useState<DiaSemana | null>(null);
+  const [diasDestino, setDiasDestino] = useState<DiaSemana[]>([]);
 
   const currentKey = `${medicoId}-${isOpen}`;
   if (prevKey !== currentKey) {
@@ -106,6 +101,7 @@ export function HorarioModal({
     if (isOpen) {
       setConfig(buildInitialState(horarios));
       setErrorValidacion(null);
+      setCopiandoDesde(null);
     }
   }
 
@@ -215,52 +211,30 @@ export function HorarioModal({
     });
   };
 
-  // Copiar bloques del día origen a Lunes-Viernes (dejando Sábado y Domingo en descanso)
-  const copiarALunesViernes = (diaOrigen: DiaSemana) => {
-    setErrorValidacion(null);
-    const bloquesOrigen = config[diaOrigen].bloques;
-    if (bloquesOrigen.length === 0) return;
-
-    setConfig((prev) => {
-      const nuevo = { ...prev };
-      // Activar y copiar a Lunes a Viernes
-      for (const d of DIAS_LABORALES_LV) {
-        nuevo[d] = {
-          activo: true,
-          bloques: bloquesOrigen.map((b) => ({
-            idTemp: generarIdTemp(d),
-            hora_inicio: b.hora_inicio,
-            hora_fin: b.hora_fin,
-          })),
-        };
-      }
-      // Sábado y Domingo quedan en descanso / inactivos
-      nuevo['SABADO'] = {
-        ...nuevo['SABADO'],
-        activo: false,
-      };
-      nuevo['DOMINGO'] = {
-        ...nuevo['DOMINGO'],
-        activo: false,
-      };
-      return nuevo;
-    });
-
-    toast.success(
-      `Horario de ${DIA_LABEL[diaOrigen]} copiado a Lunes – Viernes (Sábado y Domingo en descanso).`,
-    );
+  /** Abre o cierra el panel "Copiar a…" de un día; viene con Lun–Vie marcado. */
+  const alternarCopia = (dia: DiaSemana) => {
+    if (copiandoDesde === dia) {
+      setCopiandoDesde(null);
+      return;
+    }
+    setCopiandoDesde(dia);
+    setDiasDestino(DIAS_LABORALES_LV.filter((d) => d !== dia));
   };
 
-  // Copiar bloques del día origen a Lunes-Sábado (semana completa de la policlínica, Domingo en descanso)
-  const copiarALunesSabado = (diaOrigen: DiaSemana) => {
+  const alternarDiaDestino = (dia: DiaSemana) => {
+    setDiasDestino((prev) => (prev.includes(dia) ? prev.filter((d) => d !== dia) : [...prev, dia]));
+  };
+
+  /** Copia los turnos del día de origen a los días marcados; los demás no se tocan. */
+  const copiarTurnos = () => {
+    if (!copiandoDesde || diasDestino.length === 0) return;
     setErrorValidacion(null);
-    const bloquesOrigen = config[diaOrigen].bloques;
-    if (bloquesOrigen.length === 0) return;
+    const origen = copiandoDesde;
+    const bloquesOrigen = config[origen].bloques;
 
     setConfig((prev) => {
       const nuevo = { ...prev };
-      // Activar y copiar a Lunes a Sábado
-      for (const d of DIAS_LABORALES_LS) {
+      for (const d of diasDestino) {
         nuevo[d] = {
           activo: true,
           bloques: bloquesOrigen.map((b) => ({
@@ -270,17 +244,14 @@ export function HorarioModal({
           })),
         };
       }
-      // Domingo queda en descanso / inactivo (clínica no abre en Domingo)
-      nuevo['DOMINGO'] = {
-        ...nuevo['DOMINGO'],
-        activo: false,
-      };
       return nuevo;
     });
 
-    toast.success(
-      `Horario de ${DIA_LABEL[diaOrigen]} copiado a Lunes – Sábado (Domingo en descanso).`,
-    );
+    const nombres = DIAS_SEMANA.filter((d) => diasDestino.includes(d))
+      .map((d) => DIA_LABEL[d])
+      .join(', ');
+    toast.success(`Turnos de ${DIA_LABEL[origen]} copiados a: ${nombres}.`);
+    setCopiandoDesde(null);
   };
 
   // Presets / Plantillas rápidas
@@ -534,8 +505,10 @@ export function HorarioModal({
               <button
                 type="button"
                 onClick={limpiarTodo}
+                title="Marca todos los días como libres (sin atención). No se guarda hasta que pulses «Guardar Horario Semanal»."
                 className="cursor-pointer rounded-field border border-line bg-surface px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:border-danger hover:text-danger"
               >
+                <i className="ri-information-line mr-1 align-middle" />
                 Desactivar todos
               </button>
             </div>
@@ -623,31 +596,75 @@ export function HorarioModal({
                     </div>
                   </div>
 
-                  {/* Acciones de copia rápida cuando el día está activo */}
+                  {/* Copiar los turnos de este día a otros días (solo si está activo) */}
                   {diaConfig.activo && (
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => copiarALunesViernes(dia)}
-                        className="inline-flex cursor-pointer items-center gap-1 rounded-field border border-line bg-canvas px-2.5 py-1 text-xs font-medium text-ink transition-colors hover:border-brand-600 hover:text-brand-600"
-                        title={`Copiar turnos de ${DIA_LABEL[dia]} a Lunes–Viernes (Sábado y Domingo quedan en descanso)`}
-                      >
-                        <i className="ri-file-copy-line text-xs" />
-                        <span>Copiar a L–V</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => copiarALunesSabado(dia)}
-                        className="inline-flex cursor-pointer items-center gap-1 rounded-field border border-line bg-canvas px-2.5 py-1 text-xs font-medium text-ink transition-colors hover:border-brand-600 hover:text-brand-600"
-                        title={`Copiar turnos de ${DIA_LABEL[dia]} a Lunes–Sábado (Semana laboral completa, Domingo en descanso)`}
-                      >
-                        <i className="ri-calendar-check-line text-xs" />
-                        <span>Copiar a L–S</span>
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => alternarCopia(dia)}
+                      aria-expanded={copiandoDesde === dia}
+                      title="Copia los turnos de este día a los días que elijas"
+                      className={cn(
+                        "inline-flex cursor-pointer items-center gap-1 rounded-field border px-2.5 py-1 text-xs font-medium transition-colors",
+                        copiandoDesde === dia
+                          ? "border-brand-600 bg-brand-50 text-brand-700"
+                          : "border-line bg-canvas text-ink hover:border-brand-600 hover:text-brand-700",
+                      )}
+                    >
+                      <i className="ri-file-copy-line text-xs" />
+                      <span>Copiar a…</span>
+                    </button>
                   )}
                 </div>
+
+                {/* Panel "Copiar a…": elige a qué días se copian los turnos */}
+                {diaConfig.activo && copiandoDesde === dia && (
+                  <div className="mt-3 rounded-field border border-brand-200 bg-brand-50/40 p-3">
+                    <p className="text-xs font-semibold text-ink">
+                      Copiar los turnos de {DIA_LABEL[dia]} a:
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {DIAS_SEMANA.filter((d) => d !== dia).map((d) => (
+                        <button
+                          key={d}
+                          type="button"
+                          aria-pressed={diasDestino.includes(d)}
+                          onClick={() => alternarDiaDestino(d)}
+                          className={cn(
+                            "cursor-pointer rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
+                            diasDestino.includes(d)
+                              ? "border-brand-600 bg-brand-600 text-white"
+                              : "border-line bg-surface text-muted hover:border-brand-600 hover:text-brand-700",
+                          )}
+                        >
+                          {DIA_CORTO[d]}
+                        </button>
+                      ))}
+                    </div>
+                    {diasDestino.some((d) => config[d].activo) && (
+                      <p className="mt-2 text-xs text-warning">
+                        <i className="ri-error-warning-line mr-1 align-middle" />
+                        Se reemplazarán los turnos que ya tienen:{" "}
+                        {DIAS_SEMANA.filter((d) => diasDestino.includes(d) && config[d].activo)
+                          .map((d) => DIA_LABEL[d])
+                          .join(", ")}
+                        .
+                      </p>
+                    )}
+                    <div className="mt-3 flex justify-end gap-2">
+                      <Button variant="secondary" size="sm" onClick={() => setCopiandoDesde(null)}>
+                        Cancelar
+                      </Button>
+                      <Button
+                        size="sm"
+                        icon="ri-file-copy-line"
+                        onClick={copiarTurnos}
+                        disabled={diasDestino.length === 0}
+                      >
+                        Copiar
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Cuerpo de la fila: Múltiples Bloques / Turnos */}
                 {diaConfig.activo ? (
