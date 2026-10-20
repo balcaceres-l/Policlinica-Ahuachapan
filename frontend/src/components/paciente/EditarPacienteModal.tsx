@@ -5,8 +5,12 @@ import Modal from '@/components/ui/Modal';
 import { useAuth } from '@/hooks/auth/useAuth';
 import { useActualizarPaciente } from '@/hooks/paciente/usePacientes';
 import { extraerMensajeError } from '@/lib/apiError';
-import { contieneLetrasOCaracteresEspeciales, formatearTelefono } from '@/lib/utils';
-import type { Paciente } from '@/types/paciente.types';
+import {
+  contieneLetrasOCaracteresEspeciales,
+  formatearDui,
+  formatearTelefono,
+} from '@/lib/utils';
+import type { Paciente, TipoDocumento } from '@/types/paciente.types';
 
 interface EditarPacienteModalProps {
   paciente: Paciente | null;
@@ -19,6 +23,11 @@ const CLASE_INPUT =
   'transition-colors placeholder:text-muted focus:border-brand-600 focus:ring-4 ' +
   'focus:ring-brand-600/15 disabled:opacity-60';
 
+const CLASE_TEXTAREA =
+  'min-h-16 w-full resize-y rounded-field border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none ' +
+  'transition-colors placeholder:text-muted focus:border-brand-600 focus:ring-4 ' +
+  'focus:ring-brand-600/15 disabled:opacity-60';
+
 const CLASE_INPUT_DISABLED =
   'h-11 w-full rounded-field border border-line/60 bg-muted/10 px-3 text-sm text-muted outline-none ' +
   'cursor-not-allowed select-none font-medium';
@@ -28,6 +37,8 @@ export function EditarPacienteModal({ paciente, isOpen, onClose }: EditarPacient
   const [nombreCompleto, setNombreCompleto] = useState('');
   const [telefono, setTelefono] = useState('');
   const [direccion, setDireccion] = useState('');
+  const [tipoDocumento, setTipoDocumento] = useState<TipoDocumento>('DUI');
+  const [documento, setDocumento] = useState('');
   const [responsableNombre, setResponsableNombre] = useState('');
   const [responsableTelefono, setResponsableTelefono] = useState('');
   const [responsableParentesco, setResponsableParentesco] = useState('Madre');
@@ -40,6 +51,8 @@ export function EditarPacienteModal({ paciente, isOpen, onClose }: EditarPacient
       setNombreCompleto(paciente.nombre_completo || '');
       setTelefono(paciente.telefono || '');
       setDireccion(paciente.direccion || '');
+      setTipoDocumento('DUI');
+      setDocumento('');
       setResponsableNombre(paciente.responsable_nombre || '');
       setResponsableTelefono(paciente.responsable_telefono || '');
       setResponsableParentesco(paciente.responsable_parentesco || 'Madre');
@@ -50,6 +63,10 @@ export function EditarPacienteModal({ paciente, isOpen, onClose }: EditarPacient
   if (!paciente) return null;
 
   const esMenor = paciente.es_menor_edad;
+  // Sin documento propio (menor con pasaporte pendiente o adulto que se registró de menor):
+  // se puede agregar, una sola vez.
+  const puedeAgregarDocumento = !paciente.dui;
+  const tipoEfectivo: TipoDocumento = esMenor ? 'PASAPORTE' : tipoDocumento;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,6 +86,18 @@ export function EditarPacienteModal({ paciente, isOpen, onClose }: EditarPacient
     if (!esMenor && telLimpio && contieneLetrasOCaracteresEspeciales(telLimpio)) {
       setError('El teléfono de contacto solo debe contener números.');
       return;
+    }
+
+    const docLimpio = documento.trim();
+    if (puedeAgregarDocumento && docLimpio) {
+      if (tipoEfectivo === 'DUI' && !/^\d{8}-\d$/.test(docLimpio)) {
+        setError('El DUI debe tener el formato 00000000-0 (9 dígitos).');
+        return;
+      }
+      if (tipoEfectivo === 'PASAPORTE' && !/^[A-Za-z0-9]{6,15}$/.test(docLimpio)) {
+        setError('El Pasaporte debe contener entre 6 y 15 caracteres alfanuméricos (sin espacios ni símbolos).');
+        return;
+      }
     }
 
     if (esMenor) {
@@ -97,6 +126,7 @@ export function EditarPacienteModal({ paciente, isOpen, onClose }: EditarPacient
           nombre_completo: nombreLimpio,
           telefono: esMenor ? null : (telLimpio || null),
           direccion: direccion.trim() || null,
+          dui: puedeAgregarDocumento && docLimpio ? docLimpio : undefined,
           responsable_nombre: esMenor ? responsableNombre.trim() : undefined,
           responsable_telefono: esMenor ? responsableTelefono.trim() : undefined,
           responsable_parentesco: esMenor ? responsableParentesco : undefined,
@@ -161,22 +191,24 @@ export function EditarPacienteModal({ paciente, isOpen, onClose }: EditarPacient
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-muted">
-                Documento de Identidad
-              </label>
-              <input
-                type="text"
-                disabled
-                value={
-                  paciente.dui
-                    ? `${paciente.tipo_documento ?? 'DUI'}: ${paciente.dui}`
-                    : 'Sin documento (Menor de edad)'
-                }
-                className={CLASE_INPUT_DISABLED}
-                title="El DUI/Pasaporte no puede ser modificado por seguridad y unicidad clínica."
-              />
-            </div>
+            {!puedeAgregarDocumento && (
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-muted">
+                  Documento de Identidad
+                </label>
+                <input
+                  type="text"
+                  disabled
+                  value={
+                    paciente.dui
+                      ? `${paciente.tipo_documento ?? 'DUI'}: ${paciente.dui}`
+                      : 'Sin documento'
+                  }
+                  className={CLASE_INPUT_DISABLED}
+                  title="El DUI/Pasaporte no puede ser modificado por seguridad y unicidad clínica."
+                />
+              </div>
+            )}
             <div>
               <label className="mb-1 block text-xs font-semibold text-muted">
                 Fecha de Nacimiento
@@ -184,7 +216,7 @@ export function EditarPacienteModal({ paciente, isOpen, onClose }: EditarPacient
               <input
                 type="text"
                 disabled
-                value={`${paciente.fecha_nacimiento} (${esMenor ? 'Menor de edad' : 'Adulto'})`}
+                value={paciente.fecha_nacimiento}
                 className={CLASE_INPUT_DISABLED}
                 title="La fecha de nacimiento no puede ser modificada."
               />
@@ -210,50 +242,86 @@ export function EditarPacienteModal({ paciente, isOpen, onClose }: EditarPacient
           />
         </div>
 
-        {!esMenor && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-ink">
-                Teléfono de Contacto
-              </label>
-              <input
-                type="text"
-                value={telefono}
-                onChange={(e) => setTelefono(formatearTelefono(e.target.value))}
-                placeholder="7000-0000"
-                maxLength={9}
-                className={CLASE_INPUT}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-ink">
-                Dirección
-              </label>
-              <input
-                type="text"
-                value={direccion}
-                onChange={(e) => setDireccion(e.target.value)}
-                placeholder="Municipio, departamento"
-                className={CLASE_INPUT}
-              />
+        {puedeAgregarDocumento && (
+          <div className="rounded-card border border-brand-200 bg-brand-50/50 p-3.5 space-y-3">
+            <p className="text-xs text-ink">
+              <i className="ri-information-line mr-1 text-brand-600" />
+              {esMenor
+                ? 'Aún no tiene documento propio. Si tiene pasaporte, puedes agregarlo ahora; '
+                : 'Se registró siendo menor de edad y aún no tiene documento propio. Puedes agregarlo ahora; '}
+              <strong>una vez guardado ya no se podrá cambiar</strong>.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-ink">
+                  Tipo de Documento
+                </label>
+                <select
+                  value={tipoEfectivo}
+                  disabled={esMenor}
+                  onChange={(e) => {
+                    setTipoDocumento(e.target.value as TipoDocumento);
+                    setDocumento('');
+                  }}
+                  className={CLASE_INPUT}
+                >
+                  <option value="DUI">DUI (Nacional)</option>
+                  <option value="PASAPORTE">Pasaporte (Extranjero)</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-ink">
+                  {tipoEfectivo === 'DUI' ? 'Número de DUI' : 'Número de Pasaporte'}
+                </label>
+                <input
+                  type="text"
+                  value={documento}
+                  onChange={(e) =>
+                    setDocumento(
+                      tipoEfectivo === 'DUI'
+                        ? formatearDui(e.target.value)
+                        : e.target.value.toUpperCase().replace(/[^A-Za-z0-9]/g, ''),
+                    )
+                  }
+                  placeholder={tipoEfectivo === 'DUI' ? '00000000-0' : 'Ej: A12345678'}
+                  maxLength={tipoEfectivo === 'DUI' ? 10 : 15}
+                  className={CLASE_INPUT}
+                />
+              </div>
             </div>
           </div>
         )}
 
-        {esMenor && (
-          <div>
+        {!esMenor && (
+          <div className="sm:w-1/2">
             <label className="mb-1 block text-xs font-semibold text-ink">
-              Dirección
+              Teléfono de Contacto
             </label>
             <input
               type="text"
-              value={direccion}
-              onChange={(e) => setDireccion(e.target.value)}
-              placeholder="Municipio, departamento"
+              value={telefono}
+              onChange={(e) => setTelefono(formatearTelefono(e.target.value))}
+              placeholder="7000-0000"
+              maxLength={9}
               className={CLASE_INPUT}
             />
           </div>
         )}
+
+        {/* Ancho completo y debajo del teléfono: así se ve completa una dirección larga. */}
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-ink">
+            Dirección
+          </label>
+          <textarea
+            value={direccion}
+            onChange={(e) => setDireccion(e.target.value)}
+            placeholder="Municipio, departamento, colonia, calle y número de casa"
+            rows={2}
+            maxLength={250}
+            className={CLASE_TEXTAREA}
+          />
+        </div>
 
         {/* Sección editable del Responsable para menores */}
         {esMenor && (

@@ -13,6 +13,8 @@ export interface Paciente {
   direccion?: string | null;
   es_menor_edad: boolean;
   estado?: 'ACTIVO' | 'FALLECIDO';
+  /** Adulto sin documento: se registró de menor y ya cumplió 18 años. */
+  documento_pendiente?: boolean;
   /** Lo registró el médico en una consulta inmediata; la recepcionista debe completarlo. */
   datos_pendientes?: boolean;
   id_responsable?: string | null;
@@ -50,6 +52,8 @@ export interface FiltrosPacienteQuery {
 export interface EditarPaciente {
   nombre_completo: string;
   telefono?: string | null;
+  /** Solo se acepta si el paciente aún no tiene documento (se registró de menor). */
+  dui?: string;
   direccion?: string | null;
   responsable_nombre?: string | null;
   responsable_telefono?: string | null;

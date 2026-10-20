@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { useGuardarSignosVitales, useSignosVitales } from '@/hooks/cita/useCitas';
+import { extraerMensajeError } from '@/lib/apiError';
 import { obtenerFechaLocal } from '@/lib/utils';
 import type { Cita, SignosVitales } from '@/types/cita.types';
 
@@ -248,6 +249,22 @@ function SignosVitalesModalContent({ cita, onClose }: { cita: Cita; onClose: () 
       datos.saturacion_oxigeno = null;
     }
 
+    // Debe haber al menos una medición; las observaciones solas no cuentan.
+    const hayMedicion = [
+      datos.presion_sistolica,
+      datos.presion_diastolica,
+      datos.frecuencia_cardiaca,
+      datos.frecuencia_respiratoria,
+      datos.temperatura_c,
+      datos.peso_kg,
+      datos.talla_cm,
+      datos.saturacion_oxigeno,
+    ].some((valor) => valor !== null && valor !== undefined);
+    if (!hayMedicion) {
+      setError('Registra al menos un signo vital (presión, frecuencia, temperatura, peso, talla o saturación).');
+      return;
+    }
+
     try {
       await guardarMutation.mutateAsync({ id: cita.id, datos });
       toast.success(
@@ -257,8 +274,7 @@ function SignosVitalesModalContent({ cita, onClose }: { cita: Cita; onClose: () 
       );
       onClose();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al guardar los signos vitales.';
-      setError(msg);
+      setError(extraerMensajeError(err, 'Error al guardar los signos vitales.'));
     }
   };
 

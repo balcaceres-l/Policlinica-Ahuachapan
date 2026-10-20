@@ -33,6 +33,18 @@ class SignosVitalesController extends Controller
         'observaciones' => ['nullable', 'string', 'max:1000'],
     ];
 
+    /** Mediciones: las observaciones solas no cuentan como signos vitales. */
+    private const MEDIDAS = [
+        'presion_sistolica',
+        'presion_diastolica',
+        'frecuencia_cardiaca',
+        'frecuencia_respiratoria',
+        'temperatura_c',
+        'peso_kg',
+        'talla_cm',
+        'saturacion_oxigeno',
+    ];
+
     public function show(Request $request, cita $cita): JsonResponse
     {
         if (! $this->puedeVer($request, $cita)) {
@@ -83,6 +95,19 @@ class SignosVitalesController extends Controller
         }
 
         $existente = signos_vitales::where('id_cita', $cita->id_cita)->first();
+
+        // Debe quedar al menos una medición: lo enviado manda y, si un campo no
+        // viene, cuenta lo que ya estaba guardado.
+        $quedaAlgunaMedicion = collect(self::MEDIDAS)->contains(
+            fn (string $campo) => array_key_exists($campo, $validado)
+                ? $validado[$campo] !== null
+                : $existente?->{$campo} !== null,
+        );
+        if (! $quedaAlgunaMedicion) {
+            throw ValidationException::withMessages([
+                'signos_vitales' => 'Registra al menos un signo vital (presión, frecuencia, temperatura, peso, talla o saturación).',
+            ]);
+        }
 
         $peso = array_key_exists('peso_kg', $validado)
             ? (isset($validado['peso_kg']) ? (float) $validado['peso_kg'] : null)

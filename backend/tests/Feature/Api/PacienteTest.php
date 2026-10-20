@@ -385,6 +385,177 @@ class PacienteTest extends TestCase
         $this->assertEquals('1990-05-15', $paciente->fecha_nacimiento->toDateString());
     }
 
+    public function test_quien_cumple_la_mayoria_de_edad_pasa_a_adulto_y_puede_agregar_su_documento(): void
+    {
+        $resp = responsable::create([
+            'nombre_completo' => 'Madre Ramos',
+            'dui' => '04444444-4',
+            'telefono' => '7000-1111',
+            'parentesco' => 'Madre',
+        ]);
+        // Se registró de menor hace años; hoy ya tiene más de 18.
+        $paciente = paciente::create([
+            'numero_expediente' => 'JR01-2026',
+            'nombre_completo' => 'Joven Ramos',
+            'fecha_nacimiento' => now()->subYears(19)->toDateString(),
+            'dui' => null,
+            'es_menor_edad' => true,
+            'estado' => 'ACTIVO',
+            'id_responsable' => $resp->id_responsable,
+            'id_registrado_por' => $this->recepcion->id,
+        ]);
+
+        // El listado ya lo muestra como adulto.
+        $this->actingAs($this->recepcion)
+            ->getJson('/api/pacientes?categoria=ADULTO')
+            ->assertOk()
+            ->assertJsonFragment(['id_paciente' => $paciente->id_paciente]);
+
+        // Aparece entre los pendientes por completar, con la marca de documento pendiente.
+        $this->actingAs($this->recepcion)
+            ->getJson('/api/pacientes?pendientes=1')
+            ->assertOk()
+            ->assertJsonPath('data.0.id_paciente', $paciente->id_paciente)
+            ->assertJsonPath('data.0.documento_pendiente', true);
+
+        // Agrega su documento; el formato se valida igual que al registrar.
+        $this->actingAs($this->recepcion)
+            ->putJson("/api/pacientes/{$paciente->id_paciente}", [
+                'nombre_completo' => 'Joven Ramos',
+                'telefono' => '7123-4567',
+                'dui' => 'no-es-un-dui!',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('dui');
+
+        $this->actingAs($this->recepcion)
+            ->putJson("/api/pacientes/{$paciente->id_paciente}", [
+                'nombre_completo' => 'Joven Ramos',
+                'telefono' => '7123-4567',
+                'dui' => '05555555-5',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.dui', '05555555-5')
+            ->assertJsonPath('data.es_menor_edad', false)
+            ->assertJsonPath('data.documento_pendiente', false);
+
+        // Con el documento agregado ya no queda pendiente.
+        $this->actingAs($this->recepcion)
+            ->getJson('/api/pacientes?pendientes=1')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+
+        // Una vez agregado, ya no se cambia.
+        $this->actingAs($this->recepcion)
+            ->putJson("/api/pacientes/{$paciente->id_paciente}", [
+                'nombre_completo' => 'Joven Ramos',
+                'dui' => '06666666-6',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.dui', '05555555-5');
+    }
+
+    public function test_un_menor_puede_tener_pasaporte_propio_opcional(): void
+    {
+        $datos = [
+            'nombre_completo' => 'Niña Con Pasaporte',
+            'fecha_nacimiento' => now()->subYears(8)->toDateString(),
+            'responsable_nombre' => 'Madre Pasaporte',
+            'responsable_documento' => '08888888-8',
+            'responsable_telefono' => '7000-2222',
+            'responsable_parentesco' => 'Madre',
+        ];
+
+        // Sin documento propio sigue siendo válido.
+        $this->actingAs($this->recepcion)
+            ->postJson('/api/pacientes', $datos)
+            ->assertCreated()
+            ->assertJsonPath('data.dui', null);
+
+        // Con pasaporte, se guarda; el del responsable no cambia.
+        $this->actingAs($this->recepcion)
+            ->postJson('/api/pacientes', [...$datos, 'nombre_completo' => 'Niño Con Pasaporte', 'dui' => 'P1234567'])
+            ->assertCreated()
+            ->assertJsonPath('data.dui', 'P1234567')
+            ->assertJsonPath('data.tipo_documento', 'PASAPORTE')
+            ->assertJsonPath('data.responsable_documento', '08888888-8')
+            ->assertJsonPath('data.es_menor_edad', true);
+
+        // Un documento mal escrito o repetido se rechaza como en los adultos.
+        $this->actingAs($this->recepcion)
+            ->postJson('/api/pacientes', [...$datos, 'nombre_completo' => 'Otro Niño', 'dui' => 'P1234567'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('dui');
+    }
+
+    public function test_se_agrega_pasaporte_a_un_menor_ya_registrado_una_sola_vez(): void
+    {
+        $resp = responsable::create([
+            'nombre_completo' => 'Madre Menor',
+            'dui' => '09999999-9',
+            'telefono' => '7000-3333',
+            'parentesco' => 'Madre',
+        ]);
+        $menor = paciente::create([
+            'numero_expediente' => 'MP01-2026',
+            'nombre_completo' => 'Menor Sin Doc',
+            'fecha_nacimiento' => now()->subYears(10)->toDateString(),
+            'dui' => null,
+            'es_menor_edad' => true,
+            'estado' => 'ACTIVO',
+            'id_responsable' => $resp->id_responsable,
+            'id_registrado_por' => $this->recepcion->id,
+        ]);
+        $datos = [
+            'nombre_completo' => 'Menor Sin Doc',
+            'responsable_nombre' => 'Madre Menor',
+            'responsable_telefono' => '7000-3333',
+            'responsable_parentesco' => 'Madre',
+        ];
+
+        $this->actingAs($this->recepcion)
+            ->putJson("/api/pacientes/{$menor->id_paciente}", [...$datos, 'dui' => 'AB123456'])
+            ->assertOk()
+            ->assertJsonPath('data.dui', 'AB123456')
+            ->assertJsonPath('data.es_menor_edad', true)
+            ->assertJsonPath('data.documento_pendiente', false);
+
+        $this->actingAs($this->recepcion)
+            ->putJson("/api/pacientes/{$menor->id_paciente}", [...$datos, 'dui' => 'ZZ999999'])
+            ->assertOk()
+            ->assertJsonPath('data.dui', 'AB123456');
+    }
+
+    public function test_el_documento_agregado_a_un_nuevo_adulto_no_puede_repetirse(): void
+    {
+        paciente::create([
+            'numero_expediente' => 'AA01-2026',
+            'nombre_completo' => 'Ya Registrado',
+            'fecha_nacimiento' => '1980-01-01',
+            'dui' => '07777777-7',
+            'es_menor_edad' => false,
+            'estado' => 'ACTIVO',
+            'id_registrado_por' => $this->recepcion->id,
+        ]);
+        $joven = paciente::create([
+            'numero_expediente' => 'JR02-2026',
+            'nombre_completo' => 'Joven Dos',
+            'fecha_nacimiento' => now()->subYears(20)->toDateString(),
+            'dui' => null,
+            'es_menor_edad' => true,
+            'estado' => 'ACTIVO',
+            'id_registrado_por' => $this->recepcion->id,
+        ]);
+
+        $this->actingAs($this->recepcion)
+            ->putJson("/api/pacientes/{$joven->id_paciente}", [
+                'nombre_completo' => 'Joven Dos',
+                'dui' => '07777777-7',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('dui');
+    }
+
     public function test_medico_puede_editar_paciente_menor_y_datos_de_su_responsable(): void
     {
         $resp = responsable::create([

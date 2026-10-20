@@ -28,7 +28,6 @@ export function HorariosPage() {
   const [busqueda, setBusqueda] = useState('');
   const [medicoId, setMedicoId] = useState<string | null>(null);
   const [modalAbierto, setModalAbierto] = useState(false);
-  const [horarioEnEdicion, setHorarioEnEdicion] = useState<HorarioMedico | null>(null);
   const [horarioAEliminar, setHorarioAEliminar] = useState<HorarioMedico | null>(null);
 
   const { data: medicos = [], isLoading: cargandoMedicos } = useMedicos();
@@ -51,15 +50,8 @@ export function HorariosPage() {
     0,
   );
 
-  const abrirAlta = () => {
-    setHorarioEnEdicion(null);
-    setModalAbierto(true);
-  };
-
-  const abrirEdicion = (horario: HorarioMedico) => {
-    setHorarioEnEdicion(horario);
-    setModalAbierto(true);
-  };
+  // Un solo punto de entrada: el editor siempre abre la semana completa.
+  const abrirEditor = () => setModalAbierto(true);
 
   const columnas: Array<Column<HorarioMedico>> = [
     {
@@ -97,14 +89,6 @@ export function HorariosPage() {
       className: 'w-28 text-right',
       render: (horario) => (
         <div className="flex justify-end gap-1">
-          <button
-            type="button"
-            onClick={() => abrirEdicion(horario)}
-            title="Editar horario"
-            className="flex size-8 cursor-pointer items-center justify-center rounded-field text-muted transition-colors hover:bg-brand-50 hover:text-brand-600"
-          >
-            <i className="ri-pencil-line text-base" />
-          </button>
           <button
             type="button"
             onClick={() => setHorarioAEliminar(horario)}
@@ -204,8 +188,11 @@ export function HorariosPage() {
                   </p>
                   <p className="truncate text-sm text-muted">{jvpmDe(medicoSeleccionado)}</p>
                 </div>
-                <Button icon="ri-calendar-schedule-line" onClick={abrirAlta}>
-                  Configurar Horario Semanal
+                <Button
+                  icon={horarios.length > 0 ? "ri-pencil-line" : "ri-calendar-schedule-line"}
+                  onClick={abrirEditor}
+                >
+                  {horarios.length > 0 ? "Editar horario" : "Configurar horario"}
                 </Button>
               </header>
 
@@ -231,7 +218,7 @@ export function HorariosPage() {
                 isLoading={cargandoHorarios}
                 emptyIcon="ri-calendar-close-line"
                 emptyTitle="Sin horarios configurados"
-                emptyMessage="Este médico todavía no tiene bloques de atención. Haz clic en 'Configurar Horario Semanal' para asignar sus días y turnos laborales."
+                emptyMessage="Este médico todavía no tiene bloques de atención. Haz clic en 'Configurar horario' para asignar sus días y turnos laborales."
               />
             </>
           )}
@@ -245,7 +232,6 @@ export function HorariosPage() {
           medicoNombre={medicoSeleccionado.nombreCompleto}
           medicoJvpm={medicoSeleccionado.jvpm}
           horarios={horarios}
-          diaInicialEnfocado={horarioEnEdicion?.dia_semana}
           onClose={() => setModalAbierto(false)}
         />
       )}

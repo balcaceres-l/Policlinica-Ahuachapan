@@ -21,6 +21,8 @@ interface DataTableProps<T> {
   emptyMessage?: string;
   footer?: ReactNode;
   className?: string;
+  /** Menos espacio horizontal entre columnas, para tablas con muchas. */
+  compact?: boolean;
 }
 
 export function DataTable<T>({
@@ -33,6 +35,7 @@ export function DataTable<T>({
   emptyMessage = 'No se encontraron registros con los criterios seleccionados.',
   footer,
   className,
+  compact = false,
 }: DataTableProps<T>) {
   return (
     <div className={cn('overflow-hidden rounded-card border border-line bg-surface shadow-card', className)}>
@@ -49,7 +52,8 @@ export function DataTable<T>({
                   <th
                     key={column.key}
                     className={cn(
-                      'px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-muted',
+                      compact ? 'px-2.5' : 'px-5',
+                      'py-3 text-[11px] font-bold uppercase tracking-wider text-muted',
                       column.className,
                     )}
                   >
@@ -65,7 +69,7 @@ export function DataTable<T>({
                   className="border-b border-line/70 transition-colors last:border-b-0 hover:bg-brand-50/40"
                 >
                   {columns.map((column) => (
-                    <td key={column.key} className={cn('px-5 py-3.5 align-middle text-sm', column.className)}>
+                    <td key={column.key} className={cn(compact ? 'px-2.5' : 'px-5', 'py-3.5 align-middle text-sm', column.className)}>
                       {column.render(row)}
                     </td>
                   ))}

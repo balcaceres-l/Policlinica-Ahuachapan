@@ -21,7 +21,6 @@ export function CatalogoEspecialidadesPage() {
   const [busqueda, setBusqueda] = useState('');
   const [filtroEspecialidad, setFiltroEspecialidad] = useState<string>('TODAS');
   const [filtroMedico, setFiltroMedico] = useState<string>('TODOS');
-  const [filtroDisponibilidad, setFiltroDisponibilidad] = useState<'TODOS' | 'ACTIVO'>('TODOS');
   const [modoVista, setModoVista] = useState<ModoVista>('ESPECIALIDADES');
 
   const [expandidas, setExpandidas] = useState<string[]>([]);
@@ -55,15 +54,13 @@ export function CatalogoEspecialidadesPage() {
   const hayFiltrosActivos = Boolean(
     busqueda.trim() ||
       filtroEspecialidad !== 'TODAS' ||
-      filtroMedico !== 'TODOS' ||
-      filtroDisponibilidad !== 'TODOS',
+      filtroMedico !== 'TODOS',
   );
 
   const limpiarFiltros = () => {
     setBusqueda('');
     setFiltroEspecialidad('TODAS');
     setFiltroMedico('TODOS');
-    setFiltroDisponibilidad('TODOS');
     setColapsadas([]);
   };
 
@@ -84,8 +81,6 @@ export function CatalogoEspecialidadesPage() {
         // 2. Filtrar médicos estrictamente según la búsqueda y filtros
         const medicosVisibles = esp.medicos.filter((medico) => {
           const coincideId = filtroMedico === 'TODOS' || medico.id === filtroMedico;
-          const coincideEstado =
-            filtroDisponibilidad === 'TODOS' || medico.estado === filtroDisponibilidad;
 
           if (termino) {
             const coincideTextoMedico =
@@ -95,24 +90,24 @@ export function CatalogoEspecialidadesPage() {
 
             // Si el término coincide directamente con el médico
             if (coincideTextoMedico) {
-              return coincideId && coincideEstado;
+              return coincideId;
             }
 
             // Si el término coincide con el nombre de la especialidad, pero NO con el médico:
             // Solo incluirlo si no se especificó un médico en el dropdown
             if (coincideNombreEspecialidad && filtroMedico === 'TODOS') {
-              return coincideEstado;
+              return true;
             }
 
             return false;
           }
 
-          return coincideId && coincideEstado;
+          return coincideId;
         });
 
         // Si el usuario aplicó filtros específicos y ningún médico coincidió, descartar la especialidad
         const busquedaAvanzadaActiva =
-          Boolean(termino) || filtroMedico !== 'TODOS' || filtroDisponibilidad !== 'TODOS';
+          Boolean(termino) || filtroMedico !== 'TODOS';
 
         if (busquedaAvanzadaActiva && medicosVisibles.length === 0) {
           return null;
@@ -124,7 +119,7 @@ export function CatalogoEspecialidadesPage() {
         };
       })
       .filter((esp): esp is (EspecialidadConMedicos & { medicosVisibles: Usuario[] }) => esp !== null);
-  }, [catalogo, busqueda, filtroEspecialidad, filtroMedico, filtroDisponibilidad]);
+  }, [catalogo, busqueda, filtroEspecialidad, filtroMedico]);
 
   // Filtrado para la vista "Directorio de Médicos"
   const medicosDirectorioFiltrados = useMemo(() => {
@@ -132,8 +127,6 @@ export function CatalogoEspecialidadesPage() {
 
     return todosLosMedicos.filter(({ medico, especialidades }) => {
       const coincideId = filtroMedico === 'TODOS' || medico.id === filtroMedico;
-      const coincideEstado =
-        filtroDisponibilidad === 'TODOS' || medico.estado === filtroDisponibilidad;
 
       const coincideEsp =
         filtroEspecialidad === 'TODAS' ||
@@ -148,9 +141,9 @@ export function CatalogoEspecialidadesPage() {
         (medico.telefono && normalizar(medico.telefono).includes(termino)) ||
         especialidades.some((espNombre) => normalizar(espNombre).includes(termino));
 
-      return coincideId && coincideEstado && coincideEsp && coincideTexto;
+      return coincideId && coincideEsp && coincideTexto;
     });
-  }, [todosLosMedicos, busqueda, filtroMedico, filtroDisponibilidad, filtroEspecialidad, catalogo]);
+  }, [todosLosMedicos, busqueda, filtroMedico, filtroEspecialidad, catalogo]);
 
   // Manejo inteligente de apertura de acordeones
   const estaAbierta = (id: string) => {
@@ -172,9 +165,6 @@ export function CatalogoEspecialidadesPage() {
     }
   };
 
-  // Métricas rápidas
-  const totalMedicosActivos = todosLosMedicos.filter((m) => m.medico.estado === 'ACTIVO').length;
-
   if (isLoading) {
     return <LoadingSpinner label="Cargando catálogo de especialidades..." />;
   }
@@ -190,16 +180,10 @@ export function CatalogoEspecialidadesPage() {
             horarios de atención.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-info-soft px-3 py-1.5 text-xs font-semibold text-info">
-            <i className="ri-eye-line" />
-            Vista de orientación y consulta
-          </span>
-        </div>
       </div>
 
       {/* Métricas rápidas */}
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex items-center gap-4 rounded-card border border-line bg-surface p-4 shadow-card">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-field bg-brand-50 text-brand-600">
             <i className="ri-stethoscope-line text-xl" />
@@ -217,16 +201,6 @@ export function CatalogoEspecialidadesPage() {
           <div>
             <p className="text-2xl font-bold text-ink">{todosLosMedicos.length}</p>
             <p className="text-xs text-muted">Médicos especialistas</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4 rounded-card border border-line bg-surface p-4 shadow-card">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-field bg-success-soft text-success">
-            <i className="ri-checkbox-circle-line text-xl" />
-          </span>
-          <div>
-            <p className="text-2xl font-bold text-ink">{totalMedicosActivos}</p>
-            <p className="text-xs text-muted">Especialistas disponibles</p>
           </div>
         </div>
       </div>
@@ -267,16 +241,6 @@ export function CatalogoEspecialidadesPage() {
                 {medico.nombreCompleto}
               </option>
             ))}
-          </select>
-
-          {/* Filtro por Disponibilidad */}
-          <select
-            value={filtroDisponibilidad}
-            onChange={(e) => setFiltroDisponibilidad(e.target.value as 'TODOS' | 'ACTIVO')}
-            className="h-10 rounded-field border border-line bg-surface px-3 text-xs font-medium text-ink outline-none focus:border-brand-600"
-          >
-            <option value="TODOS">Todos los estados</option>
-            <option value="ACTIVO">Solo disponibles</option>
           </select>
 
           {hayFiltrosActivos && (
@@ -393,7 +357,7 @@ export function CatalogoEspecialidadesPage() {
                       >
                         {filtrandoMedicos
                           ? `${totalMedicos} ${totalMedicos === 1 ? 'médico coincidente' : 'médicos coincidentes'}`
-                          : `${totalMedicos} ${totalMedicos === 1 ? 'disponible' : 'disponibles'}`}
+                          : `${totalMedicos} ${totalMedicos === 1 ? 'médico' : 'médicos'}`}
                       </Badge>
 
                       <i
@@ -433,12 +397,6 @@ export function CatalogoEspecialidadesPage() {
                                         {medico.telefono ? ` · Tel: ${medico.telefono}` : ''}
                                       </p>
                                     </div>
-                                    <Badge
-                                      dot
-                                      variant={medico.estado === 'ACTIVO' ? 'success' : 'danger'}
-                                    >
-                                      {medico.estado === 'ACTIVO' ? 'Disponible' : 'No disponible'}
-                                    </Badge>
                                   </div>
 
                                   {/* Horarios de atención */}
@@ -517,18 +475,12 @@ export function CatalogoEspecialidadesPage() {
                         ))}
                       </div>
 
-                      {/* Teléfono y estado */}
-                      <div className="mt-3 flex items-center justify-between text-xs text-muted border-t border-line/50 pt-2.5">
+                      {/* Teléfono */}
+                      <div className="mt-3 flex items-center text-xs text-muted border-t border-line/50 pt-2.5">
                         <span className="flex items-center gap-1">
                           <i className="ri-phone-line text-brand-600" />
                           {medico.telefono || 'Sin teléfono'}
                         </span>
-                        <Badge
-                          dot
-                          variant={medico.estado === 'ACTIVO' ? 'success' : 'danger'}
-                        >
-                          {medico.estado === 'ACTIVO' ? 'Disponible' : 'No disponible'}
-                        </Badge>
                       </div>
                     </div>
 

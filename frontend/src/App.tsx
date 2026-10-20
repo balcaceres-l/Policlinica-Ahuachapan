@@ -89,9 +89,10 @@ function App() {
               path="/secretaria/pacientes/:pacienteId"
               element={<ExpedientePage />}
             />
+            {/* Era la misma lista que Pacientes: el expediente de un paciente se abre desde ahí. */}
             <Route
               path="/secretaria/expediente"
-              element={<ExpedientePage />}
+              element={<Navigate to="/secretaria/pacientes" replace />}
             />
             <Route
               path="/secretaria/expediente/:pacienteId"
@@ -99,7 +100,7 @@ function App() {
             />
             <Route
               path="/secretaria/expedientes"
-              element={<Navigate to="/secretaria/expediente" replace />}
+              element={<Navigate to="/secretaria/pacientes" replace />}
             />
             <Route
               path="/secretaria/expedientes/:pacienteId"

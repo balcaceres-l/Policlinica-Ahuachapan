@@ -1,7 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import Sidebar from '@/components/layout/Sidebar';
 import useAuth from '@/hooks/auth/useAuth';
-import { ROL_LABEL } from '@/lib/constants/roles';
 
 export function AppLayout() {
   const { usuario } = useAuth();
@@ -15,12 +14,6 @@ export function AppLayout() {
         <header className="flex h-16 shrink-0 items-center justify-between border-b border-line bg-surface px-6">
           <div className="flex items-center text-sm font-medium text-ink">
             <span>{usuario?.nombreCompleto}</span>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <span className="rounded-full bg-royal-soft px-3 py-1 text-xs font-semibold text-royal">
-              {usuario ? `Rol: ${ROL_LABEL[usuario.rol]}` : ''}
-            </span>
           </div>
         </header>
 
