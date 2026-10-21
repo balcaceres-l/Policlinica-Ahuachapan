@@ -2,6 +2,11 @@ import SidebarBase, { type ItemNav } from "@/components/layout/SidebarBase";
 
 const NAV_DOCTOR: ItemNav[] = [
   {
+    to: "/medico/dashboard",
+    label: "Mis Estadísticas",
+    icon: "ri-bar-chart-box-line",
+  },
+  {
     to: "/medico/sala-espera",
     label: "Lista de espera",
     icon: "ri-user-received-2-line",

@@ -45,3 +45,12 @@ pnpm-debug.log*
 
 # ─── Builds y compilados ───
 *.map
+*.tar.gz
+
+# ─── Manuales y documentación de entrega ───
+MANUAL_TECNICO.md
+MANUAL_TECNICO.pdf
+MANUAL_*.md
+MANUAL_*.pdf
+manual_*.md
+manual_*.pdf

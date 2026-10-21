@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import toast from 'react-hot-toast';
@@ -30,6 +31,7 @@ const ROLES: RolUsuario[] = ['MEDICO', 'RECEPCIONISTA', 'ADMINISTRADOR'];
 
 export function NuevoUsuarioModal({ isOpen, onClose }: NuevoUsuarioModalProps) {
   const crear = useCrearUsuario();
+  const [mostrarPassword, setMostrarPassword] = useState(false);
 
   const {
     register,
@@ -47,6 +49,7 @@ export function NuevoUsuarioModal({ isOpen, onClose }: NuevoUsuarioModalProps) {
 
   const cerrar = () => {
     reset(usuarioFormDefaults);
+    setMostrarPassword(false);
     onClose();
   };
 
@@ -188,17 +191,33 @@ export function NuevoUsuarioModal({ isOpen, onClose }: NuevoUsuarioModalProps) {
             <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-ink">
               Contraseña inicial
             </label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="new-password"
-              disabled={isSubmitting}
-              aria-invalid={Boolean(errors.password)}
-              className={CLASE_CAMPO}
-              {...register('password')}
-            />
-            {errors.password && (
+            <div className="relative">
+              <input
+                id="password"
+                type={mostrarPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                disabled={isSubmitting}
+                aria-invalid={Boolean(errors.password)}
+                className={`${CLASE_CAMPO} pr-10`}
+                placeholder="Mínimo 10 caracteres"
+                {...register('password')}
+              />
+              <button
+                type="button"
+                onClick={() => setMostrarPassword((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-muted transition-colors hover:text-ink focus:outline-none"
+                title={mostrarPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                tabIndex={-1}
+              >
+                <i className={mostrarPassword ? 'ri-eye-off-line text-base' : 'ri-eye-line text-base'} />
+              </button>
+            </div>
+            {errors.password ? (
               <p className="mt-1.5 text-xs text-danger">{errors.password.message}</p>
+            ) : (
+              <p className="mt-1.5 text-xs text-muted">
+                Mínimo 10 caracteres (mayúsculas, minúsculas, números y al menos un símbolo).
+              </p>
             )}
           </div>
         </div>

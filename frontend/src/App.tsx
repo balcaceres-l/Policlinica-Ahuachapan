@@ -2,6 +2,10 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import AppLayout from "@/components/layout/AppLayout";
 import LoginPage from "@/views/auth/LoginPage";
+import RecuperarPasswordPage from "@/views/auth/RecuperarPasswordPage";
+import RestablecerPasswordPage from "@/views/auth/RestablecerPasswordPage";
+import DashboardAdminPage from "@/views/admin/DashboardAdminPage";
+import DashboardMedicoPage from "@/views/medico/DashboardMedicoPage";
 import AsociarEspecialidadesPage from "@/views/admin/AsociarEspecialidadesPage";
 import EspecialidadesPage from "@/views/admin/EspecialidadesPage";
 import HorariosPage from "@/views/admin/HorariosPage";
@@ -27,10 +31,14 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/recuperar-password" element={<RecuperarPasswordPage />} />
+        <Route path="/restablecer-password" element={<RestablecerPasswordPage />} />
 
         {/* Solo administrador — RF-04..RF-09 */}
         <Route element={<ProtectedRoute roles={["ADMINISTRADOR"]} />}>
           <Route element={<AppLayout />}>
+            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="/admin/dashboard" element={<DashboardAdminPage />} />
             <Route path="/admin/usuarios" element={<ListaUsuariosPage />} />
             <Route
               path="/admin/especialidades"
@@ -48,6 +56,8 @@ function App() {
         {/* Atención Médica (Doctor) */}
         <Route element={<ProtectedRoute roles={["MEDICO"]} />}>
           <Route element={<AppLayout />}>
+            <Route path="/medico" element={<Navigate to="/medico/dashboard" replace />} />
+            <Route path="/medico/dashboard" element={<DashboardMedicoPage />} />
             <Route path="/medico/pacientes" element={<Navigate to="/medico/expediente" replace />} />
             <Route path="/medico/citas" element={<CitasPage />} />
             <Route path="/medico/sala-espera" element={<SalaEsperaPage />} />
@@ -124,7 +134,7 @@ function App() {
 
         {/* Cualquier otra ruta pasa por el guard, que decide según sesión y rol. */}
         <Route element={<ProtectedRoute />}>
-          <Route path="*" element={<Navigate to="/admin/usuarios" replace />} />
+          <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>

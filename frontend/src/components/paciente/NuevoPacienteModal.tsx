@@ -4,7 +4,7 @@ import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { useCrearPaciente } from '@/hooks/paciente/usePacientes';
 import { extraerMensajeError } from '@/lib/apiError';
-import { contieneLetrasOCaracteresEspeciales, formatearDui, formatearTelefono, obtenerFechaLocal } from '@/lib/utils';
+import { formatearDui, formatearTelefono, obtenerFechaLocal } from '@/lib/utils';
 import type { Paciente, TipoDocumento } from '@/types/paciente.types';
 
 interface NuevoPacienteModalProps {
@@ -69,6 +69,10 @@ export function NuevoPacienteModal({ isOpen, onClose, onCreado, subtitulo }: Nue
       setError('El nombre completo debe tener al menos 3 caracteres.');
       return;
     }
+    if (nombreLimpio.length > 150) {
+      setError('El nombre completo no puede superar los 150 caracteres.');
+      return;
+    }
 
     if (!fechaNacimiento) {
       setError('La fecha de nacimiento es obligatoria.');
@@ -82,6 +86,12 @@ export function NuevoPacienteModal({ isOpen, onClose, onCreado, subtitulo }: Nue
 
     const docLimpio = dui.trim();
     const telLimpio = telefono.trim();
+    const direccionLimpia = direccion.trim();
+
+    if (direccionLimpia && direccionLimpia.length > 250) {
+      setError('La dirección no puede superar los 250 caracteres.');
+      return;
+    }
 
     if (!esMenorEdad) {
       if (!docLimpio) {
@@ -100,13 +110,13 @@ export function NuevoPacienteModal({ isOpen, onClose, onCreado, subtitulo }: Nue
         }
       }
 
-      if (telLimpio && contieneLetrasOCaracteresEspeciales(telLimpio)) {
-        setError('El teléfono de contacto solo debe contener números.');
+      if (telLimpio && !/^\d{4}-\d{4}$/.test(telLimpio)) {
+        setError('El teléfono de contacto debe tener el formato 1111-1111 (8 dígitos).');
         return;
       }
     } else {
       if (pasaporteMenor && !/^[A-Za-z0-9]{6,15}$/.test(pasaporteMenor)) {
-        setError('El Pasaporte debe contener entre 6 y 15 caracteres alfanuméricos (sin espacios ni símbolos).');
+        setError('El Pasaporte del paciente debe contener entre 6 y 15 caracteres alfanuméricos (sin espacios ni símbolos).');
         return;
       }
       // Para menor de edad, validar datos del responsable
@@ -116,6 +126,10 @@ export function NuevoPacienteModal({ isOpen, onClose, onCreado, subtitulo }: Nue
       }
       if (responsableNombre.trim().length < 3) {
         setError('El nombre del responsable debe tener al menos 3 caracteres.');
+        return;
+      }
+      if (responsableNombre.trim().length > 150) {
+        setError('El nombre del responsable no puede superar los 150 caracteres.');
         return;
       }
       const respDocLimpio = responsableDocumento.trim();
@@ -138,8 +152,12 @@ export function NuevoPacienteModal({ isOpen, onClose, onCreado, subtitulo }: Nue
         setError('El teléfono del responsable es obligatorio.');
         return;
       }
-      if (contieneLetrasOCaracteresEspeciales(responsableTelefono.trim())) {
-        setError('El teléfono del responsable no debe contener letras ni caracteres especiales (solo números).');
+      if (!/^\d{4}-\d{4}$/.test(responsableTelefono.trim())) {
+        setError('El teléfono del responsable debe tener el formato 1111-1111 (8 dígitos).');
+        return;
+      }
+      if (!responsableParentesco.trim()) {
+        setError('El parentesco del responsable es obligatorio.');
         return;
       }
     }

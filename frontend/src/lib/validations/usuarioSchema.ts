@@ -32,9 +32,12 @@ export const editarUsuarioSchema = z.object({
 export const usuarioSchema = editarUsuarioSchema.extend({
   password: z
     .string()
-    .min(8, 'Debe tener al menos 8 caracteres.')
-    .regex(/[a-zA-Z]/, 'Debe incluir al menos una letra.')
-    .regex(/[0-9]/, 'Debe incluir al menos un número.'),
+    .min(1, 'La contraseña es obligatoria.')
+    .min(10, 'La contraseña debe tener al menos 10 caracteres.')
+    .regex(/[a-z]/, 'Debe incluir al menos una letra minúscula.')
+    .regex(/[A-Z]/, 'Debe incluir al menos una letra mayúscula.')
+    .regex(/[0-9]/, 'Debe incluir al menos un número.')
+    .regex(/[^a-zA-Z0-9]/, 'Debe incluir al menos un símbolo o carácter especial (!@#$%...).'),
 });
 
 export type EditarUsuarioFormValues = z.infer<typeof editarUsuarioSchema>;

@@ -1,6 +1,7 @@
 import SidebarBase, { type ItemNav } from '@/components/layout/SidebarBase';
 
 const NAV_ADMIN: ItemNav[] = [
+  { to: '/admin/dashboard', label: 'Dashboard', icon: 'ri-dashboard-line' },
   { to: '/admin/usuarios', label: 'Usuarios', icon: 'ri-group-line' },
   { to: '/admin/especialidades', label: 'Especialidades', icon: 'ri-stethoscope-line' },
   { to: '/admin/asociar-especialidades', label: 'Asociar médicos', icon: 'ri-links-line' },

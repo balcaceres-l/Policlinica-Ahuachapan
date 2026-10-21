@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Cie11Controller;
 use App\Http\Controllers\Api\Cie11ProxyController;
 use App\Http\Controllers\Api\CitaController;
 use App\Http\Controllers\Api\ConsultaController;
+use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DocumentoMedicoController;
 use App\Http\Controllers\Api\EspecialidadController;
 use App\Http\Controllers\Api\HorarioMedicoController;
@@ -18,6 +19,8 @@ use App\Http\Controllers\Api\UsuarioController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:login');
+Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:6,1');
+Route::post('/auth/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:6,1');
 
 // HU-44 — proxy hacia la API de la OMS para la herramienta de búsqueda CIE-11. Se
 // autentica con el pase de /cie11/pase (no con Sanctum) y agrega el token de la OMS.
@@ -32,6 +35,7 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middleware('throttle:6,1');
 
     Route::middleware('role:ADMINISTRADOR')->group(function () {
+        Route::get('/dashboard/admin', [DashboardController::class, 'admin']);
         Route::apiResource('usuarios', UsuarioController::class)->except('destroy');
         Route::patch('/usuarios/{usuario}/estado', [UsuarioController::class, 'cambiarEstado']);
 
@@ -134,6 +138,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // HU-39 — el médico abre la consulta eligiendo con qué especialidad atiende.
     Route::middleware('role:MEDICO')->group(function () {
+        Route::get('/dashboard/medico', [DashboardController::class, 'medico']);
         Route::get(
             '/consultas/especialidades-disponibles',
             [ConsultaController::class, 'especialidadesDisponibles'],

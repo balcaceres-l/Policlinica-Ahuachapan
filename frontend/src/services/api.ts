@@ -2,8 +2,11 @@ import axios, { AxiosError } from 'axios';
 
 export const TOKEN_KEY = 'pcah_token';
 
+const rawBaseUrl = (import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api').trim().replace(/\/+$/, '');
+const baseURL = rawBaseUrl.endsWith('/api') ? rawBaseUrl : `${rawBaseUrl}/api`;
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api',
+  baseURL,
   headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
   timeout: 15000,
 });
@@ -16,6 +19,7 @@ api.interceptors.request.use((config) => {
   const token = leerToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+    config.headers['X-Authorization'] = `Bearer ${token}`;
   }
   return config;
 });

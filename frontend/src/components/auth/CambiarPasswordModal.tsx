@@ -140,7 +140,7 @@ export function CambiarPasswordModal({ isOpen, onClose }: CambiarPasswordModalPr
             <p className="mt-1.5 text-xs text-danger">{errors.password.message}</p>
           ) : (
             <p className="mt-1.5 text-xs text-muted">
-              Mínimo 8 caracteres, con al menos una letra y un número.
+              Mínimo 10 caracteres (mayúsculas, minúsculas, números y al menos un símbolo).
             </p>
           )}
         </div>
