@@ -158,7 +158,7 @@ export function RestablecerPasswordPage() {
                     disabled={isSubmitting}
                     aria-invalid={Boolean(errors.password)}
                     className={`${CLASE_INPUT} pr-10`}
-                    placeholder="Mínimo 8 caracteres"
+                    placeholder="Mínimo 10 caracteres"
                     {...register('password')}
                   />
                   <button
@@ -174,9 +174,13 @@ export function RestablecerPasswordPage() {
                     />
                   </button>
                 </div>
-                {errors.password && (
+                {errors.password ? (
                   <p className="mt-1.5 text-xs text-danger">
                     {errors.password.message}
+                  </p>
+                ) : (
+                  <p className="mt-1.5 text-xs text-muted">
+                    Mínimo 10 caracteres (mayúsculas, minúsculas, números y al menos un símbolo).
                   </p>
                 )}
               </div>

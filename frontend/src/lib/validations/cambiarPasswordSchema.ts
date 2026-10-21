@@ -10,9 +10,12 @@ export const cambiarPasswordSchema = z
     password_actual: z.string().min(1, 'Ingresa tu contraseña actual.'),
     password: z
       .string()
-      .min(8, 'Debe tener al menos 8 caracteres.')
-      .regex(/[a-zA-Z]/, 'Debe incluir al menos una letra.')
-      .regex(/[0-9]/, 'Debe incluir al menos un número.'),
+      .min(1, 'Ingresa la nueva contraseña.')
+      .min(10, 'La nueva contraseña debe tener al menos 10 caracteres.')
+      .regex(/[a-z]/, 'Debe incluir al menos una letra minúscula.')
+      .regex(/[A-Z]/, 'Debe incluir al menos una letra mayúscula.')
+      .regex(/[0-9]/, 'Debe incluir al menos un número.')
+      .regex(/[^a-zA-Z0-9]/, 'Debe incluir al menos un símbolo o carácter especial (!@#$%...).'),
     password_confirmation: z.string().min(1, 'Confirma la nueva contraseña.'),
   })
   .refine((datos) => datos.password === datos.password_confirmation, {

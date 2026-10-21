@@ -19,10 +19,15 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // uncompromised() consulta HaveIBeenPwned, por eso solo en producción.
-        Password::defaults(fn () => app()->isProduction()
-            ? Password::min(10)->letters()->mixedCase()->numbers()->symbols()->uncompromised()
-            : Password::min(8)->letters()->numbers());
+        // uncompromised() consulta HaveIBeenPwned en internet, por eso solo en producción.
+        // La política de complejidad (10 caracteres, mayúsculas, minúsculas, números y símbolos)
+        // se aplica tanto en desarrollo como en producción para evitar discrepancias.
+        Password::defaults(fn () => Password::min(10)
+            ->letters()
+            ->mixedCase()
+            ->numbers()
+            ->symbols()
+            ->when(app()->isProduction(), fn ($rule) => $rule->uncompromised()));
 
         Model::preventLazyLoading(! app()->isProduction());
         Model::preventSilentlyDiscardingAttributes(! app()->isProduction());

@@ -13,7 +13,12 @@ export const restablecerPasswordSchema = z
   .object({
     password: z
       .string()
-      .min(8, 'La nueva contraseña debe tener al menos 8 caracteres.'),
+      .min(1, 'Ingresa tu nueva contraseña.')
+      .min(10, 'La nueva contraseña debe tener al menos 10 caracteres.')
+      .regex(/[a-z]/, 'Debe incluir al menos una letra minúscula.')
+      .regex(/[A-Z]/, 'Debe incluir al menos una letra mayúscula.')
+      .regex(/[0-9]/, 'Debe incluir al menos un número.')
+      .regex(/[^a-zA-Z0-9]/, 'Debe incluir al menos un símbolo o carácter especial (!@#$%...).'),
     password_confirmation: z
       .string()
       .min(1, 'Confirma tu nueva contraseña.'),

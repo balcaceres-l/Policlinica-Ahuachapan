@@ -6,7 +6,6 @@ import { useAuth } from '@/hooks/auth/useAuth';
 import { useActualizarPaciente } from '@/hooks/paciente/usePacientes';
 import { extraerMensajeError } from '@/lib/apiError';
 import {
-  contieneLetrasOCaracteresEspeciales,
   formatearDui,
   formatearTelefono,
 } from '@/lib/utils';
@@ -81,10 +80,20 @@ export function EditarPacienteModal({ paciente, isOpen, onClose }: EditarPacient
       setError('El nombre completo debe tener al menos 3 caracteres.');
       return;
     }
+    if (nombreLimpio.length > 150) {
+      setError('El nombre completo no puede superar los 150 caracteres.');
+      return;
+    }
 
     const telLimpio = telefono.trim();
-    if (!esMenor && telLimpio && contieneLetrasOCaracteresEspeciales(telLimpio)) {
-      setError('El teléfono de contacto solo debe contener números.');
+    if (!esMenor && telLimpio && !/^\d{4}-\d{4}$/.test(telLimpio)) {
+      setError('El teléfono de contacto debe tener el formato 1111-1111 (8 dígitos).');
+      return;
+    }
+
+    const direccionLimpia = direccion.trim();
+    if (direccionLimpia && direccionLimpia.length > 250) {
+      setError('La dirección no puede superar los 250 caracteres.');
       return;
     }
 
@@ -109,12 +118,20 @@ export function EditarPacienteModal({ paciente, isOpen, onClose }: EditarPacient
         setError('El nombre del responsable debe tener al menos 3 caracteres.');
         return;
       }
+      if (responsableNombre.trim().length > 150) {
+        setError('El nombre del responsable no puede superar los 150 caracteres.');
+        return;
+      }
       if (!responsableTelefono.trim()) {
         setError('El teléfono del responsable es obligatorio.');
         return;
       }
-      if (contieneLetrasOCaracteresEspeciales(responsableTelefono.trim())) {
-        setError('El teléfono del responsable no debe contener letras ni caracteres especiales.');
+      if (!/^\d{4}-\d{4}$/.test(responsableTelefono.trim())) {
+        setError('El teléfono del responsable debe tener el formato 1111-1111 (8 dígitos).');
+        return;
+      }
+      if (!responsableParentesco.trim()) {
+        setError('El parentesco del responsable es obligatorio.');
         return;
       }
     }
