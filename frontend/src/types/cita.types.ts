@@ -54,6 +54,39 @@ export interface Cita {
   /** Pendiente que cae dentro de un bloqueo de agenda: recepción debe contactar al paciente. */
   afectada_por_bloqueo?: boolean;
   bloqueo?: BloqueoDeCita | null;
+  /** Solo al agendar una emergencia: qué citas se corrieron detrás de ella. */
+  corrida?: CorridaTrasEmergencia | null;
+  /** Por qué se corrió esta cita (emergencia, bloqueo o atraso del médico) y a qué hora estaba antes. */
+  corrida_por?: 'EMERGENCIA' | 'BLOQUEO' | 'ATRASO' | null;
+  hora_inicio_original?: string | null;
+  /** Cita regular pendiente que quedó fuera del horario del médico (p. ej. tras correrla). */
+  fuera_de_horario?: boolean;
+  /** Cita regular pendiente que choca con otra cita regular del mismo médico. */
+  empalmada?: boolean;
+}
+
+/** Cita que no se pudo correr porque terminaría después de las 11 p. m.: se reagenda o se cancela. */
+export interface CitaSinEspacio {
+  id: string;
+  pacienteNombre: string | null;
+  pacienteExpediente: string | null;
+  hora_inicio: string;
+  hora_fin: string;
+}
+
+/** Lo que pasó con las citas que chocaban al agendar una emergencia (viene en la cita creada). */
+export interface CorridaTrasEmergencia {
+  plan: CitaCorridaPlan[];
+  fueraDeHorario: string[];
+  sinEspacio: string[];
+  citasSinEspacio: CitaSinEspacio[];
+}
+
+/** Cómo quedaría cada cita que se corre: su horario actual y el nuevo. */
+export interface CitaCorridaPlan extends CitaSinEspacio {
+  nuevo_inicio: string;
+  nuevo_fin: string;
+  fueraDeHorario: boolean;
 }
 
 /** El bloqueo que afecta a una cita, tal como lo resume el listado de citas. */
@@ -76,6 +109,9 @@ export interface AgendaDesplazada {
   citas: Cita[];
   /** Citas que quedaron fuera del horario del médico tras el desplazamiento. */
   fueraDeHorario: string[];
+  /** Citas que no se movieron porque habrían terminado después de las 11 p. m. */
+  sinEspacio: string[];
+  citasSinEspacio: CitaSinEspacio[];
 }
 
 export interface NuevaCita {
@@ -103,6 +139,16 @@ export const ESTADO_CITA_LABEL: Record<EstadoCita, string> = {
   ATENDIDA: 'Atendida',
   CANCELADA: 'Cancelada',
   NO_ASISTIO: 'No asistió',
+};
+
+/** Color de la barra lateral de una cita (`barra`) y de la barrita de la leyenda (`fondo`) según su estado. */
+export const COLOR_ESTADO_CITA: Record<EstadoCita, { barra: string; fondo: string }> = {
+  AGENDADA: { barra: 'border-l-royal', fondo: 'bg-royal' },
+  EN_ESPERA: { barra: 'border-l-amber-400', fondo: 'bg-amber-400' },
+  EN_ATENCION: { barra: 'border-l-info', fondo: 'bg-info' },
+  ATENDIDA: { barra: 'border-l-success', fondo: 'bg-success' },
+  CANCELADA: { barra: 'border-l-gray-400', fondo: 'bg-gray-400' },
+  NO_ASISTIO: { barra: 'border-l-gray-400', fondo: 'bg-gray-400' },
 };
 
 export const TIPO_CITA_LABEL: Record<TipoCita, string> = {

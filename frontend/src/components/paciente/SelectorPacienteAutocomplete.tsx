@@ -99,10 +99,19 @@ export function SelectorPacienteAutocomplete({
                   <i className="ri-folder-user-line" />
                   {pacienteSeleccionado.numero_expediente}
                 </span>
-                <span>
-                  {pacienteSeleccionado.tipo_documento === 'PASAPORTE' ? 'Pasaporte' : 'DUI'}:{' '}
-                  <strong className="text-ink font-medium">{pacienteSeleccionado.dui}</strong>
-                </span>
+                {pacienteSeleccionado.dui ? (
+                  <span>
+                    {pacienteSeleccionado.tipo_documento === 'PASAPORTE' ? 'Pasaporte' : 'DUI'}:{' '}
+                    <strong className="text-ink font-medium">{pacienteSeleccionado.dui}</strong>
+                  </span>
+                ) : (
+                  <span className="italic">Sin documento</span>
+                )}
+                {pacienteSeleccionado.datos_pendientes && (
+                  <Badge variant="warning" className="text-[10px] py-0.2">
+                    Datos pendientes
+                  </Badge>
+                )}
                 <Badge
                   variant={pacienteSeleccionado.es_menor_edad ? 'warning' : 'default'}
                   className="text-[10px] py-0.2"

@@ -28,6 +28,8 @@ class cita extends Model
         'fecha',
         'hora_inicio',
         'hora_fin',
+        'hora_inicio_original',
+        'corrida_por',
         'tipo_cita',
         'estado',
         'motivo_cancelacion',

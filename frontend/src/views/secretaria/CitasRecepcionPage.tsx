@@ -5,6 +5,7 @@ import CitasAfectadasModal, {
   type BloqueoGestionable,
 } from '@/components/bloqueo/CitasAfectadasModal';
 import CancelarCitaModal from '@/components/cita/CancelarCitaModal';
+import CitaAvisos from '@/components/cita/CitaAvisos';
 import DesplazarAgendaModal from '@/components/cita/DesplazarAgendaModal';
 import ReprogramarCitaModal from '@/components/cita/ReprogramarCitaModal';
 import SignosVitalesModal from '@/components/cita/SignosVitalesModal';
@@ -208,6 +209,7 @@ export function CitasRecepcionPage() {
               En bloqueo ({lapsoDeBloqueo(cita.bloqueo)})
             </button>
           )}
+          <CitaAvisos cita={cita} className="mt-1" />
         </div>
       ),
     },
@@ -389,7 +391,7 @@ export function CitasRecepcionPage() {
             <i className="ri-calendar-event-line text-xl" />
           </span>
           <div>
-            <p className="text-2xl font-bold text-ink">{totalHoy}</p>
+            <p className="text-2xl font-bold text-ink">{isLoading ? '–' : totalHoy}</p>
             <p className="text-xs text-muted">Citas en la fecha</p>
           </div>
         </div>
@@ -399,7 +401,7 @@ export function CitasRecepcionPage() {
             <i className="ri-user-received-2-line text-xl" />
           </span>
           <div>
-            <p className="text-2xl font-bold text-ink">{enEspera}</p>
+            <p className="text-2xl font-bold text-ink">{isLoading ? '–' : enEspera}</p>
             <p className="text-xs text-muted">En sala de espera</p>
           </div>
         </div>
@@ -409,7 +411,7 @@ export function CitasRecepcionPage() {
             <i className="ri-checkbox-circle-line text-xl" />
           </span>
           <div>
-            <p className="text-2xl font-bold text-ink">{atendidas}</p>
+            <p className="text-2xl font-bold text-ink">{isLoading ? '–' : atendidas}</p>
             <p className="text-xs text-muted">Consultas completadas</p>
           </div>
         </div>
@@ -489,7 +491,7 @@ export function CitasRecepcionPage() {
                   activa ? 'bg-white/20 text-white' : 'bg-canvas text-muted',
                 )}
               >
-                {conteos[tab.clave]}
+                {isLoading ? '–' : conteos[tab.clave]}
               </span>
             </button>
           );

@@ -1,7 +1,7 @@
 import api from '@/services/api';
 import type { ApiResponse } from '@/types/api.types';
 import type { BloqueoAgenda, NuevoBloqueo } from '@/types/bloqueo.types';
-import type { Cita } from '@/types/cita.types';
+import type { Cita, CitaCorridaPlan, CitaSinEspacio } from '@/types/cita.types';
 
 export interface FiltrosBloqueoQuery {
   medicoId?: string;
@@ -20,6 +20,11 @@ export interface CitasCorridas {
   citas: Cita[];
   /** Citas que quedaron fuera del horario del médico tras correrlas. */
   fueraDeHorario: string[];
+  /** Citas que no se movieron porque habrían terminado después de las 11 p. m. */
+  sinEspacio: string[];
+  citasSinEspacio: CitaSinEspacio[];
+  /** Cada cita movida con su horario actual y el nuevo (en la vista previa, aún sin guardar). */
+  plan: CitaCorridaPlan[];
 }
 
 /** Sirve de vigentes y de historial: el backend no descarta las fechas pasadas. */
@@ -62,7 +67,13 @@ export const getCitasAfectadas = async (id: string): Promise<Cita[]> => {
  * Para pacientes ya en la clínica: las citas afectadas pasan a empezar al terminar
  * el bloqueo, en orden, y solo se corren las siguientes que choquen con ellas.
  */
-export const correrCitasTrasBloqueo = async (id: string): Promise<CitasCorridas> => {
-  const { data } = await api.patch<ApiResponse<CitasCorridas>>(`/bloqueos/${id}/correr-citas`);
+export const correrCitasTrasBloqueo = async (
+  id: string,
+  simular = false,
+): Promise<CitasCorridas> => {
+  const { data } = await api.patch<ApiResponse<CitasCorridas>>(
+    `/bloqueos/${id}/correr-citas`,
+    simular ? { simular: true } : undefined,
+  );
   return data.data;
 };

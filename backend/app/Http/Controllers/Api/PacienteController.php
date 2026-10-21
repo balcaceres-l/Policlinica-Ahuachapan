@@ -91,17 +91,23 @@ class PacienteController extends Controller
             'nombre_completo' => ['required', 'string', 'min:3', 'max:150'],
             'fecha_nacimiento' => ['required', 'date', 'before_or_equal:today'],
             'direccion' => ['nullable', 'string', 'max:250'],
+            'registro_rapido' => ['nullable', 'boolean'],
         ]);
 
         $fechaNac = Carbon::parse($request->fecha_nacimiento);
         $esMenor = $fechaNac->age < 18;
+        // Emergencia: no se toman los datos uno por uno. Basta el nombre y la fecha de nacimiento;
+        // el registro queda pendiente y recepción lo completa después.
+        $rapido = $request->boolean('registro_rapido');
 
-        return DB::transaction(function () use ($request, $esMenor) {
+        return DB::transaction(function () use ($request, $esMenor, $rapido) {
             $idResponsable = null;
             $docPaciente = null;
             $telPaciente = null;
 
-            if ($esMenor) {
+            if ($rapido) {
+                // Sin documento, teléfono ni responsable: quedan por completar.
+            } elseif ($esMenor) {
                 // Validación estricta para menor de edad
                 $request->validate([
                     'responsable_nombre' => ['required', 'string', 'min:3', 'max:150'],
@@ -190,7 +196,7 @@ class PacienteController extends Controller
                         'es_menor_edad' => $esMenor,
                         'estado' => 'ACTIVO',
                         // Consulta inmediata: lo registra el médico y la recepcionista lo completa.
-                        'datos_pendientes' => $request->user()->rol === 'MEDICO',
+                        'datos_pendientes' => $rapido || $request->user()->rol === 'MEDICO',
                         'id_responsable' => $idResponsable,
                         'id_registrado_por' => $request->user()->id,
                         'fecha_registro' => now(),
@@ -244,11 +250,6 @@ class PacienteController extends Controller
             $nombreLimpio = trim((string) $request->nombre_completo);
             $direccionLimpia = $request->filled('direccion') ? trim((string) $request->direccion) : null;
 
-            // La recepcionista revisó y completó el registro hecho por el médico.
-            if ($request->user()->rol === 'RECEPCIONISTA') {
-                $paciente->datos_pendientes = false;
-            }
-
             // Quien no tiene documento propio puede agregarlo, una sola vez: un menor con
             // pasaporte, o quien se registró de menor y ya es adulto. Si ya tiene, no cambia.
             $documentoNuevo = null;
@@ -271,6 +272,37 @@ class PacienteController extends Controller
                         'telefono' => trim((string) $request->responsable_telefono),
                         'parentesco' => trim((string) $request->responsable_parentesco),
                     ]);
+                }
+
+                // Un menor registrado en emergencia aún no tiene responsable: se puede agregar,
+                // con todos sus datos, al editarlo.
+                if (! $paciente->id_responsable && ($request->filled('responsable_nombre') || $request->filled('responsable_documento'))) {
+                    $request->validate([
+                        'responsable_nombre' => ['required', 'string', 'min:3', 'max:150'],
+                        'responsable_documento' => ['required', 'string', 'min:6', 'max:15'],
+                        'responsable_telefono' => ['required', 'string', 'max:15'],
+                        'responsable_parentesco' => ['required', 'string', 'max:50'],
+                    ]);
+
+                    $respDoc = trim((string) $request->responsable_documento);
+                    if (! preg_match('/^\d{8}-\d$/', $respDoc) && ! preg_match('/^[A-Za-z0-9]{6,15}$/', $respDoc)) {
+                        throw ValidationException::withMessages([
+                            'responsable_documento' => ['El documento del responsable debe ser un DUI válido (00000000-0) o Pasaporte (6 a 15 caracteres alfanuméricos).'],
+                        ]);
+                    }
+
+                    $datosResp = [
+                        'nombre_completo' => trim((string) $request->responsable_nombre),
+                        'telefono' => trim((string) $request->responsable_telefono),
+                        'parentesco' => trim((string) $request->responsable_parentesco),
+                    ];
+                    $responsable = responsable::all()->first(fn ($r) => $r->dui === $respDoc);
+                    if ($responsable) {
+                        $responsable->update($datosResp);
+                    } else {
+                        $responsable = responsable::create($datosResp + ['dui' => $respDoc]);
+                    }
+                    $paciente->id_responsable = $responsable->id_responsable;
                 }
 
                 // En menores el teléfono del paciente sigue siendo null
@@ -298,6 +330,13 @@ class PacienteController extends Controller
                 }
 
                 $paciente->update($cambios);
+            }
+
+            // La recepcionista revisó el registro (de un médico, o de una emergencia): deja de estar
+            // pendiente solo cuando ya tiene lo esencial, el documento (adulto) o el responsable (menor).
+            $completo = $paciente->es_menor_edad ? (bool) $paciente->id_responsable : (bool) $paciente->dui;
+            if ($paciente->datos_pendientes && $completo && $request->user()->rol === 'RECEPCIONISTA') {
+                $paciente->update(['datos_pendientes' => false]);
             }
 
             return $this->success(

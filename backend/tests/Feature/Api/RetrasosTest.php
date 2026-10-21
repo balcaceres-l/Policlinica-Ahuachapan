@@ -240,4 +240,53 @@ class RetrasosTest extends TestCase
             'hora_fin' => '15:30',
         ])->assertOk()->assertJsonPath('data.fecha', '2026-09-28');
     }
+
+    public function test_el_atraso_no_mueve_las_citas_que_terminarian_despues_de_las_23(): void
+    {
+        Sanctum::actingAs($this->recepcion);
+        horario_medico::create([
+            'id_medico' => $this->medico->id,
+            'dia_semana' => 'LUNES',
+            'hora_inicio' => '19:00',
+            'hora_fin' => '23:00',
+        ]);
+        $primera = $this->crearCita('22:00', '22:30');
+        $segunda = $this->crearCita('22:30', '23:00');
+
+        // Con 90 minutos ninguna cabe: se quedan como estaban (nada de citas a las 00:00).
+        $r = $this->patchJson("/api/medicos/{$this->medico->id}/agenda/desplazar", [
+            'fecha' => self::LUNES,
+            'minutos' => 90,
+        ])->assertOk();
+
+        $this->assertSame('22:00', $this->hora($primera, 'hora_inicio'));
+        $this->assertSame('22:30', $this->hora($segunda, 'hora_inicio'));
+        $this->assertEqualsCanonicalizing([$primera->id_cita, $segunda->id_cita], $r->json('data.sinEspacio'));
+        $this->assertSame([], $r->json('data.citas'));
+    }
+
+    public function test_el_atraso_corre_las_que_caben_y_deja_senaladas_las_que_no(): void
+    {
+        Sanctum::actingAs($this->recepcion);
+        horario_medico::create([
+            'id_medico' => $this->medico->id,
+            'dia_semana' => 'LUNES',
+            'hora_inicio' => '19:00',
+            'hora_fin' => '23:00',
+        ]);
+        $primera = $this->crearCita('22:00', '22:30');
+        $segunda = $this->crearCita('22:30', '23:00');
+
+        $r = $this->patchJson("/api/medicos/{$this->medico->id}/agenda/desplazar", [
+            'fecha' => self::LUNES,
+            'minutos' => 30,
+        ])->assertOk();
+
+        $this->assertSame('22:30', $this->hora($primera, 'hora_inicio'));
+        $this->assertSame('23:00', $this->hora($primera, 'hora_fin'));
+        $this->assertSame('ATRASO', $primera->refresh()->corrida_por);
+        $this->assertSame('22:00', substr((string) $primera->hora_inicio_original, 0, 5));
+        $this->assertSame('22:30', $this->hora($segunda, 'hora_inicio'));
+        $this->assertSame([$segunda->id_cita], $r->json('data.sinEspacio'));
+    }
 }

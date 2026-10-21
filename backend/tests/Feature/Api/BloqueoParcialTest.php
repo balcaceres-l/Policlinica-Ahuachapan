@@ -551,4 +551,95 @@ class BloqueoParcialTest extends TestCase
         $this->deleteJson("/api/bloqueos/{$futuro->id_bloqueo}")->assertOk();
         $this->assertDatabaseMissing('bloqueo_agenda', ['id_bloqueo' => $futuro->id_bloqueo]);
     }
+
+    // ---- citas de noche: nada pasa de las 23:00 ----
+
+    private function jornadaDeNoche(): void
+    {
+        horario_medico::create([
+            'id_medico' => $this->medico->id,
+            'dia_semana' => 'LUNES',
+            'hora_inicio' => '19:00',
+            'hora_fin' => '23:00',
+        ]);
+    }
+
+    private function citasDeNoche(): array
+    {
+        return [
+            $this->crearCita('20:00', '20:30'),
+            $this->crearCita('20:30', '21:00'),
+            $this->crearCita('21:00', '21:30'),
+            $this->crearCita('21:30', '22:00'),
+            $this->crearCita('22:00', '22:30'),
+            $this->crearCita('22:30', '23:00'),
+        ];
+    }
+
+    public function test_correr_no_mueve_las_citas_que_pasarian_de_las_23_y_corre_las_que_caben(): void
+    {
+        Sanctum::actingAs($this->recepcion);
+        $this->jornadaDeNoche();
+        [$a, $b, $c, $d, $e, $f] = $this->citasDeNoche();
+
+        $id = $this->postJson('/api/bloqueos', $this->bloqueo(['hora_inicio' => '20:00', 'hora_fin' => '22:00']))
+            ->assertCreated()->json('data.bloqueo.id');
+
+        $r = $this->patchJson("/api/bloqueos/{$id}/correr-citas")->assertOk();
+
+        // Las dos primeras caben antes de las 23:00 y se corren, en orden.
+        $this->assertSame('22:00', $this->hora($a, 'hora_inicio'));
+        $this->assertSame('22:30', $this->hora($a, 'hora_fin'));
+        $this->assertSame('BLOQUEO', $a->refresh()->corrida_por);
+        $this->assertSame('20:00', substr((string) $a->hora_inicio_original, 0, 5));
+        $this->assertSame('22:30', $this->hora($b, 'hora_inicio'));
+        $this->assertSame('23:00', $this->hora($b, 'hora_fin'));
+
+        // Las que terminarían después de las 23:00 se quedan donde estaban.
+        foreach ([[$c, '21:00'], [$d, '21:30'], [$e, '22:00'], [$f, '22:30']] as [$cita, $inicio]) {
+            $this->assertSame($inicio, $this->hora($cita, 'hora_inicio'));
+        }
+
+        $this->assertCount(2, $r->json('data.citas'));
+        $this->assertEqualsCanonicalizing(
+            [$c->id_cita, $d->id_cita, $e->id_cita, $f->id_cita],
+            $r->json('data.sinEspacio'),
+        );
+    }
+
+    public function test_la_vista_previa_de_correr_no_guarda_nada_y_muestra_el_horario_nuevo(): void
+    {
+        Sanctum::actingAs($this->recepcion);
+        $this->jornadaDeNoche();
+        [$a, $b] = $this->citasDeNoche();
+
+        $id = $this->postJson('/api/bloqueos', $this->bloqueo(['hora_inicio' => '20:00', 'hora_fin' => '21:00']))
+            ->assertCreated()->json('data.bloqueo.id');
+
+        $r = $this->patchJson("/api/bloqueos/{$id}/correr-citas", ['simular' => true])->assertOk();
+
+        $this->assertSame('20:00', $this->hora($a, 'hora_inicio'));
+        $this->assertSame('20:30', $this->hora($b, 'hora_inicio'));
+        $this->assertSame([], $r->json('data.citas'));
+        $this->assertSame('21:00', $r->json('data.plan.0.nuevo_inicio'));
+        $this->assertSame('20:00', $r->json('data.plan.0.hora_inicio'));
+        $this->assertSame($a->id_cita, $r->json('data.plan.0.id'));
+    }
+
+    public function test_el_listado_marca_la_cita_fuera_de_horario_y_la_que_choca_con_otra(): void
+    {
+        Sanctum::actingAs($this->recepcion);
+        $enHorario = $this->crearCita('15:00', '15:30');
+        $fuera = $this->crearCita('19:00', '19:30'); // el horario es 15:00-18:30
+        $choca1 = $this->crearCita('16:00', '16:30');
+        $choca2 = $this->crearCita('16:15', '16:45');
+
+        $filas = collect($this->getJson('/api/citas?fecha='.$this->lunes)->assertOk()->json('data'))->keyBy('id');
+
+        $this->assertFalse($filas[$enHorario->id_cita]['fuera_de_horario']);
+        $this->assertFalse($filas[$enHorario->id_cita]['empalmada']);
+        $this->assertTrue($filas[$fuera->id_cita]['fuera_de_horario']);
+        $this->assertTrue($filas[$choca1->id_cita]['empalmada']);
+        $this->assertTrue($filas[$choca2->id_cita]['empalmada']);
+    }
 }

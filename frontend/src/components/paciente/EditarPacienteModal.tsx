@@ -40,6 +40,8 @@ export function EditarPacienteModal({ paciente, isOpen, onClose }: EditarPacient
   const [tipoDocumento, setTipoDocumento] = useState<TipoDocumento>('DUI');
   const [documento, setDocumento] = useState('');
   const [responsableNombre, setResponsableNombre] = useState('');
+  const [responsableTipoDoc, setResponsableTipoDoc] = useState<TipoDocumento>('DUI');
+  const [responsableDoc, setResponsableDoc] = useState('');
   const [responsableTelefono, setResponsableTelefono] = useState('');
   const [responsableParentesco, setResponsableParentesco] = useState('Madre');
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +56,8 @@ export function EditarPacienteModal({ paciente, isOpen, onClose }: EditarPacient
       setTipoDocumento('DUI');
       setDocumento('');
       setResponsableNombre(paciente.responsable_nombre || '');
+      setResponsableTipoDoc('DUI');
+      setResponsableDoc('');
       setResponsableTelefono(paciente.responsable_telefono || '');
       setResponsableParentesco(paciente.responsable_parentesco || 'Madre');
       setError(null);
@@ -67,6 +71,8 @@ export function EditarPacienteModal({ paciente, isOpen, onClose }: EditarPacient
   // se puede agregar, una sola vez.
   const puedeAgregarDocumento = !paciente.dui;
   const tipoEfectivo: TipoDocumento = esMenor ? 'PASAPORTE' : tipoDocumento;
+  // Menor registrado en una emergencia: aún no tiene responsable y se le puede agregar ahora.
+  const sinResponsable = esMenor && !paciente.id_responsable;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,7 +106,26 @@ export function EditarPacienteModal({ paciente, isOpen, onClose }: EditarPacient
       }
     }
 
-    if (esMenor) {
+    const respDocLimpio = responsableDoc.trim();
+    // Sin responsable, los datos van todos o ninguno: se puede guardar el resto sin ellos.
+    const llenoResponsable =
+      !sinResponsable || Boolean(responsableNombre.trim() || respDocLimpio || responsableTelefono.trim());
+
+    if (esMenor && llenoResponsable) {
+      if (sinResponsable) {
+        if (!respDocLimpio) {
+          setError('El documento del responsable es obligatorio.');
+          return;
+        }
+        if (responsableTipoDoc === 'DUI' && !/^\d{8}-\d$/.test(respDocLimpio)) {
+          setError('El DUI del responsable debe tener el formato 00000000-0 (9 dígitos).');
+          return;
+        }
+        if (responsableTipoDoc === 'PASAPORTE' && !/^[A-Za-z0-9]{6,15}$/.test(respDocLimpio)) {
+          setError('El Pasaporte del responsable debe contener entre 6 y 15 caracteres alfanuméricos.');
+          return;
+        }
+      }
       if (!responsableNombre.trim()) {
         setError('El nombre del responsable es obligatorio.');
         return;
@@ -127,9 +152,10 @@ export function EditarPacienteModal({ paciente, isOpen, onClose }: EditarPacient
           telefono: esMenor ? null : (telLimpio || null),
           direccion: direccion.trim() || null,
           dui: puedeAgregarDocumento && docLimpio ? docLimpio : undefined,
-          responsable_nombre: esMenor ? responsableNombre.trim() : undefined,
-          responsable_telefono: esMenor ? responsableTelefono.trim() : undefined,
-          responsable_parentesco: esMenor ? responsableParentesco : undefined,
+          responsable_nombre: esMenor && llenoResponsable ? responsableNombre.trim() : undefined,
+          responsable_documento: sinResponsable && llenoResponsable ? respDocLimpio : undefined,
+          responsable_telefono: esMenor && llenoResponsable ? responsableTelefono.trim() : undefined,
+          responsable_parentesco: esMenor && llenoResponsable ? responsableParentesco : undefined,
         },
       });
 
@@ -330,10 +356,17 @@ export function EditarPacienteModal({ paciente, isOpen, onClose }: EditarPacient
               <i className="ri-parent-line mr-1 text-sm" />
               Datos del Responsable Legal
             </p>
+            {sinResponsable && (
+              <p className="text-xs text-muted">
+                <i className="ri-information-line mr-1 text-brand-600" />
+                Se registró en una emergencia y aún no tiene responsable. Puedes completarlo ahora (con
+                todos sus datos) o más tarde.
+              </p>
+            )}
 
             <div>
               <label className="mb-1 block text-xs font-semibold text-ink">
-                Nombre Completo del Responsable <span className="text-danger">*</span>
+                Nombre Completo del Responsable {!sinResponsable && <span className="text-danger">*</span>}
               </label>
               <input
                 type="text"
@@ -345,21 +378,57 @@ export function EditarPacienteModal({ paciente, isOpen, onClose }: EditarPacient
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-muted">
-                  Documento del Responsable (No editable)
-                </label>
-                <input
-                  type="text"
-                  disabled
-                  value={
-                    paciente.responsable_documento
-                      ? `${paciente.responsable_tipo_documento ?? 'DUI'}: ${paciente.responsable_documento}`
-                      : 'No registrado'
-                  }
-                  className={CLASE_INPUT_DISABLED}
-                />
-              </div>
+              {sinResponsable ? (
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-ink">
+                    Documento del Responsable
+                  </label>
+                  <div className="flex gap-2">
+                    <select
+                      value={responsableTipoDoc}
+                      onChange={(e) => {
+                        setResponsableTipoDoc(e.target.value as TipoDocumento);
+                        setResponsableDoc('');
+                      }}
+                      className={`${CLASE_INPUT} w-28 shrink-0`}
+                      aria-label="Tipo de documento del responsable"
+                    >
+                      <option value="DUI">DUI</option>
+                      <option value="PASAPORTE">Pasaporte</option>
+                    </select>
+                    <input
+                      type="text"
+                      value={responsableDoc}
+                      onChange={(e) =>
+                        setResponsableDoc(
+                          responsableTipoDoc === 'DUI'
+                            ? formatearDui(e.target.value)
+                            : e.target.value.toUpperCase().replace(/[^A-Za-z0-9]/g, ''),
+                        )
+                      }
+                      placeholder={responsableTipoDoc === 'DUI' ? '00000000-0' : 'A12345678'}
+                      maxLength={responsableTipoDoc === 'DUI' ? 10 : 15}
+                      className={CLASE_INPUT}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-muted">
+                    Documento del Responsable (No editable)
+                  </label>
+                  <input
+                    type="text"
+                    disabled
+                    value={
+                      paciente.responsable_documento
+                        ? `${paciente.responsable_tipo_documento ?? 'DUI'}: ${paciente.responsable_documento}`
+                        : 'No registrado'
+                    }
+                    className={CLASE_INPUT_DISABLED}
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="mb-1 block text-xs font-semibold text-ink">

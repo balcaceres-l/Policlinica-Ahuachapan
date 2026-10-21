@@ -95,7 +95,11 @@ export function MiHorarioPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <Button icon="ri-edit-2-line" onClick={() => setEditandoHorario(true)} disabled={!medicoId}>
+          <Button
+            icon="ri-edit-2-line"
+            onClick={() => setEditandoHorario(true)}
+            disabled={!medicoId || isLoading}
+          >
             Editar mi horario
           </Button>
           <Button

@@ -5,6 +5,7 @@ import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { useDesplazarAgenda } from '@/hooks/cita/useCitas';
 import { extraerMensajeError } from '@/lib/apiError';
+import type { CitaSinEspacio } from '@/types/cita.types';
 
 interface DesplazarAgendaModalProps {
   isOpen: boolean;
@@ -32,8 +33,16 @@ export function DesplazarAgendaModal({
   const [minutos, setMinutos] = useState(30);
   const [desdeHora, setDesdeHora] = useState('');
   const [error, setError] = useState<string | null>(null);
+  /** Citas que no se movieron por pasar de las 11 p. m.: recepción debe verlas antes de cerrar. */
+  const [sinEspacio, setSinEspacio] = useState<CitaSinEspacio[] | null>(null);
 
   const desplazar = useDesplazarAgenda();
+
+  const cerrar = () => {
+    setSinEspacio(null);
+    setError(null);
+    onClose();
+  };
 
   const handleConfirmar = async () => {
     setError(null);
@@ -58,21 +67,27 @@ export function DesplazarAgendaModal({
       });
 
       const total = resultado.citas.length;
-      if (total === 0) {
-        toast('No había citas pendientes que desplazar.');
-      } else {
+      if (total > 0) {
         toast.success(`${total} cita(s) desplazada(s) ${minutos} minutos.`);
+      } else if (resultado.citasSinEspacio.length === 0) {
+        toast('No había citas pendientes que desplazar.');
       }
 
       if (resultado.fueraDeHorario.length > 0) {
         toast(
-          `${resultado.fueraDeHorario.length} cita(s) quedaron fuera del horario del médico. ` +
-            'Revisa si hay que reprogramarlas.',
+          `${resultado.fueraDeHorario.length} cita(s) quedaron fuera del horario del médico: ` +
+            'aparecen marcadas en la agenda.',
           { icon: '⚠️', duration: 6000 },
         );
       }
 
-      onClose();
+      // Las que no caben antes de las 11 p. m. no se movieron: se muestran para reagendarlas o cancelarlas.
+      if (resultado.citasSinEspacio.length > 0) {
+        setSinEspacio(resultado.citasSinEspacio);
+        return;
+      }
+
+      cerrar();
     } catch (err) {
       setError(extraerMensajeError(err, 'No se pudo desplazar la agenda.'));
     }
@@ -81,25 +96,54 @@ export function DesplazarAgendaModal({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={cerrar}
       title="Médico con atraso"
       subtitle="Corre las citas pendientes conservando la duración de cada una."
       size="md"
       footer={
-        <>
-          <Button variant="secondary" onClick={onClose} disabled={desplazar.isPending}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleConfirmar}
-            loading={desplazar.isPending}
-            icon="ri-time-line"
-          >
-            Desplazar citas
-          </Button>
-        </>
+        sinEspacio ? (
+          <Button onClick={cerrar}>Entendido</Button>
+        ) : (
+          <>
+            <Button variant="secondary" onClick={cerrar} disabled={desplazar.isPending}>
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmar} loading={desplazar.isPending} icon="ri-time-line">
+              Desplazar citas
+            </Button>
+          </>
+        )
       }
     >
+      {sinEspacio ? (
+        <div className="space-y-3">
+          <div className="rounded-field border border-danger/30 bg-danger-soft p-3 text-sm text-danger">
+            <p className="font-semibold">
+              <i className="ri-error-warning-line mr-1 align-middle" />
+              {sinEspacio.length === 1
+                ? '1 cita no cabe antes de las 11 p. m.'
+                : `${sinEspacio.length} citas no caben antes de las 11 p. m.`}
+            </p>
+            <p className="mt-1 text-xs">
+              No se movieron y siguen en su hora original. Contacta al paciente para reagendarla o,
+              si ya no la quiere, cancélala. Quedan marcadas en la agenda como citas que chocan con otra.
+            </p>
+          </div>
+          <ul className="divide-y divide-line rounded-field border border-line">
+            {sinEspacio.map((c) => (
+              <li key={c.id} className="flex items-center gap-3 p-3">
+                <span className="w-28 shrink-0 text-sm font-bold text-ink">
+                  {c.hora_inicio} - {c.hora_fin}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-ink">{c.pacienteNombre}</p>
+                  <p className="text-xs text-muted">Exp: {c.pacienteExpediente}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
       <div className="space-y-4">
         {error && (
           <div className="rounded-field border border-danger/30 bg-danger-soft p-3 text-xs text-danger">
@@ -166,10 +210,12 @@ export function DesplazarAgendaModal({
         </div>
 
         <p className="rounded-field border border-line bg-canvas p-3 text-xs text-muted">
-          Solo se mueven las citas agendadas y en espera. Las ya atendidas o canceladas no
-          se tocan. Si alguna queda fuera de la jornada, se desplaza igual y se avisa.
+          Solo se mueven las citas agendadas y en espera. Las ya atendidas o canceladas no se
+          tocan. Si alguna queda fuera del horario del médico, se corre igual y queda marcada. Las
+          que terminarían después de las 11 p. m. no se mueven: hay que reagendarlas o cancelarlas.
         </p>
       </div>
+      )}
     </Modal>
   );
 }
