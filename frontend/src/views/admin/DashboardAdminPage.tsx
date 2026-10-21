@@ -68,15 +68,14 @@ export const DashboardAdminPage: React.FC = () => {
     porcentaje: esp.porcentaje,
   }));
 
-  // Adaptar top médicos para TopListaCard
+  // Adaptar top médicos para TopListaCard (solo consultas atendidas, sin montos individuales)
   const maxConsultas = Math.max(...top_medicos.map((m) => m.consultas_atendidas), 1);
   const itemsTopMedicos: ItemTopLista[] = top_medicos.map((m) => ({
     id: m.id,
     titulo: m.nombre_completo,
     badge: m.jvpm ? `JVPM ${m.jvpm}` : undefined,
-    valor: `$${m.total_ingresos.toFixed(2)}`,
-    subtitulo: `${m.consultas_atendidas} consultas atendidas`,
-    etiquetaValor: 'USD',
+    valor: m.consultas_atendidas,
+    etiquetaValor: m.consultas_atendidas === 1 ? 'consulta' : 'consultas',
     porcentaje: Math.round((m.consultas_atendidas / maxConsultas) * 100),
   }));
 
@@ -195,10 +194,10 @@ export const DashboardAdminPage: React.FC = () => {
           />
 
           <TopListaCard
-            titulo="Atención por Médico"
-            subtitulo="Consultas atendidas y recaudación"
+            titulo="Médicos con Mayor Actividad"
+            subtitulo="Volumen de consultas atendidas"
             items={itemsTopMedicos}
-            icono="ri-medal-line"
+            icono="ri-user-star-line"
             mensajeVacio="No hay consultas finalizadas en este periodo."
           />
         </div>

@@ -96,18 +96,16 @@ class DashboardController extends Controller
                 'porcentaje' => $totalCitas > 0 ? round(((int) $esp->total / $totalCitas) * 100, 1) : 0,
             ]);
 
-        // 5. Médicos con mayor volumen de atenciones
+        // 5. Médicos con mayor volumen de atenciones (solo volumen de consultas, sin montos individuales)
         $topMedicos = DB::table('cita')
             ->join('users', 'cita.id_medico', '=', 'users.id')
-            ->leftJoin('consulta', 'cita.id_cita', '=', 'consulta.id_cita')
             ->whereBetween('cita.fecha', [$desde, $hasta])
             ->where('cita.estado', 'ATENDIDA')
             ->select(
                 'users.id',
                 'users.nombre_completo',
                 'users.jvpm',
-                DB::raw('count(cita.id_cita) as consultas_atendidas'),
-                DB::raw('COALESCE(SUM(COALESCE(consulta.total, consulta.precio, 0)), 0) as total_ingresos')
+                DB::raw('count(cita.id_cita) as consultas_atendidas')
             )
             ->groupBy('users.id', 'users.nombre_completo', 'users.jvpm')
             ->orderByDesc('consultas_atendidas')
@@ -118,7 +116,6 @@ class DashboardController extends Controller
                 'nombre_completo' => $m->nombre_completo,
                 'jvpm' => $m->jvpm,
                 'consultas_atendidas' => (int) $m->consultas_atendidas,
-                'total_ingresos' => (float) $m->total_ingresos,
             ]);
 
         // 6. Tendencia diaria (últimos 7 a 14 días según el rango)

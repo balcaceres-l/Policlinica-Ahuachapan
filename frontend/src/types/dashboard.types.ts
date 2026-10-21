@@ -32,7 +32,6 @@ export interface MedicoRendimiento {
   nombre_completo: string;
   jvpm: string | null;
   consultas_atendidas: number;
-  total_ingresos: number;
 }
 
 export interface DiagnosticoFrecuente {
