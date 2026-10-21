@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDashboardAdmin } from '@/hooks/dashboard/useDashboard';
-import type { PeriodoFiltro } from '@/types/dashboard.types';
+import type { PeriodoFiltro, TipoAgrupacion } from '@/types/dashboard.types';
 import KpiCard from '@/components/dashboard/KpiCard';
 import SelectorPeriodo from '@/components/dashboard/SelectorPeriodo';
 import GraficoTendencia from '@/components/dashboard/GraficoTendencia';
@@ -11,11 +11,13 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 export const DashboardAdminPage: React.FC = () => {
   const [periodo, setPeriodo] = useState<PeriodoFiltro>('mes_actual');
+  const [agrupacion, setAgrupacion] = useState<TipoAgrupacion>('auto');
   const [desde, setDesde] = useState<string | undefined>();
   const [hasta, setHasta] = useState<string | undefined>();
 
   const { data, isLoading, isError, refetch } = useDashboardAdmin({
     periodo,
+    agrupacion,
     desde,
     hasta,
   });
@@ -176,8 +178,17 @@ export const DashboardAdminPage: React.FC = () => {
         <div className="space-y-6 lg:col-span-2">
           <GraficoTendencia
             titulo="Tendencia de Citas"
-            subtitulo="Comportamiento diario de citas atendidas y canceladas"
+            subtitulo={
+              data.agrupacion === 'mes'
+                ? 'Comportamiento mensual de citas atendidas y canceladas'
+                : data.agrupacion === 'ano'
+                  ? 'Comportamiento anual de citas atendidas y canceladas'
+                  : 'Comportamiento diario de citas atendidas y canceladas'
+            }
             datos={tendencia}
+            agrupacionActiva={data.agrupacion}
+            agrupacionSeleccionada={agrupacion}
+            onCambiarAgrupacion={setAgrupacion}
           />
 
           <EstadoCitasGrid estados={citas_por_estado} />

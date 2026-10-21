@@ -5,6 +5,8 @@ export type PeriodoFiltro =
   | 'ano_actual'
   | 'personalizado';
 
+export type TipoAgrupacion = 'auto' | 'dia' | 'mes' | 'ano';
+
 export interface RangoPeriodo {
   desde: string;
   hasta: string;
@@ -12,9 +14,11 @@ export interface RangoPeriodo {
 }
 
 export interface TendenciaDiaria {
-  fecha: string;
+  clave?: string;
+  fecha?: string;
   dia: string;
   etiqueta: string;
+  subtitulo?: string;
   atendidas: number;
   canceladas: number;
   total: number;
@@ -62,6 +66,7 @@ export interface DashboardAdminData {
   especialidades_demandadas: EspecialidadDemandada[];
   top_medicos: MedicoRendimiento[];
   tendencia: TendenciaDiaria[];
+  agrupacion: 'dia' | 'mes' | 'ano';
 }
 
 export interface DashboardMedicoData {
@@ -87,10 +92,12 @@ export interface DashboardMedicoData {
   };
   top_diagnosticos_cie11: DiagnosticoFrecuente[];
   tendencia: TendenciaDiaria[];
+  agrupacion: 'dia' | 'mes' | 'ano';
 }
 
 export interface ParametrosFiltroDashboard {
   periodo?: PeriodoFiltro;
+  agrupacion?: TipoAgrupacion;
   desde?: string;
   hasta?: string;
 }

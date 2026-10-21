@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDashboardMedico } from '@/hooks/dashboard/useDashboard';
-import type { PeriodoFiltro } from '@/types/dashboard.types';
+import type { PeriodoFiltro, TipoAgrupacion } from '@/types/dashboard.types';
 import KpiCard from '@/components/dashboard/KpiCard';
 import SelectorPeriodo from '@/components/dashboard/SelectorPeriodo';
 import GraficoTendencia from '@/components/dashboard/GraficoTendencia';
@@ -11,11 +11,13 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 export const DashboardMedicoPage: React.FC = () => {
   const [periodo, setPeriodo] = useState<PeriodoFiltro>('mes_actual');
+  const [agrupacion, setAgrupacion] = useState<TipoAgrupacion>('auto');
   const [desde, setDesde] = useState<string | undefined>();
   const [hasta, setHasta] = useState<string | undefined>();
 
   const { data, isLoading, isError, refetch } = useDashboardMedico({
     periodo,
+    agrupacion,
     desde,
     hasta,
   });
@@ -194,9 +196,18 @@ export const DashboardMedicoPage: React.FC = () => {
         {/* Tendencia y Distribución de sus Citas */}
         <div className="space-y-6 lg:col-span-2">
           <GraficoTendencia
-            titulo="Mis Consultas por Día"
-            subtitulo="Actividad diaria de atención a pacientes"
+            titulo="Mis Consultas"
+            subtitulo={
+              data.agrupacion === 'mes'
+                ? 'Actividad mensual de atención a pacientes'
+                : data.agrupacion === 'ano'
+                  ? 'Actividad anual de atención a pacientes'
+                  : 'Actividad diaria de atención a pacientes'
+            }
             datos={tendencia}
+            agrupacionActiva={data.agrupacion}
+            agrupacionSeleccionada={agrupacion}
+            onCambiarAgrupacion={setAgrupacion}
           />
 
           <EstadoCitasGrid estados={citas_por_estado} />
