@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Button from '@/components/ui/Button';
 import useAuth from '@/hooks/auth/useAuth';
@@ -101,9 +101,17 @@ export function LoginPage() {
           </div>
 
           <div className="mb-5">
-            <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-ink">
-              Contraseña
-            </label>
+            <div className="mb-1.5 flex items-center justify-between">
+              <label htmlFor="password" className="block text-sm font-medium text-ink">
+                Contraseña
+              </label>
+              <Link
+                to="/recuperar-password"
+                className="text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
             <input
               id="password"
               type="password"

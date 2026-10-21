@@ -19,6 +19,8 @@ use App\Http\Controllers\Api\UsuarioController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:login');
+Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:6,1');
+Route::post('/auth/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:6,1');
 
 // HU-44 — proxy hacia la API de la OMS para la herramienta de búsqueda CIE-11. Se
 // autentica con el pase de /cie11/pase (no con Sanctum) y agrega el token de la OMS.

@@ -2,6 +2,8 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import AppLayout from "@/components/layout/AppLayout";
 import LoginPage from "@/views/auth/LoginPage";
+import RecuperarPasswordPage from "@/views/auth/RecuperarPasswordPage";
+import RestablecerPasswordPage from "@/views/auth/RestablecerPasswordPage";
 import DashboardAdminPage from "@/views/admin/DashboardAdminPage";
 import DashboardMedicoPage from "@/views/medico/DashboardMedicoPage";
 import AsociarEspecialidadesPage from "@/views/admin/AsociarEspecialidadesPage";
@@ -29,6 +31,8 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/recuperar-password" element={<RecuperarPasswordPage />} />
+        <Route path="/restablecer-password" element={<RestablecerPasswordPage />} />
 
         {/* Solo administrador — RF-04..RF-09 */}
         <Route element={<ProtectedRoute roles={["ADMINISTRADOR"]} />}>
