@@ -50,8 +50,11 @@ export function HorariosPage() {
     0,
   );
 
-  // Un solo punto de entrada: el editor siempre abre la semana completa.
-  const abrirEditor = () => setModalAbierto(true);
+  // Un solo punto de entrada: el editor siempre abre la semana completa. No se abre mientras
+  // el horario carga: se vería como "sin horario" cuando en realidad aún no llegó.
+  const abrirEditor = () => {
+    if (!cargandoHorarios) setModalAbierto(true);
+  };
 
   const columnas: Array<Column<HorarioMedico>> = [
     {
@@ -191,15 +194,23 @@ export function HorariosPage() {
                 <Button
                   icon={horarios.length > 0 ? "ri-pencil-line" : "ri-calendar-schedule-line"}
                   onClick={abrirEditor}
+                  disabled={cargandoHorarios}
+                  loading={cargandoHorarios}
                 >
-                  {horarios.length > 0 ? "Editar horario" : "Configurar horario"}
+                  {cargandoHorarios
+                    ? 'Cargando horario...'
+                    : horarios.length > 0
+                      ? 'Editar horario'
+                      : 'Configurar horario'}
                 </Button>
               </header>
 
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <p className="text-sm font-bold text-ink">
                   Bloques de atención{' '}
-                  <span className="font-normal text-muted">({horarios.length})</span>
+                  <span className="font-normal text-muted">
+                    ({cargandoHorarios ? '...' : horarios.length})
+                  </span>
                 </p>
                 {horarios.length > 0 && (
                   <p className="text-xs text-muted">

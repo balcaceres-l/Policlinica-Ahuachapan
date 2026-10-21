@@ -26,6 +26,8 @@ export interface BloqueDisponible {
 export interface Disponibilidad {
   bloqueado: boolean;
   bloques: BloqueDisponible[];
+  /** Hora en que termina la última cita del día; un sobrecupo se agenda desde ahí. */
+  ultimaCitaFin: string | null;
 }
 
 export const getCitas = async (filtros?: FiltrosCitasQuery): Promise<Cita[]> => {

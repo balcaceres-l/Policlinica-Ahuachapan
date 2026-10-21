@@ -526,6 +526,88 @@ class PacienteTest extends TestCase
             ->assertJsonPath('data.dui', 'AB123456');
     }
 
+    public function test_registro_rapido_de_emergencia_solo_pide_nombre_y_fecha_de_nacimiento(): void
+    {
+        // Adulto: sin documento ni teléfono, queda pendiente.
+        $adulto = $this->actingAs($this->recepcion)
+            ->postJson('/api/pacientes', [
+                'nombre_completo' => 'Paciente de Emergencia',
+                'fecha_nacimiento' => now()->subYears(40)->toDateString(),
+                'registro_rapido' => true,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.datos_pendientes', true)
+            ->assertJsonPath('data.documento_pendiente', true)
+            ->assertJsonPath('data.dui', null)
+            ->assertJsonPath('data.es_menor_edad', false);
+
+        // Menor: sin responsable, queda pendiente.
+        $this->actingAs($this->recepcion)
+            ->postJson('/api/pacientes', [
+                'nombre_completo' => 'Niña de Emergencia',
+                'fecha_nacimiento' => now()->subYears(6)->toDateString(),
+                'registro_rapido' => true,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.datos_pendientes', true)
+            ->assertJsonPath('data.responsable_pendiente', true)
+            ->assertJsonPath('data.es_menor_edad', true);
+
+        // Sin el registro rápido las reglas de siempre siguen vigentes.
+        $this->actingAs($this->recepcion)
+            ->postJson('/api/pacientes', [
+                'nombre_completo' => 'Sin Documento',
+                'fecha_nacimiento' => now()->subYears(40)->toDateString(),
+            ])
+            ->assertStatus(422);
+
+        // Sigue pendiente aunque la recepcionista lo edite sin agregar el documento…
+        $id = $adulto->json('data.id');
+        $this->actingAs($this->recepcion)
+            ->putJson("/api/pacientes/{$id}", ['nombre_completo' => 'Paciente de Emergencia', 'direccion' => 'Calle 1'])
+            ->assertOk()
+            ->assertJsonPath('data.datos_pendientes', true);
+
+        // …y deja de estarlo cuando ya tiene el documento.
+        $this->actingAs($this->recepcion)
+            ->putJson("/api/pacientes/{$id}", ['nombre_completo' => 'Paciente de Emergencia', 'dui' => '01111111-1'])
+            ->assertOk()
+            ->assertJsonPath('data.datos_pendientes', false)
+            ->assertJsonPath('data.documento_pendiente', false);
+    }
+
+    public function test_se_agrega_el_responsable_a_un_menor_registrado_en_emergencia(): void
+    {
+        $id = $this->actingAs($this->recepcion)
+            ->postJson('/api/pacientes', [
+                'nombre_completo' => 'Niño de Emergencia',
+                'fecha_nacimiento' => now()->subYears(4)->toDateString(),
+                'registro_rapido' => true,
+            ])
+            ->assertCreated()->json('data.id');
+
+        // Los datos del responsable van completos o no van.
+        $this->actingAs($this->recepcion)
+            ->putJson("/api/pacientes/{$id}", [
+                'nombre_completo' => 'Niño de Emergencia',
+                'responsable_nombre' => 'Madre del Niño',
+            ])
+            ->assertStatus(422);
+
+        $this->actingAs($this->recepcion)
+            ->putJson("/api/pacientes/{$id}", [
+                'nombre_completo' => 'Niño de Emergencia',
+                'responsable_nombre' => 'Madre del Niño',
+                'responsable_documento' => '02222222-2',
+                'responsable_telefono' => '7000-5555',
+                'responsable_parentesco' => 'Madre',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.responsable_pendiente', false)
+            ->assertJsonPath('data.responsable_nombre', 'Madre del Niño')
+            ->assertJsonPath('data.datos_pendientes', false);
+    }
+
     public function test_el_documento_agregado_a_un_nuevo_adulto_no_puede_repetirse(): void
     {
         paciente::create([

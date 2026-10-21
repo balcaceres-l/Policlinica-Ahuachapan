@@ -27,7 +27,8 @@ export function ConsultaInmediataModal({
   onRegistrarNuevo,
 }: ConsultaInmediataModalProps) {
   const navigate = useNavigate();
-  const { data: especialidades = [] } = useEspecialidadesDisponibles();
+  const { data: especialidades = [], isLoading: cargandoEspecialidades } =
+    useEspecialidadesDisponibles();
   const iniciarMutation = useConsultaInmediata();
 
   const [pacienteId, setPacienteId] = useState(pacienteInicialId ?? '');
@@ -89,7 +90,12 @@ export function ConsultaInmediataModal({
           <Button variant="secondary" onClick={cerrar} disabled={iniciarMutation.isPending}>
             Cancelar
           </Button>
-          <Button icon="ri-stethoscope-line" onClick={iniciar} loading={iniciarMutation.isPending}>
+          <Button
+            icon="ri-stethoscope-line"
+            onClick={iniciar}
+            loading={iniciarMutation.isPending}
+            disabled={cargandoEspecialidades}
+          >
             Iniciar consulta
           </Button>
         </>

@@ -45,6 +45,8 @@ class PacienteResource extends JsonResource
             'estado' => $this->estado ?? 'ACTIVO',
             // Adulto sin documento: se registró de menor y falta agregarlo.
             'documento_pendiente' => ! $this->es_menor_edad && ! $this->dui,
+            // Menor registrado en emergencia: falta su responsable.
+            'responsable_pendiente' => $this->es_menor_edad && ! $this->id_responsable,
             'datos_pendientes' => (bool) $this->datos_pendientes,
             'datosPendientes' => (bool) $this->datos_pendientes,
             'id_responsable' => $this->id_responsable,

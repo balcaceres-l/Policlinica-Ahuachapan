@@ -1,19 +1,21 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 interface InfoTooltipProps {
   titulo: string;
-  children: string;
+  children: ReactNode;
   className?: string;
+  /** `sm` para acompañar una etiqueta de formulario. */
+  tamano?: 'sm' | 'md';
 }
 
 /**
  * Indicador "!" con una explicación breve. Abre al pasar el cursor, al enfocar con
  * teclado o al tocar, y no depende del `title` nativo del navegador.
  */
-export function InfoTooltip({ titulo, children, className }: InfoTooltipProps) {
+export function InfoTooltip({ titulo, children, className, tamano = 'md' }: InfoTooltipProps) {
   const boton = useRef<HTMLButtonElement>(null);
-  const [posicion, setPosicion] = useState<{ top: number; left: number } | null>(null);
+  const [posicion, setPosicion] = useState<{ top?: number; bottom?: number; left: number } | null>(null);
   const abierto = posicion !== null;
 
   // Posición fija y acotada a la ventana: así no se corta contra el menú lateral ni el borde derecho.
@@ -23,7 +25,13 @@ export function InfoTooltip({ titulo, children, className }: InfoTooltipProps) {
     const ancho = 288;
     const margen = 16;
     const left = Math.min(Math.max(caja.left, margen), window.innerWidth - ancho - margen);
-    setPosicion({ top: caja.bottom + 8, left });
+    // Si abajo no hay lugar para la tarjeta, se abre hacia arriba del indicador.
+    const espacioAbajo = window.innerHeight - caja.bottom;
+    setPosicion(
+      espacioAbajo < 300 && caja.top > espacioAbajo
+        ? { bottom: window.innerHeight - caja.top + 8, left }
+        : { top: caja.bottom + 8, left },
+    );
   };
   const cerrar = () => setPosicion(null);
 
@@ -42,7 +50,10 @@ export function InfoTooltip({ titulo, children, className }: InfoTooltipProps) {
         onFocus={abrir}
         onBlur={cerrar}
         onKeyDown={(e) => e.key === 'Escape' && cerrar()}
-        className="flex size-7 cursor-pointer items-center justify-center rounded-full border border-line bg-surface text-sm font-bold text-brand-600 transition-colors hover:border-brand-600 hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-600/15"
+        className={cn(
+          'flex cursor-pointer items-center justify-center rounded-full border border-line bg-surface font-bold text-brand-600 transition-colors hover:border-brand-600 hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-600/15',
+          tamano === 'sm' ? 'size-5 text-[11px]' : 'size-7 text-sm',
+        )}
       >
         !
       </button>
@@ -50,7 +61,7 @@ export function InfoTooltip({ titulo, children, className }: InfoTooltipProps) {
       {posicion && (
         <span
           role="tooltip"
-          style={{ top: posicion.top, left: posicion.left }}
+          style={{ top: posicion.top, bottom: posicion.bottom, left: posicion.left }}
           className="fixed z-50 w-72 rounded-card border border-line bg-surface p-4 text-left shadow-pop"
         >
           <span className="mb-1 flex items-center gap-1.5 text-sm font-bold text-ink">

@@ -73,7 +73,7 @@ function FormularioReprogramar({ cita, onClose }: FormularioProps) {
       return;
     }
     const horaActual = obtenerHoraLocal();
-    if (nuevaFecha === hoyStr && cita.tipo_cita === 'REGULAR' && nuevaHoraInicio < horaActual) {
+    if (nuevaFecha === hoyStr && nuevaHoraInicio < horaActual) {
       setError(`No se puede reprogramar para las ${nuevaHoraInicio} porque esa hora ya transcurrió hoy (hora actual: ${horaActual}).`);
       return;
     }
@@ -236,6 +236,7 @@ function FormularioReprogramar({ cita, onClose }: FormularioProps) {
               <input
                 type="time"
                 value={nuevaHoraInicio}
+                min={nuevaFecha === obtenerFechaLocal() ? obtenerHoraLocal() : undefined}
                 onChange={(e) => handleHoraInicioChange(e.target.value)}
                 className={CLASE_INPUT}
               />

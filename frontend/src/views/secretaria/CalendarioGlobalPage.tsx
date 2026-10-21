@@ -1,14 +1,24 @@
 import { useState, useMemo } from 'react';
 import AgendarCitaModal from '@/components/cita/AgendarCitaModal';
-import Badge from '@/components/ui/Badge';
+import CitasAfectadasModal, {
+  type BloqueoGestionable,
+} from '@/components/bloqueo/CitasAfectadasModal';
+import CancelarCitaModal from '@/components/cita/CancelarCitaModal';
+import CitaFilaCompacta from '@/components/cita/CitaFilaCompacta';
+import ReprogramarCitaModal from '@/components/cita/ReprogramarCitaModal';
 import Button from '@/components/ui/Button';
 import EmptyState from '@/components/ui/EmptyState';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useBloqueos } from '@/hooks/bloqueo/useBloqueos';
 import { useCitas } from '@/hooks/cita/useCitas';
 import { useMedicos } from '@/hooks/usuario/useUsuarios';
-import { lapsoDeBloqueo } from '@/lib/bloqueo';
-import { ESTADO_CITA_LABEL, TIPO_CITA_LABEL, type EstadoCita } from '@/types/cita.types';
+import { bloqueoDeCita, lapsoDeBloqueo } from '@/lib/bloqueo';
+import {
+  COLOR_ESTADO_CITA,
+  ESTADO_CITA_LABEL,
+  type Cita,
+  type EstadoCita,
+} from '@/types/cita.types';
 import { getIniciales, jvpmDe } from '@/lib/utils';
 
 type ModoVista = 'dia' | 'semana' | 'mes';
@@ -45,6 +55,9 @@ export function CalendarioGlobalPage() {
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoCita | 'TODOS'>('TODOS');
 
   const [modalAgendar, setModalAgendar] = useState(false);
+  const [citaAReagendar, setCitaAReagendar] = useState<Cita | null>(null);
+  const [citaACancelar, setCitaACancelar] = useState<Cita | null>(null);
+  const [bloqueoAGestionar, setBloqueoAGestionar] = useState<BloqueoGestionable | null>(null);
   const [medicoSeleccionadoParaCita, setMedicoSeleccionadoParaCita] = useState<string | undefined>(
     undefined,
   );
@@ -52,10 +65,11 @@ export function CalendarioGlobalPage() {
   const { data: medicos = [], isLoading: cargandoMedicos } = useMedicos();
 
   // En modo 'dia' consultamos por fecha específica; en semana/mes consultamos todas para distribuirlas
-  const { data: citas = [] } = useCitas(
+  const { data: citas = [], isLoading: cargandoCitas } = useCitas(
     modoVista === 'dia' ? { fecha: fechaSeleccionada } : undefined,
   );
-  const { data: bloqueos = [] } = useBloqueos();
+  const { data: bloqueos = [], isLoading: cargandoBloqueos } = useBloqueos();
+  const cargandoAgenda = cargandoCitas || cargandoBloqueos;
 
   const medicosFiltrados = useMemo(() => {
     const lista = medicos;
@@ -267,6 +281,15 @@ export function CalendarioGlobalPage() {
       {/* ============================================================ */}
       {modoVista === 'dia' && (
         <>
+          <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted">
+            <span className="font-semibold text-ink">Estado de la cita:</span>
+            {(['AGENDADA', 'EN_ESPERA', 'EN_ATENCION', 'ATENDIDA', 'CANCELADA'] as const).map((e) => (
+              <span key={e} className="inline-flex items-center gap-1.5">
+                <span className={`h-4 w-1.5 rounded-full ${COLOR_ESTADO_CITA[e].fondo}`} />
+                {ESTADO_CITA_LABEL[e]}
+              </span>
+            ))}
+          </div>
           {medicosFiltrados.length === 0 ? (
             <div className="rounded-card border border-line bg-surface shadow-card">
               <EmptyState
@@ -300,7 +323,11 @@ export function CalendarioGlobalPage() {
                             <p className="truncate text-xs font-bold text-ink">
                               {medico.nombreCompleto}
                             </p>
-                            <p className="truncate text-[11px] text-muted">{jvpmDe(medico)}</p>
+                            <p className="truncate text-[11px] text-muted">
+                              {jvpmDe(medico)}
+                              {citasMedico.length > 0 &&
+                                ` · ${citasMedico.length} ${citasMedico.length === 1 ? 'cita' : 'citas'}`}
+                            </p>
                           </div>
                         </div>
                         <button
@@ -315,90 +342,46 @@ export function CalendarioGlobalPage() {
                     </div>
 
                     {/* Lista de citas o estado de agenda */}
-                    <div className="flex-1 p-3 space-y-2.5 min-h-55">
-                      {bloqueosDelDia.map((bloqueo) => (
+                    <div className="max-h-120 min-h-55 flex-1 space-y-1.5 overflow-y-auto p-3">
+                      {!cargandoAgenda && bloqueosDelDia.map((bloqueo) => (
                         <div
                           key={bloqueo.id}
-                          className="flex flex-col items-center justify-center rounded-field border border-dashed border-danger/40 bg-danger-soft/40 p-4 text-center"
+                          className="flex items-start gap-2 rounded-field border border-dashed border-danger/40 bg-danger-soft/40 px-2 py-1.5 text-left"
                         >
-                          <i className="ri-calendar-close-line text-2xl text-danger mb-1" />
-                          <p className="text-xs font-bold text-danger">
-                            {bloqueo.tipo_bloqueo === 'PARCIAL'
-                              ? `Bloqueo Parcial (${lapsoDeBloqueo(bloqueo)})`
-                              : 'Agenda Bloqueada (Día Completo)'}
-                          </p>
-                          <p className="mt-1 text-[11px] text-danger/80">{bloqueo.motivo}</p>
+                          <i className="ri-calendar-close-line mt-0.5 text-base text-danger" aria-hidden="true" />
+                          <div className="min-w-0">
+                            <p className="text-[11px] font-bold leading-tight text-danger">
+                              {bloqueo.tipo_bloqueo === 'PARCIAL'
+                                ? `Bloqueo parcial · ${lapsoDeBloqueo(bloqueo)}`
+                                : 'Agenda bloqueada · día completo'}
+                            </p>
+                            <p className="truncate text-[10px] text-danger/80" title={bloqueo.motivo}>
+                              {bloqueo.motivo}
+                            </p>
+                          </div>
                         </div>
                       ))}
 
-                      {citasMedico.length === 0 && bloqueosDelDia.length === 0 ? (
+                      {cargandoAgenda ? (
+                        <div className="flex h-full flex-col items-center justify-center gap-1 p-6 text-center text-muted">
+                          <i className="ri-loader-4-line animate-spin text-2xl" aria-hidden="true" />
+                          <p className="text-xs font-medium">Cargando citas...</p>
+                        </div>
+                      ) : citasMedico.length === 0 && bloqueosDelDia.length === 0 ? (
                         <div className="flex h-full flex-col items-center justify-center rounded-field border border-dashed border-line p-6 text-center text-muted">
                           <i className="ri-calendar-check-line text-2xl opacity-40 mb-1" />
                           <p className="text-xs font-medium">Sin citas programadas</p>
                         </div>
                       ) : (
-                        citasMedico.map((cita) => {
-                          const esCancelada = cita.estado === 'CANCELADA';
-                          const esEmergencia = cita.tipo_cita === 'EMERGENCIA';
-
-                          return (
-                            <div
-                              key={cita.id}
-                              className={`rounded-field border p-2.5 transition-all text-xs ${
-                                esCancelada
-                                  ? 'border-line bg-canvas text-muted opacity-60'
-                                  : esEmergencia
-                                    ? 'border-danger/40 bg-danger-soft/30 text-ink'
-                                    : 'border-line bg-surface hover:border-brand-300'
-                              }`}
-                            >
-                              <div className="flex items-center justify-between mb-1">
-                                <span className="font-bold text-ink">
-                                  {cita.hora_inicio} - {cita.hora_fin}
-                                </span>
-                                <Badge
-                                  variant={
-                                    cita.estado === 'ATENDIDA'
-                                      ? 'success'
-                                      : cita.estado === 'EN_ESPERA'
-                                        ? 'info'
-                                        : cita.estado === 'CANCELADA'
-                                          ? 'default'
-                                          : 'royal'
-                                  }
-                                >
-                                  {ESTADO_CITA_LABEL[cita.estado]}
-                                </Badge>
-                              </div>
-                              <p className="font-semibold text-ink truncate">{cita.pacienteNombre}</p>
-                              <p className="text-[11px] text-muted">
-                                Exp: {cita.pacienteExpediente}
-                              </p>
-                              {cita.especialidadNombre && (
-                                <p className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-brand-700">
-                                  <i className="ri-stethoscope-line" />
-                                  <span className="truncate">{cita.especialidadNombre}</span>
-                                </p>
-                              )}
-                              {cita.afectada_por_bloqueo && cita.bloqueo && (
-                                <p
-                                  className="mt-1 inline-flex items-center gap-1 rounded bg-warning-soft px-1.5 py-0.5 text-[10px] font-bold text-warning"
-                                  title="Cae dentro de un bloqueo: recepción debe contactar al paciente."
-                                >
-                                  <i className="ri-alarm-warning-line" />
-                                  En bloqueo ({lapsoDeBloqueo(cita.bloqueo)})
-                                </p>
-                              )}
-                              {cita.tipo_cita !== 'REGULAR' && (
-                                <div className="mt-1">
-                                  <span className="inline-block rounded px-1.5 py-0.5 text-[10px] font-bold uppercase bg-warning-soft text-warning">
-                                    {TIPO_CITA_LABEL[cita.tipo_cita]}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })
+                        citasMedico.map((cita) => (
+                          <CitaFilaCompacta
+                            key={cita.id}
+                            cita={cita}
+                            onReagendar={setCitaAReagendar}
+                            onCancelar={setCitaACancelar}
+                            onCorrer={(c) => setBloqueoAGestionar(bloqueoDeCita(c))}
+                          />
+                        ))
                       )}
                     </div>
                   </div>
@@ -545,6 +528,23 @@ export function CalendarioGlobalPage() {
           </div>
         </div>
       )}
+
+      <ReprogramarCitaModal
+        cita={citaAReagendar}
+        isOpen={citaAReagendar !== null}
+        onClose={() => setCitaAReagendar(null)}
+      />
+
+      <CancelarCitaModal
+        cita={citaACancelar}
+        isOpen={citaACancelar !== null}
+        onClose={() => setCitaACancelar(null)}
+      />
+
+      <CitasAfectadasModal
+        bloqueo={bloqueoAGestionar}
+        onClose={() => setBloqueoAGestionar(null)}
+      />
 
       <AgendarCitaModal
         isOpen={modalAgendar}

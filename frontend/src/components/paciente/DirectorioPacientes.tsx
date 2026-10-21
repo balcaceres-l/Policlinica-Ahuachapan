@@ -81,9 +81,9 @@ export function DirectorioPacientes() {
   const deMedicos = pendientes.length - sinDocumento;
   const textoPendientes = [
     sinDocumento > 0 &&
-      `${sinDocumento} ${sinDocumento === 1 ? 'paciente cumplió' : 'pacientes cumplieron'} 18 años: falta su documento`,
+      `${sinDocumento} ${sinDocumento === 1 ? 'paciente sin documento' : 'pacientes sin documento'}: falta agregarlo`,
     deMedicos > 0 &&
-      `${deMedicos} ${deMedicos === 1 ? 'paciente registrado' : 'pacientes registrados'} por un médico: completar sus datos`,
+      `${deMedicos} ${deMedicos === 1 ? 'paciente con datos' : 'pacientes con datos'} por completar`,
   ]
     .filter(Boolean)
     .join('  ·  ');
@@ -117,15 +117,19 @@ export function DirectorioPacientes() {
             {p.documento_pendiente ? (
               <span
                 className="mt-1 inline-block"
-                title="Se registró de menor y ya cumplió 18 años. Edita el paciente para agregar su documento de identidad."
+                title="Falta su documento de identidad (se registró de menor y ya cumplió 18 años, o fue una emergencia). Edita el paciente para agregarlo."
               >
                 <Badge variant="warning">Documento pendiente</Badge>
               </span>
             ) : (
-              p.datos_pendientes && (
+              (p.datos_pendientes || p.responsable_pendiente) && (
                 <span
                   className="mt-1 inline-block"
-                  title="Lo registró un médico al atenderlo sin cita. Recepción debe completar su registro."
+                  title={
+                    p.responsable_pendiente
+                      ? 'Se registró en una emergencia y falta su responsable. Edita el paciente para completarlo.'
+                      : 'Lo registró un médico o fue una emergencia. Recepción debe completar su registro.'
+                  }
                 >
                   <Badge variant="warning">Datos pendientes</Badge>
                 </span>

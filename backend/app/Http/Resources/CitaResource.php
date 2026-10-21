@@ -22,6 +22,9 @@ class CitaResource extends JsonResource
             'hora_inicio' => substr((string) $this->hora_inicio, 0, 5),
             'hora_fin' => substr((string) $this->hora_fin, 0, 5),
             'tipo_cita' => $this->tipo_cita,
+            // Si se corrió (emergencia, bloqueo o atraso): por qué y a qué hora estaba antes.
+            'corrida_por' => $this->corrida_por,
+            'hora_inicio_original' => $this->hora_inicio_original ? substr((string) $this->hora_inicio_original, 0, 5) : null,
             'estado' => $this->estado,
             'motivo_cancelacion' => $this->motivo_cancelacion,
             'hora_llegada' => $this->hora_llegada?->toDateTimeString(),
@@ -34,6 +37,16 @@ class CitaResource extends JsonResource
             'consulta_id' => $this->whenLoaded('consulta', fn () => $this->consulta?->id_consulta),
             'consulta_precio' => $this->whenLoaded('consulta', fn () => $this->consulta?->precio !== null ? (float) $this->consulta->precio : null),
             'consulta_total' => $this->whenLoaded('consulta', fn () => $this->consulta?->total !== null ? (float) $this->consulta->total : null),
+            // Solo en los listados (AgendaService::marcarAfectadas): la cita regular pendiente
+            // quedó fuera del horario del médico, o choca con otra cita regular suya.
+            'fuera_de_horario' => $this->when(
+                array_key_exists('fuera_de_horario', $this->resource->getAttributes()),
+                fn () => (bool) $this->resource->getAttribute('fuera_de_horario'),
+            ),
+            'empalmada' => $this->when(
+                array_key_exists('empalmada', $this->resource->getAttributes()),
+                fn () => (bool) $this->resource->getAttribute('empalmada'),
+            ),
             'minutos_retraso' => $this->minutosDeRetraso(),
             'retrasada' => $this->minutosDeRetraso() > config('clinica.retraso_paciente_min'),
             // Solo en los listados, que resuelven el bloqueo con AgendaService::marcarAfectadas.

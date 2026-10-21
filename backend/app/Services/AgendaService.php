@@ -16,6 +16,12 @@ class AgendaService
     /** Minutos que dura un bloque cuando no se indica hora_fin. */
     public const DURACION_BLOQUE_MIN = 30;
 
+    /**
+     * Hora límite (en minutos desde la medianoche) hasta la que se puede correr una cita:
+     * 23:00. Una cita cuyo fin pasaría de ahí no se mueve; recepción la reagenda o la cancela.
+     */
+    public const LIMITE_NOCTURNO_MIN = 23 * 60;
+
     private const DIAS = [
         Carbon::MONDAY => 'LUNES',
         Carbon::TUESDAY => 'MARTES',
@@ -140,6 +146,95 @@ class AgendaService
             }
 
             $c->setRelation('bloqueoAfectante', $afecta);
+        }
+
+        $this->marcarEstadoDeHorario($citas);
+    }
+
+    /**
+     * Datos mínimos de las citas que no se pudieron correr (no caben antes de las 23:00),
+     * para que recepción vea de quiénes se trata sin otra consulta.
+     *
+     * @param  array<int, string>  $ids
+     * @return array<int, array{id: string, pacienteNombre: ?string, pacienteExpediente: ?string, hora_inicio: string, hora_fin: string}>
+     */
+    public function detalleSinEspacio(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        return cita::with('paciente')->whereIn('id_cita', $ids)->orderBy('hora_inicio')->get()
+            ->map(fn (cita $c) => [
+                'id' => $c->id_cita,
+                'pacienteNombre' => $c->paciente?->nombre_completo,
+                'pacienteExpediente' => $c->paciente?->numero_expediente,
+                'hora_inicio' => substr((string) $c->hora_inicio, 0, 5),
+                'hora_fin' => substr((string) $c->hora_fin, 0, 5),
+            ])->all();
+    }
+
+    /**
+     * Marca en cada cita regular pendiente si quedó fuera del horario del médico (por ejemplo
+     * tras correrla) o si choca con otra cita regular del mismo médico. Las emergencias,
+     * sobrecupos y consultas sin cita no dependen del horario. Si el médico no tiene ningún
+     * horario configurado no se marca nada: no hay jornada contra la cual comparar.
+     *
+     * @param  Collection<int, cita>  $citas
+     */
+    private function marcarEstadoDeHorario(Collection $citas): void
+    {
+        $pendiente = fn (cita $c) => $c->tipo_cita === 'REGULAR' && in_array($c->estado, ['AGENDADA', 'EN_ESPERA'], true);
+        $regulares = $citas->filter($pendiente);
+
+        $horarios = collect();
+        $mismas = collect();
+
+        if ($regulares->isNotEmpty()) {
+            $medicos = $regulares->pluck('id_medico')->unique()->values();
+            $fechas = $regulares->map(fn (cita $c) => $c->fecha->toDateString())->unique()->values();
+
+            $horarios = horario_medico::whereIn('id_medico', $medicos)->get()
+                ->groupBy(fn (horario_medico $h) => $h->id_medico);
+
+            // Todas las pendientes regulares de esos médicos y días: un choque se detecta
+            // aunque el listado esté filtrado por estado o por otro criterio.
+            $mismas = cita::where('tipo_cita', 'REGULAR')
+                ->whereIn('estado', ['AGENDADA', 'EN_ESPERA'])
+                ->whereIn('id_medico', $medicos)
+                ->whereDate('fecha', '>=', $fechas->min())
+                ->whereDate('fecha', '<=', $fechas->max())
+                ->get(['id_cita', 'id_medico', 'fecha', 'hora_inicio', 'hora_fin'])
+                ->groupBy(fn (cita $c) => $c->id_medico.'|'.$c->fecha->toDateString());
+        }
+
+        foreach ($citas as $c) {
+            $fuera = false;
+            $choca = false;
+
+            if ($pendiente($c)) {
+                $ini = substr((string) $c->hora_inicio, 0, 5);
+                $fin = substr((string) $c->hora_fin, 0, 5);
+                $dia = self::DIAS[$c->fecha->dayOfWeek];
+                $delMedico = $horarios[$c->id_medico] ?? collect();
+
+                if ($delMedico->isNotEmpty()) {
+                    $fuera = ! $delMedico->contains(
+                        fn (horario_medico $h) => $h->dia_semana === $dia
+                            && $ini >= substr((string) $h->hora_inicio, 0, 5)
+                            && $fin <= substr((string) $h->hora_fin, 0, 5),
+                    );
+                }
+
+                $choca = ($mismas[$c->id_medico.'|'.$c->fecha->toDateString()] ?? collect())->contains(
+                    fn (cita $o) => $o->id_cita !== $c->id_cita
+                        && substr((string) $o->hora_inicio, 0, 5) < $fin
+                        && substr((string) $o->hora_fin, 0, 5) > $ini,
+                );
+            }
+
+            $c->setAttribute('fuera_de_horario', $fuera);
+            $c->setAttribute('empalmada', $choca);
         }
     }
 
@@ -287,9 +382,12 @@ class AgendaService
         return DB::transaction(function () use ($datos) {
             User::where('id', $datos['id_medico'])->lockForUpdate()->first();
 
-            $esExcepcion = in_array($datos['tipo_cita'] ?? 'REGULAR', cita::TIPOS_SIN_VALIDACION, true);
+            $tipo = $datos['tipo_cita'] ?? 'REGULAR';
+            $esExcepcion = in_array($tipo, cita::TIPOS_SIN_VALIDACION, true);
 
-            if (! $esExcepcion) {
+            if ($tipo === 'SOBRECUPO') {
+                $this->asegurarSobrecupo($datos['id_medico'], $datos['fecha'], $datos['hora_inicio'], $datos['hora_fin']);
+            } elseif (! $esExcepcion) {
                 $this->asegurarDisponible(
                     $datos['id_medico'],
                     $datos['fecha'],
@@ -324,7 +422,15 @@ class AgendaService
                 ->lockForUpdate()
                 ->get();
 
-            if (! in_array($cita->tipo_cita, cita::TIPOS_SIN_VALIDACION, true)) {
+            if ($cita->tipo_cita === 'SOBRECUPO') {
+                $this->asegurarSobrecupo(
+                    $medicoDestinoId,
+                    $fecha,
+                    $horaInicio,
+                    $horaFin,
+                    $cita->id_cita,
+                );
+            } elseif (! in_array($cita->tipo_cita, cita::TIPOS_SIN_VALIDACION, true)) {
                 $this->asegurarDisponible(
                     $medicoDestinoId,
                     $fecha,
@@ -340,6 +446,9 @@ class AgendaService
                 'hora_inicio' => $horaInicio,
                 'hora_fin' => $horaFin,
                 'estado' => 'AGENDADA',
+                // Una cita reprogramada a mano deja de estar "corrida".
+                'hora_inicio_original' => null,
+                'corrida_por' => null,
             ];
 
             if ($nuevaEspecialidadId) {
@@ -354,11 +463,12 @@ class AgendaService
 
     /**
      * Corre las citas pendientes de un médico cuando llega tarde. Conserva la
-     * duración de cada una y respeta el orden; las que quedan fuera de la
-     * jornada se desplazan igual y se devuelven señaladas, porque el médico ya
-     * va tarde y recepción necesita verlas para decidir.
+     * duración de cada una y respeta el orden. Las que quedan fuera de la jornada
+     * pero antes de las 23:00 se corren igual y se devuelven señaladas; las que
+     * terminarían después de las 23:00 NO se mueven (no hay citas de madrugada) y se
+     * devuelven como `sin_espacio` para que recepción las reagende o las cancele.
      *
-     * @return array{citas: array<int, cita>, fuera_de_horario: array<int, string>}
+     * @return array{citas: array<int, cita>, fuera_de_horario: array<int, string>, sin_espacio: array<int, string>}
      */
     public function desplazarPorAtraso(
         string $medicoId,
@@ -378,22 +488,33 @@ class AgendaService
                 ->get();
 
             $fueraDeHorario = [];
+            $sinEspacio = [];
+            $movidas = [];
 
             foreach ($citas as $c) {
-                $inicio = Carbon::parse((string) $c->hora_inicio)->addMinutes($minutos);
-                $fin = Carbon::parse((string) $c->hora_fin)->addMinutes($minutos);
+                $inicio = $this->aMinutos((string) $c->hora_inicio) + $minutos;
+                $fin = $this->aMinutos((string) $c->hora_fin) + $minutos;
+
+                if ($fin > self::LIMITE_NOCTURNO_MIN) {
+                    $sinEspacio[] = $c->id_cita;
+
+                    continue;
+                }
 
                 $c->update([
-                    'hora_inicio' => $inicio->format('H:i'),
-                    'hora_fin' => $fin->format('H:i'),
+                    'hora_inicio_original' => $c->hora_inicio_original ?? $c->hora_inicio,
+                    'corrida_por' => 'ATRASO',
+                    'hora_inicio' => $this->deMinutos($inicio),
+                    'hora_fin' => $this->deMinutos($fin),
                 ]);
+                $movidas[] = $c;
 
-                if (! $this->dentroDelHorario($medicoId, $fecha, $inicio->format('H:i'), $fin->format('H:i'))) {
+                if (! $this->dentroDelHorario($medicoId, $fecha, $this->deMinutos($inicio), $this->deMinutos($fin))) {
                     $fueraDeHorario[] = $c->id_cita;
                 }
             }
 
-            return ['citas' => $citas->all(), 'fuera_de_horario' => $fueraDeHorario];
+            return ['citas' => $movidas, 'fuera_de_horario' => $fueraDeHorario, 'sin_espacio' => $sinEspacio];
         });
     }
 
@@ -406,11 +527,15 @@ class AgendaService
      *
      * Las emergencias y sobrecupos que no caen en el bloqueo se dejan donde están.
      *
-     * @return array{citas: array<int, cita>, fuera_de_horario: array<int, string>}
+     * Una cita que al correrla terminaría después de las 23:00 no se mueve, y tampoco las
+     * siguientes que tendrían que correrse: se devuelven como `sin_espacio` para que recepción
+     * las reagende o las cancele. Con `$simular` solo se calcula el plan, sin guardar nada.
+     *
+     * @return array{citas: array<int, cita>, fuera_de_horario: array<int, string>, sin_espacio: array<int, string>, plan: array<int, array{cita: cita, nuevo_inicio: string, nuevo_fin: string, fuera_de_horario: bool}>}
      *
      * @throws RuntimeException si el bloqueo es de día completo o no afecta ninguna cita
      */
-    public function correrCitasTrasBloqueo(bloqueo_agenda $bloqueo): array
+    public function correrCitasTrasBloqueo(bloqueo_agenda $bloqueo, bool $simular = false): array
     {
         if (! $bloqueo->esParcial()) {
             throw new RuntimeException(
@@ -418,40 +543,120 @@ class AgendaService
             );
         }
 
-        return DB::transaction(function () use ($bloqueo) {
-            $medicoId = $bloqueo->id_medico;
-            $fecha = $bloqueo->fecha->toDateString();
+        return $this->correrTrasVentana(
+            $bloqueo->id_medico,
+            $bloqueo->fecha->toDateString(),
+            $bloqueo->horaInicioCorta(),
+            $bloqueo->horaFinCorta(),
+            ignorarBloqueoId: $bloqueo->id_bloqueo,
+            excluirCitaId: null,
+            simular: $simular,
+            vacioEsError: true,
+            origen: 'BLOQUEO',
+        );
+    }
 
+    /**
+     * Una emergencia ocupa su horario aunque haya otra cita: las citas regulares que chocan con ella
+     * se corren detrás, una por una y en orden, igual que tras un bloqueo parcial (mismo límite de
+     * las 23:00). La emergencia no se mueve. Si nada choca, no hay nada que correr.
+     *
+     * @return array{citas: array<int, cita>, fuera_de_horario: array<int, string>, sin_espacio: array<int, string>, plan: array<int, array{cita: cita, nuevo_inicio: string, nuevo_fin: string, fuera_de_horario: bool}>}
+     */
+    public function correrCitasTrasEmergencia(cita $emergencia, bool $simular = false): array
+    {
+        return $this->correrTrasVentana(
+            $emergencia->id_medico,
+            $emergencia->fecha->toDateString(),
+            substr((string) $emergencia->hora_inicio, 0, 5),
+            substr((string) $emergencia->hora_fin, 0, 5),
+            ignorarBloqueoId: null,
+            excluirCitaId: $emergencia->id_cita,
+            simular: $simular,
+            vacioEsError: false,
+            origen: 'EMERGENCIA',
+        );
+    }
+
+    /**
+     * Cómo queda la corrida para responder al frontend: cada cita movida con su horario actual y el nuevo.
+     *
+     * @param  array{plan: array<int, array{cita: cita, nuevo_inicio: string, nuevo_fin: string, fuera_de_horario: bool, antes_inicio?: string, antes_fin?: string}>}  $resultado
+     * @return array<int, array<string, mixed>>
+     */
+    public function planParaRespuesta(array $resultado): array
+    {
+        return collect($resultado['plan'])->map(function (array $p) {
+            $p['cita']->loadMissing('paciente');
+
+            return [
+                'id' => $p['cita']->id_cita,
+                'pacienteNombre' => $p['cita']->paciente?->nombre_completo,
+                'pacienteExpediente' => $p['cita']->paciente?->numero_expediente,
+                // La hora de antes, aunque la corrida ya se haya guardado.
+                'hora_inicio' => $p['antes_inicio'] ?? substr((string) $p['cita']->hora_inicio, 0, 5),
+                'hora_fin' => $p['antes_fin'] ?? substr((string) $p['cita']->hora_fin, 0, 5),
+                'nuevo_inicio' => $p['nuevo_inicio'],
+                'nuevo_fin' => $p['nuevo_fin'],
+                'fueraDeHorario' => $p['fuera_de_horario'],
+            ];
+        })->values()->all();
+    }
+
+    /**
+     * Libera una ventana de horario (un bloqueo parcial o una emergencia) corriendo las citas pendientes
+     * que caen dentro de ella y las siguientes que choquen con ellas. Ver correrCitasTrasBloqueo.
+     */
+    private function correrTrasVentana(
+        string $medicoId,
+        string $fecha,
+        string $desde,
+        string $hasta,
+        ?string $ignorarBloqueoId,
+        ?string $excluirCitaId,
+        bool $simular,
+        bool $vacioEsError,
+        string $origen,
+    ): array {
+        return DB::transaction(function () use ($medicoId, $fecha, $desde, $hasta, $ignorarBloqueoId, $excluirCitaId, $simular, $vacioEsError, $origen) {
             User::where('id', $medicoId)->lockForUpdate()->first();
 
             $pendientes = cita::where('id_medico', $medicoId)
                 ->whereDate('fecha', $fecha)
                 ->whereIn('estado', ['AGENDADA', 'EN_ESPERA'])
+                ->when($excluirCitaId, fn ($q, $id) => $q->where('id_cita', '!=', $id))
                 ->orderBy('hora_inicio')
                 ->orderBy('hora_fin')
                 ->lockForUpdate()
                 ->get();
 
             $afectadas = $pendientes
-                ->filter(fn (cita $c) => $bloqueo->solapaCon(
-                    substr((string) $c->hora_inicio, 0, 5),
-                    substr((string) $c->hora_fin, 0, 5),
-                ))
+                // Una emergencia solo desplaza a las citas regulares; las demás excepciones se quedan.
+                ->filter(fn (cita $c) => ($excluirCitaId === null || $c->tipo_cita === 'REGULAR')
+                    && substr((string) $c->hora_inicio, 0, 5) < $hasta
+                    && substr((string) $c->hora_fin, 0, 5) > $desde)
                 ->pluck('id_cita')
                 ->all();
 
             if ($afectadas === []) {
-                throw new RuntimeException('Ninguna cita quedó dentro de este bloqueo.');
+                if ($vacioEsError) {
+                    throw new RuntimeException('Ninguna cita quedó dentro de este bloqueo.');
+                }
+
+                return ['citas' => [], 'fuera_de_horario' => [], 'sin_espacio' => [], 'plan' => []];
             }
 
             // Otros bloqueos del mismo día: una cita corrida no puede caer en ellos.
             $otrosBloqueos = $this->bloqueosParcialesDe($medicoId, $fecha)
-                ->reject(fn (bloqueo_agenda $b) => $b->id_bloqueo === $bloqueo->id_bloqueo);
+                ->reject(fn (bloqueo_agenda $b) => $b->id_bloqueo === $ignorarBloqueoId);
 
-            $libreDesde = $this->aMinutos($bloqueo->horaFinCorta());
+            $libreDesde = $this->aMinutos($hasta);
             $enZona = false;
             $movidas = [];
+            $plan = [];
             $fueraDeHorario = [];
+            $sinEspacio = [];
+            $sinCupo = false;
 
             foreach ($pendientes as $c) {
                 $esAfectada = in_array($c->id_cita, $afectadas, true);
@@ -476,6 +681,14 @@ class AgendaService
                     continue;
                 }
 
+                // Desde la primera que no cabe, las siguientes que habría que mover tampoco caben
+                // (siguen el mismo orden); se dejan donde están para no desordenar la agenda.
+                if ($sinCupo) {
+                    $sinEspacio[] = $c->id_cita;
+
+                    continue;
+                }
+
                 $duracion = $fin - $inicio;
                 $nuevoInicio = $libreDesde;
 
@@ -491,25 +704,100 @@ class AgendaService
 
                 $nuevoFin = $nuevoInicio + $duracion;
 
-                if ($nuevoFin > 24 * 60 - 1) {
-                    throw new RuntimeException('Las citas no caben en el resto del día: reagenda algunas.');
+                if ($nuevoFin > self::LIMITE_NOCTURNO_MIN) {
+                    $sinCupo = true;
+                    $sinEspacio[] = $c->id_cita;
+
+                    continue;
                 }
 
-                $c->update([
-                    'hora_inicio' => $this->deMinutos($nuevoInicio),
-                    'hora_fin' => $this->deMinutos($nuevoFin),
-                ]);
+                $fuera = ! $this->dentroDelHorario($medicoId, $fecha, $this->deMinutos($nuevoInicio), $this->deMinutos($nuevoFin));
+
+                $plan[] = [
+                    'cita' => $c,
+                    'antes_inicio' => substr((string) $c->hora_inicio, 0, 5),
+                    'antes_fin' => substr((string) $c->hora_fin, 0, 5),
+                    'nuevo_inicio' => $this->deMinutos($nuevoInicio),
+                    'nuevo_fin' => $this->deMinutos($nuevoFin),
+                    'fuera_de_horario' => $fuera,
+                ];
+
+                if (! $simular) {
+                    $c->update([
+                        // Se guarda la hora de la primera vez, aunque se corra más de una vez.
+                        'hora_inicio_original' => $c->hora_inicio_original ?? $c->hora_inicio,
+                        'corrida_por' => $origen,
+                        'hora_inicio' => $this->deMinutos($nuevoInicio),
+                        'hora_fin' => $this->deMinutos($nuevoFin),
+                    ]);
+                }
                 $movidas[] = $c;
 
-                if (! $this->dentroDelHorario($medicoId, $fecha, $this->deMinutos($nuevoInicio), $this->deMinutos($nuevoFin))) {
+                if ($fuera) {
                     $fueraDeHorario[] = $c->id_cita;
                 }
 
                 $libreDesde = $nuevoFin;
             }
 
-            return ['citas' => $movidas, 'fuera_de_horario' => $fueraDeHorario];
+            return [
+                'citas' => $movidas,
+                'fuera_de_horario' => $fueraDeHorario,
+                'sin_espacio' => $sinEspacio,
+                'plan' => $plan,
+            ];
         });
+    }
+
+    /** Hora en que termina la última cita vigente del médico ese día ('H:i'), o null si no tiene. */
+    public function finDeLaUltimaCita(string $medicoId, string $fecha, ?string $ignorarCitaId = null): ?string
+    {
+        $fin = cita::where('id_medico', $medicoId)
+            ->whereDate('fecha', $fecha)
+            ->whereIn('estado', cita::ESTADOS_VIGENTES)
+            ->when($ignorarCitaId, fn ($q, $id) => $q->where('id_cita', '!=', $id))
+            ->max('hora_fin');
+
+        return $fin ? substr((string) $fin, 0, 5) : null;
+    }
+
+    /**
+     * Un sobrecupo es un paciente extra que el médico acepta ver además de su jornada: puede quedar
+     * fuera de su horario, pero siempre después de la última cita del día y nunca encima de otra, ni
+     * en un bloqueo, ni terminando después de las 23:00.
+     *
+     * @throws RuntimeException
+     */
+    private function asegurarSobrecupo(
+        string $medicoId,
+        string $fecha,
+        string $horaInicio,
+        string $horaFin,
+        ?string $ignorarCitaId = null,
+    ): void {
+        $bloqueo = $this->bloqueoQueTocaRango($medicoId, $fecha, $horaInicio, $horaFin);
+        if ($bloqueo !== null) {
+            throw new RuntimeException(
+                $bloqueo->esParcial()
+                    ? "El médico tiene la agenda bloqueada de {$bloqueo->horaInicioCorta()} a {$bloqueo->horaFinCorta()}."
+                    : 'El médico tiene la agenda bloqueada ese día.',
+            );
+        }
+
+        if ($this->aMinutos($horaFin) > self::LIMITE_NOCTURNO_MIN) {
+            throw new RuntimeException('Un sobrecupo no puede terminar después de las 11 p. m.');
+        }
+
+        if (Carbon::parse($fecha)->isToday() && $horaInicio < now()->format('H:i')) {
+            throw new RuntimeException('No se puede agendar un sobrecupo en una hora que ya transcurrió hoy.');
+        }
+
+        $ultima = $this->finDeLaUltimaCita($medicoId, $fecha, $ignorarCitaId);
+        if ($ultima !== null && $horaInicio < $ultima) {
+            throw new RuntimeException(
+                "Un sobrecupo va después de la última cita del médico ese día, que termina a las {$ultima}. Elige una hora desde ahí.",
+            );
+        }
     }
 
     /** 'H:i' o 'H:i:s' -> minutos desde la medianoche. */

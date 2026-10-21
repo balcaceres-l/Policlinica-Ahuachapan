@@ -56,6 +56,10 @@ export const useEliminarBloqueo = () => {
   });
 };
 
+/** Vista previa de cómo quedarían las citas al correrlas: no guarda nada. */
+export const useSimularCorrerCitas = () =>
+  useMutation({ mutationFn: (id: string) => correrCitasTrasBloqueo(id, true) });
+
 export const useCorrerCitasBloqueo = () => {
   const queryClient = useQueryClient();
   return useMutation({

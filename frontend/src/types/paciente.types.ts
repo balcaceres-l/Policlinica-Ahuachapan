@@ -13,8 +13,10 @@ export interface Paciente {
   direccion?: string | null;
   es_menor_edad: boolean;
   estado?: 'ACTIVO' | 'FALLECIDO';
-  /** Adulto sin documento: se registró de menor y ya cumplió 18 años. */
+  /** Adulto sin documento: se registró de menor y ya cumplió 18 años, o fue una emergencia. */
   documento_pendiente?: boolean;
+  /** Menor registrado en emergencia: falta su responsable. */
+  responsable_pendiente?: boolean;
   /** Lo registró el médico en una consulta inmediata; la recepcionista debe completarlo. */
   datos_pendientes?: boolean;
   id_responsable?: string | null;
@@ -34,6 +36,8 @@ export interface NuevoPaciente {
   telefono?: string | null;
   direccion?: string | null;
   es_menor_edad: boolean;
+  /** Emergencia: basta el nombre y la fecha de nacimiento; el registro queda pendiente de completar. */
+  registro_rapido?: boolean;
   responsable_nombre?: string | null;
   responsable_tipo_documento?: TipoDocumento | null;
   responsable_telefono?: string | null;
@@ -56,6 +60,8 @@ export interface EditarPaciente {
   dui?: string;
   direccion?: string | null;
   responsable_nombre?: string | null;
+  /** Solo si el menor aún no tiene responsable (registro de emergencia): se agrega con todos sus datos. */
+  responsable_documento?: string | null;
   responsable_telefono?: string | null;
   responsable_parentesco?: string | null;
 }

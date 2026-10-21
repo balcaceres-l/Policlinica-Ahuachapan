@@ -244,6 +244,109 @@ class AgendaTest extends TestCase
         ]))->assertCreated();
     }
 
+    public function test_el_sobrecupo_va_despues_de_la_ultima_cita_y_nunca_encima_de_otra(): void
+    {
+        Sanctum::actingAs($this->recepcion);
+        $this->postJson('/api/citas', $this->datosCita(['hora_inicio' => '15:00', 'hora_fin' => '15:30']))->assertCreated();
+        $this->postJson('/api/citas', $this->datosCita(['hora_inicio' => '16:00', 'hora_fin' => '16:30']))->assertCreated();
+
+        // Encima de una cita, o antes de la última, no.
+        $this->postJson('/api/citas', $this->datosCita(['tipo_cita' => 'SOBRECUPO', 'hora_inicio' => '15:00', 'hora_fin' => '15:30']))
+            ->assertStatus(409);
+        $this->postJson('/api/citas', $this->datosCita(['tipo_cita' => 'SOBRECUPO', 'hora_inicio' => '15:30', 'hora_fin' => '16:00']))
+            ->assertStatus(409)
+            ->assertJsonPath('message', fn ($m) => str_contains($m, '16:30'));
+
+        // Justo al terminar la última, sí, aunque sea fuera del horario del médico.
+        $this->postJson('/api/citas', $this->datosCita(['tipo_cita' => 'SOBRECUPO', 'hora_inicio' => '16:30', 'hora_fin' => '17:00']))
+            ->assertCreated();
+        $this->postJson('/api/citas', $this->datosCita(['tipo_cita' => 'SOBRECUPO', 'hora_inicio' => '19:00', 'hora_fin' => '19:30']))
+            ->assertCreated();
+
+        // La disponibilidad dice desde qué hora se puede dar un sobrecupo.
+        $this->getJson("/api/agenda/disponibilidad?medico_id={$this->medico->id}&fecha=".self::LUNES)
+            ->assertJsonPath('data.ultimaCitaFin', '19:30');
+    }
+
+    public function test_una_emergencia_corre_sola_las_citas_que_chocan_con_ella_y_nada_mas(): void
+    {
+        Sanctum::actingAs($this->recepcion);
+        $a = $this->postJson('/api/citas', $this->datosCita(['hora_inicio' => '15:00', 'hora_fin' => '15:30']))->json('data.id');
+        $b = $this->postJson('/api/citas', $this->datosCita(['hora_inicio' => '15:30', 'hora_fin' => '16:00']))->json('data.id');
+        $libre = $this->postJson('/api/citas', $this->datosCita(['hora_inicio' => '17:00', 'hora_fin' => '17:30']))->json('data.id');
+
+        $r = $this->postJson('/api/citas', $this->datosCita(['tipo_cita' => 'EMERGENCIA', 'hora_inicio' => '15:00', 'hora_fin' => '15:30']))
+            ->assertCreated();
+        $emergencia = $r->json('data.id');
+
+        // Las que chocaban se corren detrás de la emergencia, en orden; la libre y la emergencia no se tocan.
+        $this->assertSame('15:30', substr(cita::find($a)->hora_inicio, 0, 5));
+        $this->assertSame('16:00', substr(cita::find($b)->hora_inicio, 0, 5));
+        $this->assertSame('17:00', substr(cita::find($libre)->hora_inicio, 0, 5));
+        $this->assertSame('15:00', substr(cita::find($emergencia)->hora_inicio, 0, 5));
+
+        // La respuesta cuenta qué se corrió, con la hora de antes y la de ahora.
+        $this->assertCount(2, $r->json('data.corrida.plan'));
+        $this->assertSame('15:00', $r->json('data.corrida.plan.0.hora_inicio'));
+        $this->assertSame('15:30', $r->json('data.corrida.plan.0.nuevo_inicio'));
+        $this->assertSame([], $r->json('data.corrida.sinEspacio'));
+
+        // Queda anotado por qué se corrió y a qué hora estaba; la libre y la emergencia no llevan marca.
+        $this->assertSame('EMERGENCIA', cita::find($a)->corrida_por);
+        $this->assertSame('15:00', substr(cita::find($a)->hora_inicio_original, 0, 5));
+        $this->assertNull(cita::find($libre)->corrida_por);
+        $this->assertNull(cita::find($emergencia)->corrida_por);
+
+        // Si recepción la reprograma a mano, deja de figurar como corrida.
+        $this->patchJson("/api/citas/{$a}/reprogramar", ['fecha' => self::LUNES, 'hora_inicio' => '18:00', 'hora_fin' => '18:30'])->assertOk();
+        $this->assertNull(cita::find($a)->corrida_por);
+        $this->assertNull(cita::find($a)->hora_inicio_original);
+    }
+
+    public function test_una_emergencia_sin_choques_no_corre_nada_y_las_regulares_no_corren_a_nadie(): void
+    {
+        Sanctum::actingAs($this->recepcion);
+        $regular = $this->postJson('/api/citas', $this->datosCita(['hora_inicio' => '15:00', 'hora_fin' => '15:30']))
+            ->assertCreated();
+        $this->assertNull($regular->json('data.corrida'));
+
+        $emergencia = $this->postJson('/api/citas', $this->datosCita(['tipo_cita' => 'EMERGENCIA', 'hora_inicio' => '16:00', 'hora_fin' => '16:30']))
+            ->assertCreated();
+        $this->assertSame([], $emergencia->json('data.corrida.plan'));
+        $this->assertSame('15:00', substr(cita::find($regular->json('data.id'))->hora_inicio, 0, 5));
+    }
+
+    public function test_la_emergencia_senala_las_citas_que_no_caben_antes_de_las_23(): void
+    {
+        Sanctum::actingAs($this->recepcion);
+        \App\Models\horario_medico::create([
+            'id_medico' => $this->medico->id,
+            'dia_semana' => 'LUNES',
+            'hora_inicio' => '19:00',
+            'hora_fin' => '23:00',
+        ]);
+        $primera = $this->postJson('/api/citas', $this->datosCita(['hora_inicio' => '22:00', 'hora_fin' => '22:30']))->json('data.id');
+        $segunda = $this->postJson('/api/citas', $this->datosCita(['hora_inicio' => '22:30', 'hora_fin' => '23:00']))->json('data.id');
+
+        $r = $this->postJson('/api/citas', $this->datosCita(['tipo_cita' => 'EMERGENCIA', 'hora_inicio' => '22:00', 'hora_fin' => '22:30']))
+            ->assertCreated();
+
+        // La primera cabe (22:30-23:00); la segunda pasaría de las 23:00: se queda donde estaba, señalada.
+        $this->assertSame('22:30', substr(cita::find($primera)->hora_inicio, 0, 5));
+        $this->assertSame('22:30', substr(cita::find($segunda)->hora_inicio, 0, 5));
+        $this->assertCount(1, $r->json('data.corrida.plan'));
+        $this->assertSame([$segunda], $r->json('data.corrida.sinEspacio'));
+        $this->assertSame($segunda, $r->json('data.corrida.citasSinEspacio.0.id'));
+    }
+
+    public function test_el_sobrecupo_no_puede_terminar_despues_de_las_23(): void
+    {
+        Sanctum::actingAs($this->recepcion);
+
+        $this->postJson('/api/citas', $this->datosCita(['tipo_cita' => 'SOBRECUPO', 'hora_inicio' => '22:45', 'hora_fin' => '23:15']))
+            ->assertStatus(409);
+    }
+
     public function test_la_emergencia_no_consume_disponibilidad(): void
     {
         Sanctum::actingAs($this->recepcion);

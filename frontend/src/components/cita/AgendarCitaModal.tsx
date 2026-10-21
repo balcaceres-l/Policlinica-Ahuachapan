@@ -1,16 +1,20 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import EmergenciaCorrioCitasModal from '@/components/cita/EmergenciaCorrioCitasModal';
 import IndicadorDisponibilidad from '@/components/cita/IndicadorDisponibilidad';
 import SelectorMedicoCascada from '@/components/cita/SelectorMedicoCascada';
 import SelectorPacienteAutocomplete from '@/components/paciente/SelectorPacienteAutocomplete';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
+import InfoTooltip from '@/components/ui/InfoTooltip';
 import Modal from '@/components/ui/Modal';
 import { useAuth } from '@/hooks/auth/useAuth';
-import { useAgendarCita } from '@/hooks/cita/useCitas';
+import { useAgendarCita, useDisponibilidad } from '@/hooks/cita/useCitas';
 import { useEspecialidadesDeMedico } from '@/hooks/especialidad/useEspecialidades';
+import { useCrearPaciente } from '@/hooks/paciente/usePacientes';
+import { extraerMensajeError } from '@/lib/apiError';
 import { getIniciales, jvpmDe, obtenerFechaLocal, obtenerHoraLocal } from '@/lib/utils';
-import type { TipoCita } from '@/types/cita.types';
+import type { CorridaTrasEmergencia, TipoCita } from '@/types/cita.types';
 
 interface AgendarCitaModalProps {
   isOpen: boolean;
@@ -23,6 +27,13 @@ const CLASE_INPUT =
   'h-11 w-full rounded-field border border-line bg-surface px-3 text-sm text-ink outline-none ' +
   'transition-colors placeholder:text-muted focus:border-brand-600 focus:ring-4 ' +
   'focus:ring-brand-600/15 disabled:opacity-60';
+
+/** Suma minutos a una hora "HH:MM" sin pasar de las 23:59. */
+const sumarMinutos = (hora: string, minutos: number): string => {
+  const [h, m] = hora.split(':').map(Number);
+  const total = Math.min(h * 60 + m + minutos, 23 * 60 + 59);
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+};
 
 export function AgendarCitaModal({
   isOpen,
@@ -43,9 +54,20 @@ export function AgendarCitaModal({
   const [horaInicio, setHoraInicio] = useState('15:00');
   const [horaFin, setHoraFin] = useState('15:30');
   const [tipoCita, setTipoCita] = useState<TipoCita>('REGULAR');
+  // Si recepción cambia la hora a mano, deja de proponerse la sugerida.
+  const [horaManual, setHoraManual] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Emergencia: registrar al paciente solo con nombre y fecha de nacimiento.
+  const [registroRapido, setRegistroRapido] = useState(false);
+  const [rapidoNombre, setRapidoNombre] = useState('');
+  const [rapidoNacimiento, setRapidoNacimiento] = useState('');
+  const [errorRapido, setErrorRapido] = useState<string | null>(null);
+
   const agendarMutation = useAgendarCita();
+  const crearPaciente = useCrearPaciente();
+  /** Emergencia recién agendada que chocaba con otras citas: se avisa qué se corrió. */
+  const [corrida, setCorrida] = useState<CorridaTrasEmergencia | null>(null);
 
   // Si es médico, consultamos estrictamente sus especialidades asignadas
   const medicoIdParaEspecialidades = esMedico ? usuario?.id : medicoId;
@@ -90,6 +112,51 @@ export function AgendarCitaModal({
     setHoraFin(`${finH}:${finM}`);
   };
 
+  /** La emergencia no espera a tomar los datos uno por uno: se registra lo mínimo y queda pendiente. */
+  const handleRegistroRapido = async () => {
+    setErrorRapido(null);
+    const nombre = rapidoNombre.trim();
+
+    if (nombre.length < 3) {
+      setErrorRapido('Escribe el nombre del paciente (mínimo 3 letras).');
+      return;
+    }
+    if (!rapidoNacimiento) {
+      setErrorRapido('Indica la fecha de nacimiento.');
+      return;
+    }
+    if (rapidoNacimiento > hoy) {
+      setErrorRapido('La fecha de nacimiento no puede ser posterior a hoy.');
+      return;
+    }
+
+    const nac = new Date(`${rapidoNacimiento}T00:00:00`);
+    const ahora = new Date();
+    let edad = ahora.getFullYear() - nac.getFullYear();
+    if (
+      ahora.getMonth() < nac.getMonth() ||
+      (ahora.getMonth() === nac.getMonth() && ahora.getDate() < nac.getDate())
+    ) {
+      edad--;
+    }
+
+    try {
+      const creado = await crearPaciente.mutateAsync({
+        nombre_completo: nombre,
+        fecha_nacimiento: rapidoNacimiento,
+        es_menor_edad: edad < 18,
+        registro_rapido: true,
+      });
+      setPacienteId(creado.id);
+      setRegistroRapido(false);
+      setRapidoNombre('');
+      setRapidoNacimiento('');
+      toast.success('Paciente registrado. Queda pendiente de completar sus datos.');
+    } catch (err) {
+      setErrorRapido(extraerMensajeError(err, 'No se pudo registrar al paciente.'));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -117,34 +184,39 @@ export function AgendarCitaModal({
       setError('No se pueden agendar citas para fechas en el pasado.');
       return;
     }
-    if (!horaInicio || !horaFin) {
+    if (!inicioFinal || !finFinal) {
       setError('Debes especificar la hora de inicio y de fin.');
       return;
     }
-    if (horaInicio >= horaFin) {
+    if (inicioFinal >= finFinal) {
       setError('La hora de inicio debe ser anterior a la hora de fin.');
       return;
     }
-    const horaActual = obtenerHoraLocal();
-    if (fecha === hoyStr && tipoCita === 'REGULAR' && horaInicio < horaActual) {
+    if (fecha === hoyStr && inicioFinal < horaActual) {
       setError(
-        `No se puede agendar a las ${horaInicio} porque esa hora ya transcurrió hoy (hora actual: ${horaActual}).`,
+        `No se puede agendar a las ${inicioFinal} porque esa hora ya transcurrió hoy (hora actual: ${horaActual}).`,
       );
       return;
     }
 
     try {
-      await agendarMutation.mutateAsync({
+      const creada = await agendarMutation.mutateAsync({
         paciente_id: pacienteId,
         medico_id: medicoFinalId,
         especialidad_id: especialidadId,
         fecha,
-        hora_inicio: horaInicio,
-        hora_fin: horaFin,
+        hora_inicio: inicioFinal,
+        hora_fin: finFinal,
         tipo_cita: tipoCita,
       });
 
       toast.success('Cita agendada exitosamente.');
+
+      // Una emergencia que cayó encima de otras citas las corrió sola: se avisa qué pasó con cada una.
+      if (creada.corrida && (creada.corrida.plan.length > 0 || creada.corrida.sinEspacio.length > 0)) {
+        setCorrida(creada.corrida);
+      }
+
       onClose();
       // Limpiar formulario al cerrar
       setPacienteId('');
@@ -153,14 +225,32 @@ export function AgendarCitaModal({
         setEspecialidadId(undefined);
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al agendar cita.';
-      setError(msg);
+      setError(extraerMensajeError(err, 'Error al agendar cita.'));
     }
   };
 
   const medicoEfectivoId = esMedico ? usuario?.id : medicoId;
 
+  // Sobrecupo: va después de la última cita del día. Se propone esa hora (media hora de duración).
+  const { data: disponibilidad } = useDisponibilidad(
+    tipoCita === 'SOBRECUPO' ? medicoEfectivoId || undefined : undefined,
+    fecha || undefined,
+  );
+  const ultimaCitaFin = tipoCita === 'SOBRECUPO' ? disponibilidad?.ultimaCitaFin : null;
+  // Hoy nunca se propone ni se acepta una hora que ya pasó.
+  const esHoy = fecha === hoy;
+  const horaActual = obtenerHoraLocal();
+  const horaMinima = [ultimaCitaFin, esHoy && tipoCita !== 'REGULAR' ? horaActual : null]
+    .filter((h): h is string => Boolean(h))
+    .sort()
+    .pop();
+  const propuesta = tipoCita === 'SOBRECUPO' || (tipoCita === 'EMERGENCIA' && esHoy) ? horaMinima : undefined;
+  const proponer = Boolean(propuesta) && !horaManual;
+  const inicioFinal = proponer ? (propuesta as string) : horaInicio;
+  const finFinal = proponer ? sumarMinutos(propuesta as string, 30) : horaFin;
+
   return (
+    <>
     <Modal
       isOpen={isOpen}
       onClose={onClose}
@@ -179,6 +269,7 @@ export function AgendarCitaModal({
           <Button
             onClick={handleSubmit}
             loading={agendarMutation.isPending}
+            disabled={cargandoEspecialidades}
             icon="ri-calendar-check-line"
           >
             Confirmar Cita
@@ -199,6 +290,77 @@ export function AgendarCitaModal({
           pacienteId={pacienteId}
           onSelectPaciente={setPacienteId}
         />
+
+        {/* Emergencia: paciente nuevo sin datos. Solo nombre y fecha de nacimiento. */}
+        {tipoCita === 'EMERGENCIA' && !pacienteId && (
+          <div className="rounded-card border border-danger/30 bg-danger-soft/30 p-3">
+            {registroRapido ? (
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-ink">
+                  <i className="ri-flashlight-line mr-1 align-middle text-danger" />
+                  Registro rápido de emergencia
+                  <span className="ml-1 font-normal text-muted">
+                    · solo nombre y fecha de nacimiento; los demás datos se completan después.
+                  </span>
+                </p>
+                {errorRapido && <p className="text-xs text-danger">{errorRapido}</p>}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-ink">
+                      Nombre completo <span className="text-danger">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={rapidoNombre}
+                      onChange={(e) => setRapidoNombre(e.target.value)}
+                      placeholder="Nombre del paciente"
+                      className={CLASE_INPUT}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-ink">
+                      Fecha de nacimiento <span className="text-danger">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={rapidoNacimiento}
+                      max={hoy}
+                      onChange={(e) => setRapidoNacimiento(e.target.value)}
+                      className={CLASE_INPUT}
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setRegistroRapido(false)}
+                    disabled={crearPaciente.isPending}
+                  >
+                    Volver
+                  </Button>
+                  <Button
+                    size="sm"
+                    icon="ri-user-add-line"
+                    onClick={handleRegistroRapido}
+                    loading={crearPaciente.isPending}
+                  >
+                    Registrar y seleccionar
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setRegistroRapido(true)}
+                className="flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-danger hover:underline"
+              >
+                <i className="ri-flashlight-line" />
+                ¿Paciente nuevo en una emergencia? Registro rápido (solo nombre y fecha de nacimiento)
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Modo Médico: Se bloquea al médico logueado y solo elige entre sus especialidades */}
         {esMedico ? (
@@ -293,8 +455,12 @@ export function AgendarCitaModal({
               </label>
               <input
                 type="time"
-                value={horaInicio}
-                onChange={(e) => handleHoraInicioChange(e.target.value)}
+                value={inicioFinal}
+                min={horaMinima}
+                onChange={(e) => {
+                  handleHoraInicioChange(e.target.value);
+                  setHoraManual(true);
+                }}
                 className={CLASE_INPUT}
               />
             </div>
@@ -304,8 +470,12 @@ export function AgendarCitaModal({
               </label>
               <input
                 type="time"
-                value={horaFin}
-                onChange={(e) => setHoraFin(e.target.value)}
+                value={finFinal}
+                onChange={(e) => {
+                  setHoraInicio(inicioFinal);
+                  setHoraFin(e.target.value);
+                  setHoraManual(true);
+                }}
                 className={CLASE_INPUT}
               />
             </div>
@@ -313,7 +483,26 @@ export function AgendarCitaModal({
         )}
 
         <div>
-          <label className="mb-1 block text-xs font-semibold text-ink">Tipo de Cita</label>
+          <label className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-ink">
+            Tipo de Cita
+            <InfoTooltip titulo="¿Qué es cada tipo de cita?" tamano="sm">
+              <span className="block space-y-1.5">
+                <span className="block">
+                  <b className="text-ink">Regular:</b> cita normal en un horario libre del médico,
+                  dentro de su jornada. No puede empalmarse con otra.
+                </span>
+                <span className="block">
+                  <b className="text-ink">Emergencia:</b> urgencia que no puede esperar. Se puede dar
+                  a cualquier hora, incluso a la misma hora de otra cita. Al agendarla, las citas que
+                  chocan se corren detrás de ella y el sistema te muestra cómo quedaron.
+                </span>
+                <span className="block">
+                  <b className="text-ink">Sobrecupo:</b> paciente extra que el médico acepta ver
+                  además de su jornada.
+                </span>
+              </span>
+            </InfoTooltip>
+          </label>
           <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
@@ -329,7 +518,10 @@ export function AgendarCitaModal({
             </button>
             <button
               type="button"
-              onClick={() => setTipoCita('EMERGENCIA')}
+              onClick={() => {
+                setTipoCita('EMERGENCIA');
+                setHoraManual(false);
+              }}
               className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-field border p-2 text-xs font-semibold transition-colors ${
                 tipoCita === 'EMERGENCIA'
                   ? 'border-danger bg-danger-soft text-danger'
@@ -341,7 +533,10 @@ export function AgendarCitaModal({
             </button>
             <button
               type="button"
-              onClick={() => setTipoCita('SOBRECUPO')}
+              onClick={() => {
+                setTipoCita('SOBRECUPO');
+                setHoraManual(false);
+              }}
               className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-field border p-2 text-xs font-semibold transition-colors ${
                 tipoCita === 'SOBRECUPO'
                   ? 'border-warning bg-warning-soft text-warning'
@@ -352,14 +547,25 @@ export function AgendarCitaModal({
               Sobrecupo
             </button>
           </div>
-          {tipoCita !== 'REGULAR' && (
+          {tipoCita === 'EMERGENCIA' && (
             <p className="mt-1.5 text-[11px] text-muted">
-              * Las citas de emergencia y sobrecupo omiten la restricción estándar de disponibilidad.
+              Puede ir a cualquier hora, aunque haya otra cita. Las citas que choquen se corren solas
+              detrás de la emergencia.
+            </p>
+          )}
+          {tipoCita === 'SOBRECUPO' && (
+            <p className="mt-1.5 text-[11px] text-muted">
+              {ultimaCitaFin
+                ? `Va después de la última cita del día, que termina a las ${ultimaCitaFin}. Puede quedar fuera del horario del médico.`
+                : 'Ese día el médico no tiene citas: el sobrecupo puede ir a la hora que indiques.'}
             </p>
           )}
         </div>
       </form>
     </Modal>
+
+    <EmergenciaCorrioCitasModal corrida={corrida} onClose={() => setCorrida(null)} />
+    </>
   );
 }
 

@@ -151,20 +151,28 @@ class BloqueoAgendaController extends Controller
      * empezar cuando termina el bloqueo, en orden, y solo se corren las
      * siguientes que choquen con ellas.
      */
-    public function correrCitas(bloqueo_agenda $bloqueo): JsonResponse
+    public function correrCitas(Request $request, bloqueo_agenda $bloqueo): JsonResponse
     {
+        $simular = $request->boolean('simular');
+
         try {
-            $resultado = $this->agenda->correrCitasTrasBloqueo($bloqueo);
+            $resultado = $this->agenda->correrCitasTrasBloqueo($bloqueo, $simular);
         } catch (RuntimeException $e) {
             return $this->failure($e->getMessage(), 422);
         }
 
         $citas = collect($resultado['citas'])->each->load(['paciente', 'medico']);
 
+        // Cómo quedaría (o quedó) cada cita movida: el horario actual y el nuevo.
+        $plan = $this->agenda->planParaRespuesta($resultado);
+
         return $this->success([
-            'citas' => CitaResource::collection($citas)->resolve(),
+            'citas' => $simular ? [] : CitaResource::collection($citas)->resolve(),
             'fueraDeHorario' => $resultado['fuera_de_horario'],
-        ], count($citas).' cita(s) corrida(s).');
+            'sinEspacio' => $resultado['sin_espacio'],
+            'citasSinEspacio' => $this->agenda->detalleSinEspacio($resultado['sin_espacio']),
+            'plan' => $plan,
+        ], $simular ? 'Vista previa de cómo quedarían las citas.' : count($citas).' cita(s) corrida(s).');
     }
 
     public function destroy(Request $request, bloqueo_agenda $bloqueo): JsonResponse

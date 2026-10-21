@@ -21,7 +21,8 @@ const filtros: { valor: Filtro; texto: string }[] = [
 export default function SalaEsperaPage() {
   const navigate = useNavigate();
   const { data: citas = [], isLoading: cargando, refetch } = useSalaEspera();
-  const { data: especialidades = [] } = useEspecialidadesDisponibles();
+  const { data: especialidades = [], isLoading: cargandoEspecialidades } =
+    useEspecialidadesDisponibles();
   const iniciarMutation = useIniciarConsulta();
 
   const [filtro, setFiltro] = useState<Filtro>('espera');
@@ -342,7 +343,7 @@ export default function SalaEsperaPage() {
                           <Button
                             size="sm"
                             icon="ri-stethoscope-line"
-                            disabled={enConsulta || iniciandoId !== null}
+                            disabled={enConsulta || iniciandoId !== null || cargandoEspecialidades}
                             loading={iniciandoId === cita.id}
                             onClick={() => handleIniciarAtencion(cita)}
                           >

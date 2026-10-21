@@ -61,6 +61,8 @@ class CitaController extends Controller
         return $this->success([
             'bloqueado' => $this->agenda->estaBloqueado($validado['medico_id'], $validado['fecha']),
             'bloques' => $this->agenda->bloquesDisponibles($validado['medico_id'], $validado['fecha']),
+            // Un sobrecupo se agenda desde aquí en adelante.
+            'ultimaCitaFin' => $this->agenda->finDeLaUltimaCita($validado['medico_id'], $validado['fecha']),
         ]);
     }
 
@@ -113,11 +115,21 @@ class CitaController extends Controller
             return $this->failure($e->getMessage(), 409);
         }
 
-        return $this->success(
-            (new CitaResource($cita->load(['paciente', 'medico', 'especialidad'])))->resolve(),
-            'Cita agendada correctamente.',
-            201,
-        );
+        $datos = (new CitaResource($cita->load(['paciente', 'medico', 'especialidad'])))->resolve();
+
+        // Una emergencia puede caer encima de otras citas: las regulares que chocan se corren
+        // detrás de ella, una por una y sin pasar de las 23:00 (las que no caben se señalan).
+        if ($cita->tipo_cita === 'EMERGENCIA') {
+            $corrida = $this->agenda->correrCitasTrasEmergencia($cita);
+            $datos['corrida'] = [
+                'plan' => $this->agenda->planParaRespuesta($corrida),
+                'fueraDeHorario' => $corrida['fuera_de_horario'],
+                'sinEspacio' => $corrida['sin_espacio'],
+                'citasSinEspacio' => $this->agenda->detalleSinEspacio($corrida['sin_espacio']),
+            ];
+        }
+
+        return $this->success($datos, 'Cita agendada correctamente.', 201);
     }
 
     public function cancelar(Request $request, cita $cita): JsonResponse
@@ -240,6 +252,8 @@ class CitaController extends Controller
         return $this->success([
             'citas' => CitaResource::collection($citas)->resolve(),
             'fueraDeHorario' => $resultado['fuera_de_horario'],
+            'sinEspacio' => $resultado['sin_espacio'],
+            'citasSinEspacio' => $this->agenda->detalleSinEspacio($resultado['sin_espacio']),
         ], count($citas).' cita(s) desplazada(s) '.$validado['minutos'].' minutos.');
     }
 
