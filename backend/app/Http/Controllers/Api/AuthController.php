@@ -107,7 +107,20 @@ class AuthController extends Controller
             ]
         );
 
-        $frontendUrl = rtrim((string) env('FRONTEND_URL', 'http://localhost:5173'), '/');
+        $rawFrontendUrl = (string) env('FRONTEND_URL', 'http://localhost:5173');
+        $allowedOrigins = array_values(array_unique(array_merge(
+            array_filter(array_map('trim', explode(',', $rawFrontendUrl))),
+            config('cors.allowed_origins', [])
+        )));
+        $requestOrigin = $request->header('Origin');
+
+        if ($requestOrigin && in_array($requestOrigin, $allowedOrigins, true)) {
+            $baseFrontend = $requestOrigin;
+        } else {
+            $baseFrontend = $allowedOrigins[0] ?? 'http://localhost:5173';
+        }
+
+        $frontendUrl = rtrim($baseFrontend, '/');
         $urlRestablecimiento = "{$frontendUrl}/restablecer-password?token={$tokenPlano}&usuario=" . urlencode($user->usuario);
 
         try {
