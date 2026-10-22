@@ -80,8 +80,8 @@ class RestablecerPasswordTest extends TestCase
         $response = $this->postJson('/api/auth/reset-password', [
             'usuario' => $this->usuario->usuario,
             'token' => $tokenPlano,
-            'password' => 'nuevaPassword2026',
-            'password_confirmation' => 'nuevaPassword2026',
+            'password' => 'NuevaPassword#2026',
+            'password_confirmation' => 'NuevaPassword#2026',
         ]);
 
         $response->assertOk()
@@ -95,7 +95,7 @@ class RestablecerPasswordTest extends TestCase
         // Puede iniciar sesión con la nueva contraseña
         $loginResponse = $this->postJson('/api/auth/login', [
             'usuario' => $this->usuario->usuario,
-            'password' => 'nuevaPassword2026',
+            'password' => 'NuevaPassword#2026',
         ]);
 
         $loginResponse->assertOk()
@@ -113,8 +113,8 @@ class RestablecerPasswordTest extends TestCase
         $response = $this->postJson('/api/auth/reset-password', [
             'usuario' => $this->usuario->usuario,
             'token' => 'token_falso_incorrecto',
-            'password' => 'nuevaPassword2026',
-            'password_confirmation' => 'nuevaPassword2026',
+            'password' => 'NuevaPassword#2026',
+            'password_confirmation' => 'NuevaPassword#2026',
         ]);
 
         $response->assertStatus(422)
@@ -134,8 +134,8 @@ class RestablecerPasswordTest extends TestCase
         $response = $this->postJson('/api/auth/reset-password', [
             'usuario' => $this->usuario->usuario,
             'token' => $tokenPlano,
-            'password' => 'nuevaPassword2026',
-            'password_confirmation' => 'nuevaPassword2026',
+            'password' => 'NuevaPassword#2026',
+            'password_confirmation' => 'NuevaPassword#2026',
         ]);
 
         $response->assertStatus(422)

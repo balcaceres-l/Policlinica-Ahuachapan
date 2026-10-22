@@ -20,7 +20,7 @@ class RegistroUsuarioTest extends TestCase
             'usuario' => 'amenjivar@policlinica.com',
             'rol' => 'MEDICO',
             'telefono' => '2443-1024',
-            'password' => 'claveSegura123',
+            'password' => 'ClaveSegura#123',
         ], $sobrescribir);
     }
 

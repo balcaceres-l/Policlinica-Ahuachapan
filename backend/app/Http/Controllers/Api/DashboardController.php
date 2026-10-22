@@ -357,12 +357,16 @@ class DashboardController extends Controller
             $tipo = $agrupacionSolicitada;
         }
 
-        // Formato SQL para agrupar en el motor de base de datos
-        $formatoSql = match ($tipo) {
-            'ano' => "DATE_FORMAT(fecha, '%Y')",
-            'mes' => "DATE_FORMAT(fecha, '%Y-%m')",
-            default => "DATE_FORMAT(fecha, '%Y-%m-%d')",
+        // Formato SQL para agrupar en el motor de base de datos. MariaDB (producción) usa
+        // DATE_FORMAT; SQLite (pruebas) no la tiene y usa strftime con los mismos formatos.
+        $formato = match ($tipo) {
+            'ano' => '%Y',
+            'mes' => '%Y-%m',
+            default => '%Y-%m-%d',
         };
+        $formatoSql = DB::connection()->getDriverName() === 'sqlite'
+            ? "strftime('{$formato}', fecha)"
+            : "DATE_FORMAT(fecha, '{$formato}')";
 
         // 1 sola consulta SQL agregada (ejecución ultra-rápida de 2-5ms)
         $registros = DB::table('cita')

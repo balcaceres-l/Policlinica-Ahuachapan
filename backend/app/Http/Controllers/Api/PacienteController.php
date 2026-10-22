@@ -13,6 +13,7 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -65,16 +66,18 @@ class PacienteController extends Controller
 
         $pacientes = $query->orderByDesc('fecha_registro')->get();
 
-        // Búsqueda en memoria sobre los atributos ya descifrados
+        // Búsqueda en memoria sobre los atributos ya descifrados (los nombres van cifrados y la base
+        // no puede compararlos). Sin tildes ni mayúsculas: "maria" encuentra "María".
         if (! empty($buscar)) {
-            $termino = mb_strtolower(trim($buscar));
-            $pacientes = $pacientes->filter(function (paciente $p) use ($termino) {
-                return str_contains(mb_strtolower((string) $p->numero_expediente), $termino)
-                    || str_contains(mb_strtolower((string) $p->nombre_completo), $termino)
-                    || str_contains(mb_strtolower((string) $p->dui), $termino)
+            $normalizar = fn (?string $t): string => Str::ascii(mb_strtolower(trim((string) $t)));
+            $termino = $normalizar($buscar);
+            $pacientes = $pacientes->filter(function (paciente $p) use ($termino, $normalizar) {
+                return str_contains($normalizar($p->numero_expediente), $termino)
+                    || str_contains($normalizar($p->nombre_completo), $termino)
+                    || str_contains($normalizar($p->dui), $termino)
                     || ($p->responsable && (
-                        str_contains(mb_strtolower((string) $p->responsable->nombre_completo), $termino)
-                        || str_contains(mb_strtolower((string) $p->responsable->dui), $termino)
+                        str_contains($normalizar($p->responsable->nombre_completo), $termino)
+                        || str_contains($normalizar($p->responsable->dui), $termino)
                     ));
             })->values();
         }

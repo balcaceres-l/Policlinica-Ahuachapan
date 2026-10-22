@@ -208,3 +208,18 @@ backend de EP-04 como "solo migraciones"; hoy ya tiene controladores y rutas.
 - Relacionado (CIE-11): al guardar, el campo del diagnóstico se vuelve a montar y el relanzamiento
   de `lib/ect.ts` abría la lista de sugerencias encima del modal. Ahora solo relanza si el médico
   escribió en ese campo antes de que la herramienta estuviera lista.
+
+## Pruebas en rojo tras mezclar el PR #27 (2026-10-21)
+
+**Estado: Resuelto (2026-10-21), sin commit todavía.** Al revisar `development` después de los PR #26 (citas de noche) y #27 (dashboard y recuperación de contraseña) se verificó que nada del #26 se perdió, pero la suite tenía 8 pruebas fallando por el #27:
+
+- **6 pruebas de contraseña** (`CambiarPasswordTest`, `RegistroUsuarioTest`, `RestablecerPasswordTest`): el commit `972b953` hizo obligatoria en todos los entornos la política de 10 caracteres con mayúsculas, minúsculas, número y símbolo (`AppServiceProvider`), pero las pruebas seguían usando claves como `claveNueva456`. Se cambiaron las claves de prueba (p. ej. `ClaveNueva#456`); el código no cambió.
+- **2 pruebas del dashboard** (`DashboardTest`): `DashboardController::generarTendencia` usaba `DATE_FORMAT`, que existe en MariaDB pero no en SQLite (las pruebas corren en SQLite). Ahora elige `strftime` o `DATE_FORMAT` según el motor. Verificado contra la base compartida (MariaDB) con agrupación por día, mes y año.
+- Si tras un `pull` falla la prueba del PDF de la receta con `Class "Barryvdh\DomPDF\Facade\Pdf" not found`, falta correr `composer install` en `backend` (dompdf se agregó en el Sprint 3).
+
+## Búsqueda de pacientes distinguía tildes (2026-10-21)
+
+**Estado: Resuelto (2026-10-21), sin commit todavía.**
+
+- `GET /pacientes?buscar=` comparaba con `mb_strtolower`, así que "maria" no encontraba a "María" y recepción podía registrar dos veces a la misma persona. Los nombres van cifrados, por eso la búsqueda se hace en PHP: ahora se normaliza con `Str::ascii` (sin tildes ni mayúsculas, "ñ" = "n"), igual que `normalizar()` del frontend. Prueba nueva en `PacienteTest`.
+- Revisado: todos los filtros del frontend ya usaban `normalizar()`; la base (MariaDB, `utf8mb4_unicode_ci`) no distingue tildes ni mayúsculas en `users`, `especialidades` y demás columnas sin cifrar (verificado: `"María" LIKE "%maria%"` es verdadero). La búsqueda de usuarios usa `LIKE` y por eso hereda ese comportamiento en producción.
