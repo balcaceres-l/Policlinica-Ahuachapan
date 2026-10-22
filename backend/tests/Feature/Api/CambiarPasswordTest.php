@@ -12,9 +12,9 @@ class CambiarPasswordTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const ACTUAL = 'claveActual123';
+    private const ACTUAL = 'ClaveActual#123';
 
-    private const NUEVA = 'claveNueva456';
+    private const NUEVA = 'ClaveNueva#456';
 
     private function usuario(array $atributos = []): User
     {

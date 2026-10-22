@@ -304,6 +304,67 @@ class PacienteTest extends TestCase
             ->assertJsonCount(2, 'data');
     }
 
+    public function test_la_busqueda_de_paciente_no_distingue_tildes_ni_mayusculas(): void
+    {
+        $maria = paciente::create([
+            'numero_expediente' => 'MV01-2026',
+            'nombre_completo' => 'María Elena Vásquez',
+            'fecha_nacimiento' => '1985-09-12',
+            'dui' => '08888888-8',
+            'estado' => 'ACTIVO',
+            'id_registrado_por' => $this->recepcion->id,
+        ]);
+        paciente::create([
+            'numero_expediente' => 'NP01-2026',
+            'nombre_completo' => 'Ñuflo Pérez',
+            'fecha_nacimiento' => '1990-01-01',
+            'dui' => '09999999-9',
+            'estado' => 'ACTIVO',
+            'id_registrado_por' => $this->recepcion->id,
+        ]);
+        $responsable = responsable::create([
+            'nombre_completo' => 'Josefa Ramírez',
+            'dui' => '05555555-5',
+            'telefono' => '7000-0000',
+            'parentesco' => 'Madre',
+        ]);
+        $menor = paciente::create([
+            'numero_expediente' => 'LR01-2026',
+            'nombre_completo' => 'Luis Ramos',
+            'fecha_nacimiento' => now()->subYears(5)->toDateString(),
+            'es_menor_edad' => true,
+            'estado' => 'ACTIVO',
+            'id_responsable' => $responsable->id_responsable,
+            'id_registrado_por' => $this->recepcion->id,
+        ]);
+
+        // Con o sin tilde, en mayúsculas o minúsculas, se encuentra al mismo paciente.
+        foreach (['maria', 'María', 'MARIA', 'MARÍA elena', 'vasquez', 'Vásquez', 'vAsQuEz'] as $busqueda) {
+            $this->actingAs($this->recepcion)
+                ->getJson('/api/pacientes?buscar='.urlencode($busqueda))
+                ->assertOk()
+                ->assertJsonCount(1, 'data')
+                ->assertJsonPath('data.0.id', $maria->id_paciente);
+        }
+
+        foreach (['nuflo', 'ñuflo', 'perez', 'PÉREZ'] as $busqueda) {
+            $this->actingAs($this->recepcion)
+                ->getJson('/api/pacientes?buscar='.urlencode($busqueda))
+                ->assertOk()
+                ->assertJsonCount(1, 'data')
+                ->assertJsonPath('data.0.nombreCompleto', 'Ñuflo Pérez');
+        }
+
+        // También por el nombre del responsable.
+        foreach (['ramirez', 'Ramírez', 'josefa'] as $busqueda) {
+            $this->actingAs($this->recepcion)
+                ->getJson('/api/pacientes?buscar='.urlencode($busqueda))
+                ->assertOk()
+                ->assertJsonCount(1, 'data')
+                ->assertJsonPath('data.0.id', $menor->id_paciente);
+        }
+    }
+
     public function test_busqueda_de_paciente_por_nombre_expediente_y_documento(): void
     {
         paciente::create([
