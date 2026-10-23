@@ -47,10 +47,56 @@
   --shadow-pop: 0 12px 32px rgba(16, 24, 40, 0.16);
 }
 
+/* ============================================================
+   Tokens en Modo Oscuro (Paleta Slate / Navy Institucional)
+   Inspirado en el prototipo visual de la Policlínica
+   ============================================================ */
+:root.dark,
+.dark {
+  /* --- Superficies Slate en Modo Oscuro --- */
+  --color-canvas: #0b111e;
+  --color-surface: #131c2e;
+  --color-line: #1e293b;
+  --color-ink: #f8fafc;
+  --color-muted: #94a3b8;
+
+  /* --- Marca / Acentos en Modo Oscuro --- */
+  --color-brand-50: #162032;
+  --color-brand-100: #1e293b;
+  --color-brand-200: #334155;
+  --color-brand-300: #475569;
+  --color-brand-400: #38bdf8;
+  --color-brand-500: #0ea5e9;
+  --color-brand-600: #0284c7;
+  --color-brand-700: #0369a1;
+  --color-brand-800: #060911;
+  --color-brand-900: #030712;
+
+  /* --- Acentos semánticos luminosos en Modo Oscuro --- */
+  --color-success: #10b981;
+  --color-success-soft: rgba(16, 185, 129, 0.15);
+  --color-danger: #f43f5e;
+  --color-danger-soft: rgba(244, 63, 94, 0.15);
+  --color-warning: #f59e0b;
+  --color-warning-soft: rgba(245, 158, 11, 0.15);
+  --color-info: #0ea5e9;
+  --color-info-soft: rgba(14, 165, 233, 0.15);
+  --color-royal: #c084fc;
+  --color-royal-soft: rgba(192, 132, 252, 0.15);
+
+  /* --- Sombras en Modo Oscuro --- */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.35);
+  --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.7);
+}
+
 @layer base {
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  html.dark {
+    color-scheme: dark;
   }
 
   body {
@@ -63,17 +109,29 @@
 
   /* Scrollbar discreto */
   ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #f1f3f5;
   }
   ::-webkit-scrollbar-thumb {
     background: #d3d7dc;
     border-radius: 999px;
-    border: 3px solid transparent;
-    background-clip: content-box;
   }
   ::-webkit-scrollbar-thumb:hover {
     background: #b9bec5;
-    background-clip: content-box;
+  }
+
+  /* Scrollbar en Modo Oscuro (tonos slate del prototipo) */
+  .dark ::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.6);
+  }
+  .dark ::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 999px;
+  }
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: #475569;
   }
 }

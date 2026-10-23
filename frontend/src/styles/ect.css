@@ -24,3 +24,21 @@
 .ctw-window .overflowBox {
   max-height: 20rem !important;
 }
+
+/* Soporte de Modo Oscuro para el buscador CIE-11 (ECT) */
+.dark .ctw-window .ectComponent .popupMode .popupModeResults {
+  background-color: #131c2e;
+  border: 1px solid #1e293b;
+  color: #f8fafc;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+}
+
+.dark .ctw-window .searchResult {
+  color: #f8fafc;
+  border-bottom-color: #1e293b;
+}
+
+.dark .ctw-window .searchResult:hover,
+.dark .ctw-window .searchResult.selected {
+  background-color: #162032;
+}
