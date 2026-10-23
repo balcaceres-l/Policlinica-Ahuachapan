@@ -1,5 +1,6 @@
 import React from 'react';
 import type { TendenciaDiaria, TipoAgrupacion } from '@/types/dashboard.types';
+import { cn } from '@/lib/utils';
 
 interface GraficoTendenciaProps {
   titulo: string;
@@ -94,7 +95,7 @@ export const GraficoTendencia: React.FC<GraficoTendenciaProps> = ({
       ) : (
         /* Contenedor con scroll horizontal suave para ver 1 mes, 12 meses o 3 años sin aplastamiento */
         <div className="mt-4 flex flex-col">
-          <div className="flex h-60 items-end gap-2 overflow-x-auto pb-4 pt-8 sm:gap-3">
+          <div className="flex h-72 items-end gap-2 overflow-x-auto pb-4 pt-28 sm:gap-3">
             {datos.map((d, index) => {
               const alturaTotalPct = Math.round((d.total / maxTotal) * 100);
               const alturaAtendidasPct =
@@ -111,16 +112,50 @@ export const GraficoTendencia: React.FC<GraficoTendenciaProps> = ({
                   className="group relative flex h-full flex-1 min-w-[44px] sm:min-w-[50px] flex-col items-center justify-end shrink-0"
                 >
                   {/* Tooltip flotante al pasar el mouse */}
-                  <div className="pointer-events-none absolute -top-14 z-20 hidden -translate-y-2 whitespace-nowrap rounded-lg bg-gray-900 dark:bg-[#0C1322] dark:border dark:border-[#1E293B] px-2.5 py-1.5 text-[11px] font-medium text-white dark:text-slate-200 shadow-xl transition-all group-hover:block">
-                    <p className="font-bold text-gray-200 dark:text-white">
-                      {d.subtitulo ? d.subtitulo : d.etiqueta} {d.dia !== d.etiqueta ? `(${d.dia})` : ''}
+                  <div
+                    className={cn(
+                      'pointer-events-none absolute -top-24 z-30 hidden whitespace-nowrap rounded-xl',
+                      'bg-slate-900/95 dark:bg-[#0C1322] border border-slate-700/60 dark:border-[#1E293B]',
+                      'px-3 py-2 text-[11px] font-medium text-white dark:text-slate-200 shadow-xl backdrop-blur-xs transition-all group-hover:block',
+                      index === 0
+                        ? 'left-0'
+                        : index >= datos.length - 2
+                          ? 'right-0'
+                          : 'left-1/2 -translate-x-1/2',
+                    )}
+                  >
+                    <p className="font-bold text-slate-100 dark:text-white pb-1 mb-1 border-b border-slate-700/50 dark:border-[#1E293B]">
+                      {d.subtitulo ? d.subtitulo : d.etiqueta} {d.dia && d.dia !== d.etiqueta ? `(${d.dia})` : ''}
                     </p>
-                    <p className="text-emerald-400">Atendidas: {d.atendidas}</p>
-                    <p className="text-rose-400">Canceladas: {d.canceladas}</p>
-                    {otras > 0 && <p className="text-slate-300">Otras: {otras}</p>}
-                    <p className="border-t border-gray-700 dark:border-[#1E293B] pt-0.5 text-gray-400 dark:text-slate-400">
-                      Total: {d.total}
-                    </p>
+                    <div className="space-y-0.5 min-w-[120px]">
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="flex items-center gap-1.5 text-slate-300">
+                          <span className="size-1.5 rounded-full bg-emerald-400" />
+                          Atendidas:
+                        </span>
+                        <span className="font-bold text-emerald-400">{d.atendidas}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="flex items-center gap-1.5 text-slate-300">
+                          <span className="size-1.5 rounded-full bg-rose-400" />
+                          Canceladas:
+                        </span>
+                        <span className="font-bold text-rose-400">{d.canceladas}</span>
+                      </div>
+                      {otras > 0 && (
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="flex items-center gap-1.5 text-slate-300">
+                            <span className="size-1.5 rounded-full bg-slate-400" />
+                            Otras:
+                          </span>
+                          <span className="font-bold text-slate-300">{otras}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between gap-4 border-t border-slate-700/50 dark:border-[#1E293B] pt-1 mt-1 font-semibold text-slate-200">
+                        <span>Total:</span>
+                        <span className="font-bold text-white">{d.total}</span>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Columna / Barra apilada con animación hover */}
