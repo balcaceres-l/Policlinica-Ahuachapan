@@ -42,7 +42,7 @@ export function Tooltip({ texto, children, className }: TooltipProps) {
         <span
           role="tooltip"
           style={{ left: pos.x, top: pos.top, bottom: pos.bottom }}
-          className="pointer-events-none fixed z-60 max-w-64 -translate-x-1/2 rounded-field bg-ink px-2.5 py-1.5 text-center text-xs font-semibold leading-snug text-white shadow-pop"
+          className="pointer-events-none fixed z-60 max-w-64 -translate-x-1/2 rounded-field bg-ink px-2.5 py-1.5 text-center text-xs font-semibold leading-snug text-white shadow-pop dark:bg-slate-800 dark:text-slate-100 dark:border dark:border-slate-700"
         >
           {texto}
         </span>

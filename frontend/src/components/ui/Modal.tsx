@@ -53,7 +53,7 @@ export function Modal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-brand-900/40 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-brand-900/40 dark:bg-black/60 p-4 backdrop-blur-sm"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -63,7 +63,7 @@ export function Modal({
         aria-modal="true"
         aria-label={title}
         className={cn(
-          'w-full overflow-hidden rounded-card bg-surface shadow-pop',
+          'w-full overflow-hidden rounded-2xl bg-surface border border-line shadow-pop',
           TAMANOS[size],
         )}
       >

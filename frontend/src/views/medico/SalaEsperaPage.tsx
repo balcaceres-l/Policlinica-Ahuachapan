@@ -311,12 +311,12 @@ export default function SalaEsperaPage() {
                       <span
                         className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
                           atendida
-                            ? 'bg-emerald-50 text-emerald-800'
+                            ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-400'
                             : esConsultaActiva
-                              ? 'bg-blue-50 text-blue-800 animate-pulse'
+                              ? 'bg-blue-50 text-blue-800 dark:bg-sky-500/15 dark:text-sky-400 animate-pulse'
                               : enEspera
-                                ? 'bg-amber-50 text-amber-800'
-                                : 'bg-slate-100 text-slate-700'
+                                ? 'bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-400'
+                                : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
                         }`}
                       >
                         <span className="size-1.5 rounded-full bg-current" />
