@@ -76,14 +76,14 @@ export const DashboardMedicoPage: React.FC = () => {
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-ink">
+            <h1 className="text-2xl font-bold tracking-tight text-ink dark:text-white">
               Mis Estadísticas y Rendimiento
             </h1>
-            <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-700">
+            <span className="rounded-full bg-brand-50 text-brand-700 dark:bg-sky-950/80 dark:text-sky-400 dark:border dark:border-sky-800/40 px-2.5 py-0.5 text-xs font-semibold">
               {rango.periodo}
             </span>
           </div>
-          <p className="mt-1 text-xs text-muted">
+          <p className="mt-1 text-xs text-muted dark:text-slate-400">
             Métricas personales de tus consultas, diagnósticos CIE-11 y tiempos de atención
           </p>
         </div>
@@ -92,54 +92,54 @@ export const DashboardMedicoPage: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2">
           <Link
             to="/medico/sala-espera"
-            className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-brand-700"
+            className="flex items-center gap-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 dark:bg-sky-600 dark:hover:bg-sky-500 px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition-colors"
           >
             <i className="ri-user-received-2-line" />
             Sala de Espera
           </Link>
           <Link
             to="/medico/citas"
-            className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-xs transition-colors hover:bg-canvas"
+            className="flex items-center gap-1.5 rounded-lg border border-line bg-surface text-ink hover:bg-canvas dark:bg-[#162032] dark:border-[#1E293B] dark:text-slate-200 dark:hover:bg-[#1e293b] px-3 py-1.5 text-xs font-semibold shadow-xs transition-colors"
           >
-            <i className="ri-calendar-check-line text-brand-600" />
+            <i className="ri-calendar-check-line text-brand-600 dark:text-sky-400" />
             Mis Citas
           </Link>
           <Link
             to="/medico/horarios"
-            className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-xs transition-colors hover:bg-canvas"
+            className="flex items-center gap-1.5 rounded-lg border border-line bg-surface text-ink hover:bg-canvas dark:bg-[#162032] dark:border-[#1E293B] dark:text-slate-200 dark:hover:bg-[#1e293b] px-3 py-1.5 text-xs font-semibold shadow-xs transition-colors"
           >
-            <i className="ri-calendar-schedule-line text-brand-600" />
+            <i className="ri-calendar-schedule-line text-brand-600 dark:text-sky-400" />
             Mi Horario
           </Link>
         </div>
       </div>
 
       {/* Banner de Jornada de Hoy */}
-      <div className="flex flex-col gap-3 rounded-card border border-brand-200 bg-brand-50/50 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-2xl border border-brand-200 bg-brand-50/50 dark:bg-[#131C2E] dark:border-[#1E293B] p-4 sm:flex-row sm:items-center sm:justify-between shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white shadow-xs">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-600 dark:bg-sky-600 text-white shadow-xs">
             <i className="ri-sun-line text-xl" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-ink">Jornada de Hoy</h2>
-            <p className="text-xs text-muted">Resumen en vivo de tu agenda del día</p>
+            <h2 className="text-sm font-bold text-ink dark:text-white">Jornada de Hoy</h2>
+            <p className="text-xs text-muted dark:text-slate-400">Resumen en vivo de tu agenda del día</p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 rounded-lg bg-surface px-3 py-1.5 border border-line shadow-xs">
-            <span className="text-xs font-medium text-muted">Programadas hoy:</span>
-            <span className="font-bold text-ink">{kpis.citas_hoy}</span>
+          <div className="flex items-center gap-2 rounded-lg bg-surface dark:bg-[#162032] px-3 py-1.5 border border-line dark:border-[#1E293B] shadow-xs">
+            <span className="text-xs font-medium text-muted dark:text-slate-400">Programadas hoy:</span>
+            <span className="font-bold text-ink dark:text-white">{kpis.citas_hoy}</span>
           </div>
 
-          <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-1.5 border border-amber-200 shadow-xs">
-            <span className="text-xs font-medium text-amber-800">En espera:</span>
-            <span className="font-bold text-amber-900">{kpis.en_espera_hoy}</span>
+          <div className="flex items-center gap-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 px-3 py-1.5 border border-amber-200 dark:border-amber-800/40 shadow-xs">
+            <span className="text-xs font-medium text-amber-800 dark:text-amber-400">En espera:</span>
+            <span className="font-bold text-amber-900 dark:text-amber-300">{kpis.en_espera_hoy}</span>
           </div>
 
-          <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-1.5 border border-emerald-200 shadow-xs">
-            <span className="text-xs font-medium text-emerald-800">Atendidos hoy:</span>
-            <span className="font-bold text-emerald-900">{kpis.atendidos_hoy}</span>
+          <div className="flex items-center gap-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1.5 border border-emerald-200 dark:border-emerald-800/40 shadow-xs">
+            <span className="text-xs font-medium text-emerald-800 dark:text-emerald-400">Atendidos hoy:</span>
+            <span className="font-bold text-emerald-900 dark:text-emerald-300">{kpis.atendidos_hoy}</span>
           </div>
         </div>
       </div>

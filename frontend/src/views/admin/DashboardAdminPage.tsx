@@ -87,14 +87,14 @@ export const DashboardAdminPage: React.FC = () => {
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-ink">
+            <h1 className="text-2xl font-bold tracking-tight text-ink dark:text-white">
               Dashboard Administrativo
             </h1>
-            <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-700">
+            <span className="rounded-full bg-brand-50 text-brand-700 dark:bg-sky-950/80 dark:text-sky-400 dark:border dark:border-sky-800/40 px-2.5 py-0.5 text-xs font-semibold">
               {rango.periodo}
             </span>
           </div>
-          <p className="mt-1 text-xs text-muted">
+          <p className="mt-1 text-xs text-muted dark:text-slate-400">
             Métricas de rendimiento clínico, citas y volumen de atención general
           </p>
         </div>
@@ -103,21 +103,21 @@ export const DashboardAdminPage: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2">
           <Link
             to="/admin/usuarios"
-            className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-xs transition-colors hover:bg-canvas"
+            className="flex items-center gap-1.5 rounded-lg border border-line bg-surface text-ink hover:bg-canvas dark:bg-[#162032] dark:border-[#1E293B] dark:text-slate-200 dark:hover:bg-[#1e293b] px-3 py-1.5 text-xs font-semibold shadow-xs transition-colors"
           >
-            <i className="ri-group-line text-brand-600" />
+            <i className="ri-group-line text-brand-600 dark:text-sky-400" />
             Usuarios
           </Link>
           <Link
             to="/admin/especialidades"
-            className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-xs transition-colors hover:bg-canvas"
+            className="flex items-center gap-1.5 rounded-lg border border-line bg-surface text-ink hover:bg-canvas dark:bg-[#162032] dark:border-[#1E293B] dark:text-slate-200 dark:hover:bg-[#1e293b] px-3 py-1.5 text-xs font-semibold shadow-xs transition-colors"
           >
-            <i className="ri-stethoscope-line text-brand-600" />
+            <i className="ri-stethoscope-line text-brand-600 dark:text-sky-400" />
             Especialidades
           </Link>
           <Link
             to="/admin/horarios"
-            className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-brand-700"
+            className="flex items-center gap-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 dark:bg-sky-600 dark:hover:bg-sky-500 px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition-colors"
           >
             <i className="ri-time-line" />
             Horarios Médicos
