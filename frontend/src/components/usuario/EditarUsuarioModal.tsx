@@ -122,7 +122,7 @@ export function EditarUsuarioModal({ usuario, onClose }: EditarUsuarioModalProps
 
         <div className="mb-4">
           <label htmlFor="editar_usuario" className="mb-1.5 block text-sm font-medium text-ink">
-            Usuario (correo institucional)
+            Usuario
           </label>
           <input
             id="editar_usuario"
